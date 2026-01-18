@@ -17,7 +17,7 @@ export const AuthLayout = ({ children, subtitle }: AuthLayoutProps) => {
                         <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
                     </div>
                     <span className="text-lg font-semibold tracking-tight text-white">
-                        Dev<span className="text-neutral-500">Path</span>
+                        Study<span className="text-neutral-500">Sense</span>
                     </span>
                 </div>
 
@@ -30,7 +30,7 @@ export const AuthLayout = ({ children, subtitle }: AuthLayoutProps) => {
                     </h1>
                     <p className="mt-6 text-lg text-neutral-400">
                         Join 500,000+ developers tracking their skills, following roadmaps, and building their
-                        careers with DevPath.
+                        careers with StudySense.
                     </p>
                 </div>
 

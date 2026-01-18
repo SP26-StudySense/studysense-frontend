@@ -11,7 +11,7 @@ export const Header = () => {
                         <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
                     </div>
                     <span className="text-lg font-semibold tracking-tight text-neutral-900">
-                        Dev<span className="text-neutral-500">Path</span>
+                        Study<span className="text-neutral-500">Sense</span>
                     </span>
                 </Link>
 
