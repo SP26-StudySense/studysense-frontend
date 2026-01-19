@@ -1,4 +1,6 @@
 import { AuthGuard } from '@/features/auth/components/auth-guard';
+import { Sidebar } from '@/components/dashboard/Sidebar';
+import { UserProfile } from '@/components/dashboard/UserProfile';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -7,35 +9,25 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <AuthGuard>
-      <div className="flex min-h-screen">
-        {/* Sidebar - to be implemented */}
-        <aside className="hidden w-64 border-r bg-card lg:block">
-          <div className="flex h-full flex-col">
-            {/* Logo */}
-            <div className="flex h-16 items-center border-b px-6">
-              <span className="text-xl font-bold">StudySense</span>
+      <div className="min-h-screen bg-[#fafafa] font-sans text-neutral-900 selection:bg-[#c1ff72] selection:text-black">
+        <div className="grid-lines pointer-events-none fixed inset-0 z-0 opacity-60"></div>
+
+        <Sidebar />
+
+        <main className="relative z-10 pl-72 transition-all duration-300">
+          {/* Header */}
+          <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-neutral-200/60 bg-[#fafafa]/80 px-8 backdrop-blur-xl">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900">Dashboard</h1>
+              <p className="text-sm text-neutral-500">Welcome back to your learning journey.</p>
             </div>
 
-            {/* Navigation - placeholder */}
-            <nav className="flex-1 space-y-1 p-4">
-              <p className="text-sm text-muted-foreground">
-                Navigation will be implemented here
-              </p>
-            </nav>
-          </div>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1">
-          {/* Header - to be implemented */}
-          <header className="sticky top-0 z-40 flex h-16 items-center border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <p className="text-sm text-muted-foreground">
-              Header will be implemented here
-            </p>
+            <UserProfile />
           </header>
 
-          {/* Page content */}
-          <div className="container py-6">{children}</div>
+          <div className="p-8">
+            {children}
+          </div>
         </main>
       </div>
     </AuthGuard>

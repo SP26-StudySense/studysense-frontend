@@ -1,57 +1,49 @@
 /**
  * Authentication types matching Backend DTOs
+ * Updated to match AUTH_API_README.md specifications
  */
 
-import { UserRole } from '@/shared/types';
-
-// User entity
+// User entity - matches API response
 export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  displayName: string;
-  avatarUrl?: string;
-  role: UserRole;
-  isEmailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
+  avatarUrl: string | null;
+  roles: string[];
 }
 
-// Auth tokens
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
-// Login request/response
+// Login request - matches API spec
 export interface LoginRequest {
-  email: string;
+  emailOrUserName: string;
   password: string;
-  rememberMe?: boolean;
+  returnUrl?: string;
 }
 
+// Login response - matches API spec
 export interface LoginResponse {
+  accessToken: string;
+  accessTokenExpiresUtc: string;
   user: User;
-  tokens: AuthTokens;
+  returnUrl?: string;
 }
 
-// Register request/response
+// Register request - matches API spec
 export interface RegisterRequest {
   email: string;
   password: string;
+  confirmPassword: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
+  returnUrl?: string;
 }
 
+// Register response - API returns message only, user needs to confirm email
 export interface RegisterResponse {
-  user: User;
-  tokens: AuthTokens;
   message: string;
 }
 
-// Forgot password
+// Forgot password request/response
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -60,10 +52,11 @@ export interface ForgotPasswordResponse {
   message: string;
 }
 
-// Reset password
+// Reset password request/response
 export interface ResetPasswordRequest {
+  userId: string;
   token: string;
-  password: string;
+  newPassword: string;
   confirmPassword: string;
 }
 
@@ -71,26 +64,36 @@ export interface ResetPasswordResponse {
   message: string;
 }
 
-// Verify email
-export interface VerifyEmailRequest {
+// Confirm email request (query params)
+export interface ConfirmEmailRequest {
+  userId: string;
   token: string;
+  returnUrl?: string;
 }
 
-export interface VerifyEmailResponse {
+export interface ConfirmEmailResponse {
   message: string;
 }
 
-// Refresh token
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
+// Refresh token response - matches API spec
 export interface RefreshTokenResponse {
   accessToken: string;
-  refreshToken: string;
+  accessTokenExpiresUtc: string;
+  user: User;
+  returnUrl?: string;
 }
 
-// Auth state
+// Google login callback data (via postMessage)
+export interface GoogleLoginCallbackData {
+  token?: string;
+  user?: User;
+  returnUrl?: string;
+  error?: {
+    message: string;
+  };
+}
+
+// Auth state for UI
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -98,9 +101,9 @@ export interface AuthState {
   error: string | null;
 }
 
-// Auth session (for middleware/server-side)
+// Auth session (for client-side storage)
 export interface AuthSession {
   user: User;
   accessToken: string;
-  expiresAt: number;
+  expiresAt: string;
 }

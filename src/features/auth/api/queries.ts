@@ -4,20 +4,30 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { get } from '@/shared/api/client';
-import { endpoints } from '@/shared/api/endpoints';
 import { queryKeys } from '@/shared/api/query-keys';
-import type { User } from '../types';
+import { getUserFromStorage } from './mutations';
 
 /**
- * Fetch current authenticated user
+ * Get current authenticated user from cache or localStorage
  */
 export function useCurrentUser(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.auth.me(),
-    queryFn: () => get<User>(endpoints.auth.me),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: () => {
+      // Check localStorage (for page reload persistence)
+      const storedUser = getUserFromStorage();
+      if (storedUser) {
+        return storedUser;
+      }
+      
+      // No stored user means not logged in
+      throw new Error('Not authenticated');
+    },
+    staleTime: Infinity, // Never refetch - data comes from login
+    gcTime: Infinity, // Keep in cache forever
     retry: false, // Don't retry on auth errors
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     ...options,
   });
 }
