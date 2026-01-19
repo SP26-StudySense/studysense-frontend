@@ -104,8 +104,10 @@ export async function get<T>(
   url: string,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.get<ApiResponse<T>>(url, config);
-  return response.data.data;
+  const response = await apiClient.get<ApiResponse<T> | T>(url, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function post<T, D = unknown>(
@@ -113,8 +115,10 @@ export async function post<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.post<ApiResponse<T>>(url, data, config);
-  return response.data.data;
+  const response = await apiClient.post<ApiResponse<T> | T>(url, data, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function put<T, D = unknown>(
@@ -122,8 +126,10 @@ export async function put<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.put<ApiResponse<T>>(url, data, config);
-  return response.data.data;
+  const response = await apiClient.put<ApiResponse<T> | T>(url, data, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function patch<T, D = unknown>(
@@ -131,16 +137,20 @@ export async function patch<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.patch<ApiResponse<T>>(url, data, config);
-  return response.data.data;
+  const response = await apiClient.patch<ApiResponse<T> | T>(url, data, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function del<T>(
   url: string,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.delete<ApiResponse<T>>(url, config);
-  return response.data.data;
+  const response = await apiClient.delete<ApiResponse<T> | T>(url, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 // Export the axios instance for direct use if needed

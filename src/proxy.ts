@@ -13,7 +13,7 @@ import { env } from '@/shared/config/env';
 const API_PROXY_PREFIX = '/api/proxy';
 
 // Backend API URL (server-side only)
-const BACKEND_API_URL = process.env.API_URL || 'http://localhost:5000/api';
+const BACKEND_API_URL = process.env.API_URL || 'http://localhost:5254/api';
 
 /**
  * Handle API proxy requests
@@ -21,7 +21,7 @@ const BACKEND_API_URL = process.env.API_URL || 'http://localhost:5000/api';
  */
 async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
-  
+
   // Remove the /api/proxy prefix to get the actual API path
   const apiPath = pathname.replace(API_PROXY_PREFIX, '');
   const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
@@ -34,35 +34,37 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
   const headers = new Headers(request.headers);
   headers.delete('host');
   headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
-  
+
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
 
   try {
+    // Get request body for non-GET requests
+    let body: string | undefined;
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      body = await request.text();
+    }
+
     // Forward request to backend
     const response = await fetch(targetUrl, {
       method: request.method,
       headers,
-      body: request.body,
-      // @ts-expect-error - duplex is required for streaming body
-      duplex: 'half',
+      body,
     });
 
     // Handle 401 - Token expired, try to refresh
     if (response.status === 401 && refreshToken && !pathname.includes('/auth/refresh')) {
       const refreshed = await tryRefreshToken(refreshToken);
-      
+
       if (refreshed) {
         // Retry request with new access token
         headers.set('Authorization', `Bearer ${refreshed.accessToken}`);
-        
+
         const retryResponse = await fetch(targetUrl, {
           method: request.method,
           headers,
-          body: request.body,
-          // @ts-expect-error - duplex is required for streaming body
-          duplex: 'half',
+          body,
         });
 
         const proxyResponse = new NextResponse(retryResponse.body, {
@@ -127,7 +129,7 @@ async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: str
 }
 
 /**
- * Main proxy function (renamed from middleware)
+ * Main proxy function
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
