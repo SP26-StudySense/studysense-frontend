@@ -25,7 +25,8 @@ export function UserProfile() {
         firstName: user.firstName,
         lastName: user.lastName,
         avatarUrl: user.avatarUrl,
-        email: user.email
+        email: user.email,
+        roles: user.roles
     });
 
     // Helper to capitalize first letter

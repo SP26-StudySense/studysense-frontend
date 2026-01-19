@@ -28,8 +28,6 @@ interface UseAuthReturn {
 }
 
 export function useAuth(): UseAuthReturn {
-    const router = useRouter();
-    const queryClient = useQueryClient();
 
     const { data: user, isLoading } = useCurrentUser();
     const loginMutation = useLogin();

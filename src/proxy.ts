@@ -33,7 +33,13 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
   // Prepare headers
   const headers = new Headers(request.headers);
   headers.delete('host');
-  headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
+  
+  // Don't set Content-Type for GET/HEAD requests - prevents backend from trying to parse empty body as JSON
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
+  } else {
+    headers.delete('Content-Type');
+  }
 
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`);

@@ -59,6 +59,7 @@ const nextConfig = {
         permanent: true,
       },
     ];
+
   },
 };
 
