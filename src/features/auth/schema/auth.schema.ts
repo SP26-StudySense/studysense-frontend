@@ -12,7 +12,7 @@ export const emailSchema = z
   .email('Please enter a valid email address')
   .max(VALIDATION.EMAIL_MAX_LENGTH, `Email must be less than ${VALIDATION.EMAIL_MAX_LENGTH} characters`);
 
-// Password schema (reusable)
+// Password schema with strength requirements (for register/reset)
 export const passwordSchema = z
   .string()
   .min(VALIDATION.PASSWORD_MIN_LENGTH, `Password must be at least ${VALIDATION.PASSWORD_MIN_LENGTH} characters`)
@@ -31,29 +31,32 @@ export const loginPasswordSchema = z
 export const nameSchema = z
   .string()
   .min(1, 'Name is required')
-  .max(VALIDATION.NAME_MAX_LENGTH, `Name must be less than ${VALIDATION.NAME_MAX_LENGTH} characters`)
-  .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes');
+  .max(VALIDATION.NAME_MAX_LENGTH, `Name must be less than ${VALIDATION.NAME_MAX_LENGTH} characters`);
 
-// Login schema
+// Optional name schema
+export const optionalNameSchema = z
+  .string()
+  .max(VALIDATION.NAME_MAX_LENGTH, `Name must be less than ${VALIDATION.NAME_MAX_LENGTH} characters`)
+  .optional();
+
+// Login schema - updated for emailOrUserName
 export const loginSchema = z.object({
-  email: emailSchema,
+  emailOrUserName: z
+    .string()
+    .min(1, 'Email or username is required'),
   password: loginPasswordSchema,
-  rememberMe: z.boolean().optional().default(false),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
-// Register schema
+// Register schema - updated with firstName/lastName
 export const registerSchema = z
   .object({
     email: emailSchema,
     firstName: nameSchema,
-    lastName: nameSchema,
+    lastName: optionalNameSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
-    acceptTerms: z.boolean().refine((val) => val === true, {
-      message: 'You must accept the terms and conditions',
-    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -69,26 +72,20 @@ export const forgotPasswordSchema = z.object({
 
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
-// Reset password schema
+// Reset password schema - updated with userId and token
 export const resetPasswordSchema = z
   .object({
+    userId: z.string().min(1, 'User ID is required'),
     token: z.string().min(1, 'Reset token is required'),
-    password: passwordSchema,
+    newPassword: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data) => data.newPassword === data.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
-
-// Verify email schema
-export const verifyEmailSchema = z.object({
-  token: z.string().min(1, 'Verification token is required'),
-});
-
-export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 
 // Change password schema (for authenticated users)
 export const changePasswordSchema = z

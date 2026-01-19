@@ -12,7 +12,8 @@ export const endpoints = {
     refresh: '/auth/refresh',
     forgotPassword: '/auth/forgot-password',
     resetPassword: '/auth/reset-password',
-    verifyEmail: '/auth/verify-email',
+    confirmEmail: '/auth/confirm-email',
+    googleLogin: '/auth/google-login',
     me: '/auth/me',
   },
 

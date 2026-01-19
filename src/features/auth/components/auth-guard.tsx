@@ -95,16 +95,21 @@ export function RoleGuard({
   const { data: user, isLoading } = useCurrentUser();
 
   useEffect(() => {
-    if (!isLoading && user && !allowedRoles.includes(user.role)) {
+    // Check if user has any of the allowed roles
+    const hasAllowedRole = user?.roles?.some(role =>
+      allowedRoles.map(r => r.toString()).includes(role)
+    );
+    if (!isLoading && user && !hasAllowedRole) {
       router.push(routes.dashboard.home);
     }
   }, [user, isLoading, allowedRoles, router]);
 
-  if (isLoading) {
-    return fallback || <DefaultLoading />;
-  }
+  // Check if user has any of the allowed roles
+  const hasAllowedRole = user?.roles?.some(role =>
+    allowedRoles.map(r => r.toString()).includes(role)
+  );
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user || !hasAllowedRole) {
     return fallback || <DefaultLoading />;
   }
 
