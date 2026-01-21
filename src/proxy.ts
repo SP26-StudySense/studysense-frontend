@@ -13,7 +13,8 @@ import { env } from '@/shared/config/env';
 const API_PROXY_PREFIX = '/api/proxy';
 
 // Backend API URL (server-side only)
-const BACKEND_API_URL = process.env.API_URL || 'http://localhost:5254/api';
+const BACKEND_API_URL = process.env.API_URL || 'https://localhost:7243/api';
+const BACKEND_API_URL_HTTP = process.env.API_URL_HTTP || 'http://localhost:5254/api';
 
 /**
  * Handle API proxy requests
@@ -33,7 +34,7 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
   // Prepare headers
   const headers = new Headers(request.headers);
   headers.delete('host');
-  
+
   // Don't set Content-Type for GET/HEAD requests - prevents backend from trying to parse empty body as JSON
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
