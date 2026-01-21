@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 import { registerSchema, type RegisterInput } from '../schema/auth.schema';
 import { useRegister } from '../api/mutations';
@@ -13,6 +13,8 @@ import { useRegister } from '../api/mutations';
 export const RegisterForm = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -76,7 +78,7 @@ export const RegisterForm = () => {
   }
 
   return (
-    <div className="glass-panel w-full rounded-2xl border border-neutral-200 bg-white/50 p-8 shadow-sm backdrop-blur-xl">
+    <div className="glass-panel w-full rounded-3xl border border-white/40 bg-white/60 p-8 shadow-xl backdrop-blur-xl">
       {apiError && (
         <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
           <AlertCircle className="h-4 w-4" />
@@ -91,7 +93,7 @@ export const RegisterForm = () => {
             <input
               {...register('firstName')}
               placeholder="John"
-              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+              className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
             />
             {errors.firstName && (
               <p className="text-xs text-red-500">{errors.firstName.message}</p>
@@ -103,7 +105,7 @@ export const RegisterForm = () => {
             <input
               {...register('lastName')}
               placeholder="Doe"
-              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+              className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
             />
             {errors.lastName && (
               <p className="text-xs text-red-500">{errors.lastName.message}</p>
@@ -117,7 +119,7 @@ export const RegisterForm = () => {
             {...register('email')}
             type="email"
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
           />
           {errors.email && (
             <p className="text-xs text-red-500">{errors.email.message}</p>
@@ -126,12 +128,21 @@ export const RegisterForm = () => {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-neutral-900">Password</label>
-          <input
-            {...register('password')}
-            type="password"
-            placeholder="••••••••"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-          />
+          <div className="relative">
+            <input
+              {...register('password')}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && (
             <p className="text-xs text-red-500">{errors.password.message}</p>
           )}
@@ -139,12 +150,21 @@ export const RegisterForm = () => {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-neutral-900">Confirm Password</label>
-          <input
-            {...register('confirmPassword')}
-            type="password"
-            placeholder="••••••••"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-          />
+          <div className="relative">
+            <input
+              {...register('confirmPassword')}
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.confirmPassword && (
             <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>
           )}
@@ -152,7 +172,7 @@ export const RegisterForm = () => {
 
         <Button
           type="submit"
-          className="w-full rounded-lg bg-neutral-900 py-6 text-sm font-semibold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 hover:-translate-y-0.5 transition-all"
+          className="w-full rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] py-6 text-sm font-bold text-neutral-900 shadow-lg shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 transition-all duration-300"
           disabled={isSubmitting || registerMutation.isPending}
         >
           {isSubmitting || registerMutation.isPending ? (

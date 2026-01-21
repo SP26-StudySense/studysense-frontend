@@ -20,6 +20,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.studysense.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
     ],
   },
 
@@ -59,7 +67,16 @@ const nextConfig = {
         permanent: true,
       },
     ];
+  },
 
+  // Rewrites
+  async rewrites() {
+    return [
+      {
+        source: '/auth/reset-password',
+        destination: '/reset-password',
+      },
+    ];
   },
 };
 

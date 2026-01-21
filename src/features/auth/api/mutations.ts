@@ -107,8 +107,9 @@ export function useLogin() {
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
 
       // Show success toast
-      toast.success('Đăng nhập thành công!', {
-        description: `Chào mừng ${response.user.firstName || response.user.email}`,
+      // Show success toast
+      toast.success('Login successful!', {
+        description: `Welcome ${response.user.firstName || response.user.email}`,
       });
 
       // Redirect to returnUrl or dashboard
@@ -117,9 +118,9 @@ export function useLogin() {
     onError: (error) => {
       // Clear any stale auth data
       queryClient.removeQueries({ queryKey: queryKeys.auth.all });
-      
+
       // Show error toast
-      toast.apiError(error, 'Đăng nhập thất bại');
+      toast.apiError(error, 'Login failed');
     },
   });
 }
@@ -134,12 +135,12 @@ export function useRegister() {
     mutationFn: (data: RegisterRequest) =>
       post<RegisterResponse>(endpoints.auth.register, data),
     onSuccess: (response) => {
-      toast.success('Đăng ký thành công!', {
-        description: response.message || 'Vui lòng kiểm tra email để xác nhận tài khoản.',
+      toast.success('Registration successful!', {
+        description: response.message || 'Please check your email to confirm your account.',
       });
     },
     onError: (error) => {
-      toast.apiError(error, 'Đăng ký thất bại');
+      toast.apiError(error, 'Registration failed');
     },
   });
 }
@@ -155,7 +156,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => post<{ message: string }>(endpoints.auth.logout),
     onSuccess: () => {
-      toast.success('Đăng xuất thành công!');
+      // No toast on logout as requested
     },
     onSettled: () => {
       // Always clear tokens and cache, even if logout API fails
@@ -187,9 +188,9 @@ export function useRefreshToken() {
       // Refresh failed - clear tokens
       clearAccessToken();
       queryClient.clear();
-      
-      toast.error('Phiên đăng nhập đã hết hạn', {
-        description: 'Vui lòng đăng nhập lại.',
+
+      toast.error('Session expired', {
+        description: 'Please log in again.',
       });
     },
   });
@@ -203,12 +204,12 @@ export function useForgotPassword() {
     mutationFn: (data: ForgotPasswordRequest) =>
       post<ForgotPasswordResponse>(endpoints.auth.forgotPassword, data),
     onSuccess: (response) => {
-      toast.success('Email đã được gửi!', {
-        description: response.message || 'Vui lòng kiểm tra hộp thư để đặt lại mật khẩu.',
+      toast.success('Email sent!', {
+        description: response.message || 'Please check your inbox to reset your password.',
       });
     },
     onError: (error) => {
-      toast.apiError(error, 'Không thể gửi email đặt lại mật khẩu');
+      toast.apiError(error, 'Failed to send reset email');
     },
   });
 }
@@ -224,15 +225,15 @@ export function useResetPassword() {
     mutationFn: (data: ResetPasswordRequest) =>
       post<ResetPasswordResponse>(endpoints.auth.resetPassword, data),
     onSuccess: () => {
-      toast.success('Đặt lại mật khẩu thành công!', {
-        description: 'Bạn có thể đăng nhập với mật khẩu mới.',
+      toast.success('Password reset successful!', {
+        description: 'You can now login with your new password.',
       });
-      
+
       // Redirect to login with success message
       router.push(`${routes.auth.login}?reset=success`);
     },
     onError: (error) => {
-      toast.apiError(error, 'Không thể đặt lại mật khẩu');
+      toast.apiError(error, 'Failed to reset password');
     },
   });
 }
@@ -248,31 +249,31 @@ export function useConfirmEmail() {
       // Encode token properly to handle special characters
       const encodedToken = encodeURIComponent(params.token);
       const encodedUserId = encodeURIComponent(params.userId);
-      
+
       // Build URL with properly encoded params
       const url = `${env.NEXT_PUBLIC_API_URL}${endpoints.auth.confirmEmail}?userId=${encodedUserId}&token=${encodedToken}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to confirm email');
       }
-      
+
       return response.json() as Promise<ConfirmEmailResponse>;
     },
     onSuccess: () => {
-      toast.success('Xác nhận email thành công!', {
-        description: 'Tài khoản của bạn đã được kích hoạt.',
+      toast.success('Email verified!', {
+        description: 'Your account has been activated.',
       });
     },
     onError: (error) => {
-      toast.apiError(error, 'Xác nhận email thất bại');
+      toast.apiError(error, 'Failed to verify email');
     },
   });
 }
@@ -302,7 +303,7 @@ export function useGoogleLogin() {
 
       if (error) {
         console.error('Google login failed:', error.message);
-        toast.error('Đăng nhập Google thất bại', {
+        toast.error('Google login failed', {
           description: error.message,
         });
         return;
@@ -341,8 +342,8 @@ export function useGoogleLogin() {
         queryClient.setQueryData(queryKeys.auth.me(), normalizedUser);
 
         // Show success toast
-        toast.success('Đăng nhập thành công!', {
-          description: `Chào mừng ${normalizedUser.firstName || normalizedUser.email}`,
+        toast.success('Login successful!', {
+          description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
         });
 
         // Redirect

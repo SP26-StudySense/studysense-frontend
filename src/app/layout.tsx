@@ -7,6 +7,8 @@ import { cn } from '@/shared/lib/utils';
 import { Providers } from '@/providers';
 
 import './globals.css';
+import { WaveTransition } from '@/components/ui/WaveTransition';
+import { TransitionProvider } from '@/shared/context/TransitionContext';
 
 export const metadata: Metadata = {
   title: {
@@ -67,12 +69,17 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          'min-h-screen bg-background font-sans antialiased',
+          'min-h-screen bg-background font-sans antialiased overflow-x-hidden',
           GeistSans.variable,
           GeistMono.variable
         )}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <TransitionProvider>
+            <WaveTransition />
+            {children}
+          </TransitionProvider>
+        </Providers>
       </body>
     </html>
   );

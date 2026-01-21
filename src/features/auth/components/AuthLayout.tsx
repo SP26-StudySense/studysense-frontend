@@ -1,74 +1,69 @@
+import { ReactNode } from 'react';
 import Link from 'next/link';
 import { GitFork } from 'lucide-react';
-import { ReactNode } from 'react';
 
 interface AuthLayoutProps {
     children: ReactNode;
-    subtitle: string;
+    subtitle?: string;
 }
 
 export const AuthLayout = ({ children, subtitle }: AuthLayoutProps) => {
     return (
-        <div className="flex min-h-screen w-full bg-[#fafafa]">
-            {/* Visual Side (Left on desktop) */}
-            <div className="hidden w-1/2 flex-col justify-between bg-neutral-900 p-12 lg:flex">
-                <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-neutral-900">
-                        <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
-                    </div>
-                    <span className="text-lg font-semibold tracking-tight text-white">
-                        Study<span className="text-neutral-500">Sense</span>
-                    </span>
-                </div>
+        <div className="min-h-screen w-full relative overflow-hidden bg-[#fafafa] font-sans selection:bg-[#00bae2] selection:text-white flex flex-col items-center justify-center p-4">
+            {/* Premium Background Effects */}
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+                {/* Gradient Blobs */}
+                <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-[#fec5fb]/40 to-[#00bae2]/20 blur-[100px] animate-pulse" />
+                <div className="absolute top-1/3 -left-40 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-[#00bae2]/30 to-[#fec5fb]/10 blur-[120px]" />
+                <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-bl from-[#fec5fb]/20 to-transparent blur-[80px]" />
 
-                <div className="relative max-w-lg">
-                    <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-neutral-700 bg-neutral-800/50 px-3 py-1 text-xs font-mono text-[#c1ff72]">
-                        git commit -m &quot;started learning&quot;
-                    </div>
-                    <h1 className="text-4xl font-medium tracking-tight text-white leading-[1.1] lg:text-5xl">
-                        Engineer your path to mastery.
+                {/* Grid Pattern */}
+                <div
+                    className="absolute inset-0 opacity-[0.03]"
+                    style={{
+                        backgroundImage: `
+              linear-gradient(to right, #000 1px, transparent 1px),
+              linear-gradient(to bottom, #000 1px, transparent 1px)
+            `,
+                        backgroundSize: '60px 60px',
+                    }}
+                />
+
+                {/* Noise Texture */}
+                <div
+                    className="absolute inset-0 opacity-[0.02] mix-blend-multiply"
+                    style={{
+                        backgroundImage:
+                            'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")',
+                    }}
+                />
+            </div>
+
+            <div className="relative z-10 w-full max-w-[440px] space-y-8">
+                {/* Header */}
+                <div className="flex flex-col items-center text-center">
+                    <Link href="/" className="mb-8 flex items-center gap-2 group cursor-pointer">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-white transition-transform duration-300 group-hover:scale-110 shadow-lg shadow-neutral-900/20">
+                            <GitFork size={20} />
+                        </div>
+                        <span className="text-xl font-bold text-neutral-900">StudySense</span>
+                    </Link>
+
+                    <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+                        {subtitle || 'Welcome back'}
                     </h1>
-                    <p className="mt-6 text-lg text-neutral-400">
-                        Join 500,000+ developers tracking their skills, following roadmaps, and building their
-                        careers with StudySense.
+                    <p className="mt-2 text-sm text-neutral-500">
+                        Enter your credentials to access your account
                     </p>
                 </div>
 
-                <div className="flex items-center gap-8 text-sm text-neutral-500">
-                    <Link href="#" className="hover:text-white transition-colors">Terms</Link>
-                    <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
-                    <Link href="#" className="hover:text-white transition-colors">Help</Link>
-                </div>
+                {/* Content (Form) */}
+                {children}
             </div>
 
-            {/* Form Side */}
-            <div className="relative flex w-full flex-col items-center justify-center p-6 lg:w-1/2 lg:p-12">
-                <div className="grid-lines pointer-events-none absolute inset-0 z-0 opacity-40"></div>
-
-                <div className="relative z-10 w-full max-w-[400px]">
-                    {/* Mobile Header */}
-                    <div className="mb-8 flex justify-center lg:hidden">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-[#c1ff72]">
-                                <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
-                            </div>
-                            <span className="text-lg font-semibold tracking-tight text-neutral-900">
-                                Dev<span className="text-neutral-500">Path</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="mb-10 text-center lg:text-left">
-                        <h2 className="text-2xl font-semibold tracking-tight text-neutral-900">
-                            {subtitle}
-                        </h2>
-                        <p className="mt-2 text-sm text-neutral-500">
-                            Welcome back to the community.
-                        </p>
-                    </div>
-
-                    {children}
-                </div>
+            {/* Footer copyright */}
+            <div className="relative z-10 mt-8 text-center text-xs text-neutral-400">
+                &copy; {new Date().getFullYear()} StudySense. All rights reserved.
             </div>
         </div>
     );

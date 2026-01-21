@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 import { resetPasswordSchema, type ResetPasswordInput } from '../schema/auth.schema';
 import { useResetPassword } from '../api/mutations';
@@ -15,6 +15,8 @@ export const ResetPasswordForm = () => {
     const searchParams = useSearchParams();
     const [apiError, setApiError] = useState<string | null>(null);
     const [isInvalidLink, setIsInvalidLink] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Get userId and token from URL
     const userId = searchParams.get('userId') || '';
@@ -62,7 +64,7 @@ export const ResetPasswordForm = () => {
     // Invalid link state
     if (isInvalidLink) {
         return (
-            <div className="glass-panel w-full rounded-2xl border border-neutral-200 bg-white/50 p-8 shadow-sm backdrop-blur-xl">
+            <div className="glass-panel w-full rounded-3xl border border-white/40 bg-white/60 p-8 shadow-xl backdrop-blur-xl">
                 <div className="flex flex-col items-center text-center space-y-4">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                         <AlertCircle className="h-8 w-8 text-red-600" />
@@ -85,7 +87,7 @@ export const ResetPasswordForm = () => {
     // Success state - mutation redirects, but just in case
     if (resetPasswordMutation.isSuccess) {
         return (
-            <div className="glass-panel w-full rounded-2xl border border-neutral-200 bg-white/50 p-8 shadow-sm backdrop-blur-xl">
+            <div className="glass-panel w-full rounded-3xl border border-white/40 bg-white/60 p-8 shadow-xl backdrop-blur-xl">
                 <div className="flex flex-col items-center text-center space-y-4">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                         <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -106,7 +108,7 @@ export const ResetPasswordForm = () => {
     }
 
     return (
-        <div className="glass-panel w-full rounded-2xl border border-neutral-200 bg-white/50 p-8 shadow-sm backdrop-blur-xl">
+        <div className="glass-panel w-full rounded-3xl border border-white/40 bg-white/60 p-8 shadow-xl backdrop-blur-xl">
             <div className="mb-6 text-center">
                 <h2 className="text-xl font-semibold text-neutral-900">Set new password</h2>
                 <p className="mt-2 text-sm text-neutral-600">
@@ -128,12 +130,21 @@ export const ResetPasswordForm = () => {
 
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-neutral-900">New Password</label>
-                    <input
-                        {...register('newPassword')}
-                        type="password"
-                        placeholder="••••••••"
-                        className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-                    />
+                    <div className="relative">
+                        <input
+                            {...register('newPassword')}
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="••••••••"
+                            className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 pr-10"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 transition-colors"
+                        >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                    </div>
                     {errors.newPassword && (
                         <p className="text-xs text-red-500">{errors.newPassword.message}</p>
                     )}
@@ -141,12 +152,21 @@ export const ResetPasswordForm = () => {
 
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-neutral-900">Confirm Password</label>
-                    <input
-                        {...register('confirmPassword')}
-                        type="password"
-                        placeholder="••••••••"
-                        className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-                    />
+                    <div className="relative">
+                        <input
+                            {...register('confirmPassword')}
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            placeholder="••••••••"
+                            className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 pr-10"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 transition-colors"
+                        >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                    </div>
                     {errors.confirmPassword && (
                         <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>
                     )}
@@ -154,7 +174,7 @@ export const ResetPasswordForm = () => {
 
                 <Button
                     type="submit"
-                    className="w-full rounded-lg bg-neutral-900 py-6 text-sm font-semibold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 hover:-translate-y-0.5 transition-all"
+                    className="w-full rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] py-6 text-sm font-bold text-neutral-900 shadow-lg shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 transition-all duration-300"
                     disabled={isSubmitting || resetPasswordMutation.isPending}
                 >
                     {isSubmitting || resetPasswordMutation.isPending ? (
