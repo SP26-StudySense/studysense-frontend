@@ -1,11 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2 } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut } from 'lucide-react';
 
 export function UserProfile() {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, logout } = useAuth();
 
     if (isLoading) {
         return (
@@ -20,37 +21,71 @@ export function UserProfile() {
 
     const initials = `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
 
-    // Debug log
-    console.log('[UserProfile] User data:', {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl,
-        email: user.email,
-        roles: user.roles
-    });
-
     // Helper to capitalize first letter
     const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
     const fullName = `${capitalize(user.firstName ?? '')} ${capitalize(user.lastName ?? '')}`.trim() || user.email;
 
-
-
     return (
-        <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-neutral-900 leading-none">
-                    {fullName}
-                </p>
-                <p className="text-xs text-neutral-500 mt-1">
-                    {user.email}
-                </p>
+        <div className="relative group">
+            {/* Avatar + Name (trigger) */}
+            <div className="flex items-center gap-3 cursor-pointer rounded-full py-1.5 px-2 transition-colors hover:bg-neutral-100">
+                <div className="text-right hidden sm:block">
+                    <p className="text-sm font-medium text-neutral-900 leading-none">
+                        {fullName}
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                        {user.email}
+                    </p>
+                </div>
+                <Avatar className="h-10 w-10 border border-neutral-200 ring-2 ring-white transition-transform hover:scale-105">
+                    <AvatarImage src={user.avatarUrl ?? ''} alt={fullName} />
+                    <AvatarFallback className="bg-neutral-900 text-white font-medium text-sm">
+                        {initials || 'U'}
+                    </AvatarFallback>
+                </Avatar>
             </div>
-            <Avatar className="h-10 w-10 border border-neutral-200 ring-2 ring-white cursor-pointer transition-transform hover:scale-105">
-                <AvatarImage src={user.avatarUrl ?? ''} alt={fullName} />
-                <AvatarFallback className="bg-neutral-900 text-white font-medium text-sm">
-                    {initials || 'U'}
-                </AvatarFallback>
-            </Avatar>
+
+            {/* Hover Dropdown */}
+            <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="min-w-[200px] rounded-xl border border-neutral-200 bg-white p-2 shadow-xl shadow-neutral-900/10">
+                    {/* User Info */}
+                    <div className="px-3 py-2 border-b border-neutral-100 mb-2">
+                        <p className="text-sm font-medium text-neutral-900 truncate">
+                            {fullName}
+                        </p>
+                        <p className="text-xs text-neutral-500 truncate">
+                            {user.email}
+                        </p>
+                    </div>
+                    
+                    {/* Dashboard Link */}
+                    <Link
+                        href="/dashboard"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                    >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                    </Link>
+                    
+                    {/* Settings Link */}
+                    <Link
+                        href="/settings"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                    >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                    </Link>
+                    
+                    {/* Logout Button */}
+                    <button
+                        onClick={() => logout()}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        Log out
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

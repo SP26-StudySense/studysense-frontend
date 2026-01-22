@@ -36,10 +36,10 @@ export const Header = () => {
                     </Link>
                     {isAuthenticated && (
                         <Link
-                            href="/study-plans"
+                            href="/dashboard"
                             className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
                         >
-                            Study Plans
+                            Dashboard
                         </Link>
                     )}
                 </nav>
@@ -79,11 +79,11 @@ export const Header = () => {
                                         </p>
                                     </div>
                                     <Link
-                                        href="/study-plans"
+                                        href="/dashboard"
                                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
                                     >
                                         <LayoutDashboard className="h-4 w-4" />
-                                        Study Plans
+                                        Dashboard
                                     </Link>
                                     <button
                                         onClick={() => logout()}
