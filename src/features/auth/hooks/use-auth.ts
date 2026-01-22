@@ -16,6 +16,7 @@ interface UseAuthReturn {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isLoggingOut: boolean;
 
     // Actions
     login: (data: LoginRequest) => Promise<void>;
@@ -68,6 +69,7 @@ export function useAuth(): UseAuthReturn {
         user: user ?? null,
         isAuthenticated: !!user,
         isLoading,
+        isLoggingOut: logoutMutation.isPending,
         login,
         register,
         logout,

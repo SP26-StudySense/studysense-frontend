@@ -16,6 +16,7 @@ import { cn } from '@/shared/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const sidebarItems = [
     {
@@ -52,7 +53,7 @@ const sidebarItems = [
 
 export function Sidebar() {
     const pathname = usePathname();
-    const { logout } = useAuth();
+    const { logout, isLoggingOut } = useAuth();
 
     // Check if a link is active
     const isActive = (href: string) => {
@@ -107,11 +108,18 @@ export function Sidebar() {
             <div className="border-t border-neutral-200 p-4">
                 <Button
                     variant="ghost"
-                    className="flex w-full items-center justify-start gap-3 rounded-xl py-6 text-neutral-600 hover:bg-red-50 hover:text-red-600"
+                    disabled={isLoggingOut}
+                    className="flex w-full items-center justify-start gap-3 rounded-xl py-6 text-neutral-600 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => logout()}
                 >
-                    <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
-                    <span className="text-sm font-medium">Log out</span>
+                    {isLoggingOut ? (
+                        <LoadingSpinner size="sm" />
+                    ) : (
+                        <>
+                            <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
+                            <span className="text-sm font-medium">Log out</span>
+                        </>
+                    )}
                 </Button>
             </div>
         </aside>

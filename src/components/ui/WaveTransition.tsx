@@ -2,8 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
 import { usePathname } from 'next/navigation';
+
+// Register GSAP plugin
+if (typeof window !== 'undefined') {
+    gsap.registerPlugin(MorphSVGPlugin);
+}
 
 export const WaveTransition = () => {
     const { isTransitioning, setTransitioning } = useTransitionRouter();
@@ -35,18 +41,18 @@ export const WaveTransition = () => {
         // Ensure wrapper is visible
         gsap.set(wrapperRef.current, { zIndex: 9999, pointerEvents: 'all' });
 
-        // Animate from Bottom to Top (Cover screen)
+        // Animate from Bottom to Top (Cover screen) using MorphSVGPlugin
         tl.fromTo(pathRef.current,
-            { attr: { d: PATH_BOTTOM } },
+            { morphSVG: PATH_BOTTOM },
             {
                 duration: 0.8,
-                attr: { d: PATH_WAVE },
+                morphSVG: PATH_WAVE,
                 ease: 'power2.in'
             }
         )
             .to(pathRef.current, {
                 duration: 0.4,
-                attr: { d: PATH_TOP },
+                morphSVG: PATH_TOP,
                 ease: 'power2.out'
             });
     };
@@ -61,19 +67,15 @@ export const WaveTransition = () => {
             }
         });
 
-        // Current state is TOP (covering screen)
-        // We want to "uncover" nicely? Or just reverse?
-        // Let's reverse to bottom to reveal the new page
-
-        // Animate from Top back to Bottom (Reveal screen)
+        // Animate from Top back to Bottom (Reveal screen) using MorphSVGPlugin
         tl.to(pathRef.current, {
             duration: 0.4,
-            attr: { d: PATH_WAVE },
+            morphSVG: PATH_WAVE,
             ease: 'power2.in'
         })
             .to(pathRef.current, {
                 duration: 0.8,
-                attr: { d: PATH_BOTTOM },
+                morphSVG: PATH_BOTTOM,
                 ease: 'power2.out'
             });
     };

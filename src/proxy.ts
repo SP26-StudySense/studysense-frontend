@@ -25,7 +25,16 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
   // Remove the /api/proxy prefix to get the actual API path
   const apiPath = pathname.replace(API_PROXY_PREFIX, '');
-  const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
+  // Use HTTP for development to avoid self-signed certificate issues
+  const targetUrl = `${BACKEND_API_URL_HTTP}${apiPath}${search}`;
+
+  console.log('[Proxy] Request:', {
+    method: request.method,
+    pathname,
+    apiPath,
+    targetUrl,
+    backendUrl: BACKEND_API_URL_HTTP,
+  });
 
   // Get access token from cookies
   const accessToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
@@ -54,10 +63,24 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     }
 
     // Forward request to backend
+    console.log('[Proxy] Fetching:', {
+      targetUrl,
+      method: request.method,
+      hasBody: !!body,
+      bodyLength: body?.length,
+      hasAccessToken: !!accessToken,
+    });
+
     const response = await fetch(targetUrl, {
       method: request.method,
       headers,
       body,
+    });
+
+    console.log('[Proxy] Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
     });
 
     // Handle 401 - Token expired, try to refresh
@@ -106,6 +129,13 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     console.error('[Proxy Error]', error);
+    console.error('[Proxy Error Details]', {
+      message: error instanceof Error ? error.message : String(error),
+      cause: error instanceof Error ? (error as any).cause : undefined,
+      code: (error as any).code,
+      name: error instanceof Error ? error.name : undefined,
+      targetUrl,
+    });
     return NextResponse.json(
       { success: false, message: 'Proxy error', error: String(error) },
       { status: 502 }

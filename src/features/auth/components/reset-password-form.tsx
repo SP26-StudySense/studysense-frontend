@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 import { resetPasswordSchema, type ResetPasswordInput } from '../schema/auth.schema';
 import { useResetPassword } from '../api/mutations';
@@ -174,12 +175,14 @@ export const ResetPasswordForm = () => {
 
                 <Button
                     type="submit"
-                    className="w-full rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] py-6 text-sm font-bold text-neutral-900 shadow-lg shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 transition-all duration-300"
+                    variant="brand"
+                    size="xl"
+                    className="w-full"
                     disabled={isSubmitting || resetPasswordMutation.isPending}
                 >
                     {isSubmitting || resetPasswordMutation.isPending ? (
                         <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <LoadingSpinner size="sm" />
                             Resetting...
                         </>
                     ) : (
