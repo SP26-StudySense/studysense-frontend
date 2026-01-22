@@ -250,8 +250,8 @@ export function useConfirmEmail() {
       const encodedToken = encodeURIComponent(params.token);
       const encodedUserId = encodeURIComponent(params.userId);
 
-      // Build URL with properly encoded params
-      const url = `${env.NEXT_PUBLIC_API_URL}${endpoints.auth.confirmEmail}?userId=${encodedUserId}&token=${encodedToken}`;
+      // Use the API proxy to avoid CORS and SSL certificate issues
+      const url = `/api/proxy${endpoints.auth.confirmEmail}?userId=${encodedUserId}&token=${encodedToken}`;
 
       const response = await fetch(url, {
         method: 'GET',

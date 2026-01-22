@@ -16,7 +16,7 @@ import Cookies from 'js-cookie';
 
 import { env } from '@/shared/config';
 import type { ApiResponse } from '@/shared/types';
-import { ApiException, parseApiError } from './errors';
+import { parseApiError } from './errors';
 
 // Token storage keys (still needed for client-side token management)
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;

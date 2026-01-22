@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 import { routes } from '@/shared/config/routes';
 import { UserRole } from '@/shared/types';
@@ -24,10 +24,7 @@ interface RoleGuardProps extends AuthGuardProps {
 function DefaultLoading() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#fafafa]">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-[#c1ff72]" />
-        <p className="text-sm text-neutral-500">Loading...</p>
-      </div>
+      <LoadingSpinner size="lg" showText text="Loading..." />
     </div>
   );
 }

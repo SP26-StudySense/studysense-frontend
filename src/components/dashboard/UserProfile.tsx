@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LayoutDashboard, Settings, LogOut } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export function UserProfile() {
-    const { user, isLoading, logout } = useAuth();
+    const { user, isLoading, logout, isLoggingOut } = useAuth();
 
     if (isLoading) {
         return (
@@ -79,10 +80,17 @@ export function UserProfile() {
                     {/* Logout Button */}
                     <button
                         onClick={() => logout()}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        disabled={isLoggingOut}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <LogOut className="h-4 w-4" />
-                        Log out
+                        {isLoggingOut ? (
+                            <LoadingSpinner size="sm" />
+                        ) : (
+                            <>
+                                <LogOut className="h-4 w-4" />
+                                Log out
+                            </>
+                        )}
                     </button>
                 </div>
             </div>

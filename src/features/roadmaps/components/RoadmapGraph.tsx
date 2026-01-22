@@ -178,45 +178,45 @@ export function RoadmapGraph({ nodes, edges, selectedNodeId, onNodeSelect, class
             </div>
 
             {/* Zoom controls */}
-            <div className="absolute bottom-6 left-6 flex flex-col gap-2 z-10">
+            <div className="absolute bottom-3 lg:bottom-6 left-3 lg:left-6 flex flex-col gap-1.5 lg:gap-2 z-10">
                 <button
                     onClick={handleZoomIn}
-                    className="w-10 h-10 rounded-xl bg-white/90 border border-neutral-200 shadow-lg flex items-center justify-center text-neutral-600 hover:bg-white hover:text-neutral-900 transition-all"
+                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-white/90 border border-neutral-200 shadow-lg flex items-center justify-center text-neutral-600 hover:bg-white hover:text-neutral-900 transition-all"
                 >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 </button>
                 <button
                     onClick={handleZoomOut}
-                    className="w-10 h-10 rounded-xl bg-white/90 border border-neutral-200 shadow-lg flex items-center justify-center text-neutral-600 hover:bg-white hover:text-neutral-900 transition-all"
+                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-white/90 border border-neutral-200 shadow-lg flex items-center justify-center text-neutral-600 hover:bg-white hover:text-neutral-900 transition-all"
                 >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 </button>
                 <button
                     onClick={handleReset}
-                    className="w-10 h-10 rounded-xl bg-white/90 border border-neutral-200 shadow-lg flex items-center justify-center text-neutral-600 hover:bg-white hover:text-neutral-900 transition-all"
+                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-white/90 border border-neutral-200 shadow-lg flex items-center justify-center text-neutral-600 hover:bg-white hover:text-neutral-900 transition-all"
                 >
-                    <RotateCcw className="h-4 w-4" />
+                    <RotateCcw className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 </button>
             </div>
 
             {/* Zoom level indicator */}
-            <div className="absolute bottom-6 left-20 bg-white/90 border border-neutral-200 rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-lg z-10">
+            <div className="absolute bottom-3 lg:bottom-6 left-14 lg:left-20 bg-white/90 border border-neutral-200 rounded-lg px-2 lg:px-3 py-1 lg:py-1.5 text-xs font-medium text-neutral-600 shadow-lg z-10">
                 {Math.round(scale * 100)}%
             </div>
 
             {/* Legend */}
-            <div className="absolute bottom-6 right-6 flex items-center gap-4 bg-white/90 border border-neutral-200 rounded-xl px-4 py-2 shadow-lg z-10">
-                <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    Beginner
+            <div className="absolute bottom-3 lg:bottom-6 right-3 lg:right-6 flex items-center gap-2 lg:gap-4 bg-white/90 border border-neutral-200 rounded-lg lg:rounded-xl px-2 lg:px-4 py-1.5 lg:py-2 shadow-lg z-10">
+                <div className="flex items-center gap-1 lg:gap-1.5 text-xs text-neutral-600">
+                    <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-emerald-500" />
+                    <span className="hidden sm:inline">Beginner</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    Intermediate
+                <div className="flex items-center gap-1 lg:gap-1.5 text-xs text-neutral-600">
+                    <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-amber-500" />
+                    <span className="hidden sm:inline">Intermediate</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                    Advanced
+                <div className="flex items-center gap-1 lg:gap-1.5 text-xs text-neutral-600">
+                    <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-red-500" />
+                    <span className="hidden sm:inline">Advanced</span>
                 </div>
             </div>
         </div>

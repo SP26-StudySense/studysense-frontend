@@ -80,11 +80,11 @@ export function RoadmapsPage() {
     };
 
     return (
-        <div className="flex gap-6 h-[calc(100vh-160px)]">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-160px)]">
             {/* Left - Graph */}
-            <div className="flex-1 flex flex-col gap-4">
+            <div className="flex-1 flex flex-col gap-4 min-w-0">
                 {/* Search & Filter Bar */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 lg:gap-4">
                     <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                         <input

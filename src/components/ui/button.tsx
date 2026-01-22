@@ -5,24 +5,34 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/shared/lib/utils"
 
 const buttonVariants = cva(
-    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
     {
         variants: {
             variant: {
-                default: "bg-primary text-primary-foreground hover:bg-primary/90",
+                default: "bg-primary text-primary-foreground hover:bg-primary/90 rounded-md",
                 destructive:
-                    "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                    "bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-md",
                 outline:
-                    "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+                    "border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md",
                 secondary:
-                    "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-                ghost: "hover:bg-accent hover:text-accent-foreground",
+                    "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md",
+                ghost: "hover:bg-accent hover:text-accent-foreground rounded-md",
                 link: "text-primary underline-offset-4 hover:underline",
+                // Brand variants - gradient primary button
+                brand:
+                    "rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] font-bold text-neutral-900 shadow-lg shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 duration-300",
+                // Brand outline - white/transparent secondary button
+                brandOutline:
+                    "rounded-full border border-neutral-200 bg-white font-semibold text-neutral-600 shadow-sm hover:bg-neutral-50 hover:border-neutral-300 hover:shadow-md duration-300",
+                // Brand secondary - dark solid button
+                brandSecondary:
+                    "rounded-full bg-neutral-900 font-semibold text-white shadow-xl hover:scale-105 hover:bg-neutral-800 hover:shadow-2xl duration-300",
             },
             size: {
                 default: "h-10 px-4 py-2",
                 sm: "h-9 rounded-md px-3",
                 lg: "h-11 rounded-md px-8",
+                xl: "px-8 py-4",
                 icon: "h-10 w-10",
             },
         },
