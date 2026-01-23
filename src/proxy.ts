@@ -44,9 +44,14 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
   const headers = new Headers(request.headers);
   headers.delete('host');
 
-  // Don't set Content-Type for GET/HEAD requests - prevents backend from trying to parse empty body as JSON
+  // Handle Content-Type header
+  const originalContentType = request.headers.get('Content-Type');
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
+    // Only set JSON if there's no Content-Type header
+    // For multipart/form-data, the original header is already in headers (includes boundary)
+    if (!originalContentType) {
+      headers.set('Content-Type', 'application/json');
+    }
   } else {
     headers.delete('Content-Type');
   }
@@ -57,30 +62,23 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
   try {
     // Get request body for non-GET requests
-    let body: string | undefined;
+    let body: BodyInit | undefined;
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      body = await request.text();
+      const contentType = request.headers.get('Content-Type') || '';
+
+      // For multipart/form-data, use arrayBuffer to preserve binary data
+      if (contentType.includes('multipart/form-data')) {
+        body = await request.arrayBuffer();
+      } else {
+        body = await request.text();
+      }
     }
 
     // Forward request to backend
-    console.log('[Proxy] Fetching:', {
-      targetUrl,
-      method: request.method,
-      hasBody: !!body,
-      bodyLength: body?.length,
-      hasAccessToken: !!accessToken,
-    });
-
     const response = await fetch(targetUrl, {
       method: request.method,
       headers,
       body,
-    });
-
-    console.log('[Proxy] Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
     });
 
     // Handle 401 - Token expired, try to refresh
