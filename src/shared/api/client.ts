@@ -27,7 +27,6 @@ const apiClient: AxiosInstance = axios.create({
   baseURL: '/api/proxy', // Proxy will forward to backend
   timeout: env.NEXT_PUBLIC_API_TIMEOUT,
   headers: {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
   },
   withCredentials: true, // Send cookies with requests
@@ -55,7 +54,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear tokens and redirect to login
       clearTokens();
-      
+
       if (typeof window !== 'undefined') {
         window.location.href = '/login?expired=true';
       }

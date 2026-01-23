@@ -58,7 +58,7 @@ export function UserProfile() {
                             {user.email}
                         </p>
                     </div>
-                    
+
                     {/* Dashboard Link */}
                     <Link
                         href="/dashboard"
@@ -67,16 +67,16 @@ export function UserProfile() {
                         <LayoutDashboard className="h-4 w-4" />
                         Dashboard
                     </Link>
-                    
-                    {/* Settings Link */}
+
+                    {/* Profile Link */}
                     <Link
-                        href="/settings"
+                        href="/profile"
                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
                     >
                         <Settings className="h-4 w-4" />
-                        Settings
+                        Profile
                     </Link>
-                    
+
                     {/* Logout Button */}
                     <button
                         onClick={() => logout()}
