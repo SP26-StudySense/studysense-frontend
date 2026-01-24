@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import Link from 'next/link';
-import { Chrome, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Chrome, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 import { loginSchema, type LoginInput } from '../schema/auth.schema';
 import { useLogin, useGoogleLogin } from '../api/mutations';
@@ -101,12 +102,14 @@ export const LoginForm = () => {
 
         <Button
           type="submit"
-          className="w-full rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] py-6 text-sm font-bold text-neutral-900 shadow-lg shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 transition-all duration-300"
+          variant="brand"
+          size="xl"
+          className="w-full"
           disabled={isSubmitting || loginMutation.isPending}
         >
           {isSubmitting || loginMutation.isPending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoadingSpinner size="sm" />
               Signing in...
             </>
           ) : (

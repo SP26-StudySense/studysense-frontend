@@ -4,6 +4,7 @@ import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
+import { Button } from '@/shared/ui/button';
 
 if (typeof window !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger);
@@ -62,15 +63,20 @@ export const CTA = () => {
                         Join 500,000+ developers learning together.
                     </p>
                     <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                        <button
+                        <Button
+                            variant="brandSecondary"
+                            size="xl"
                             onClick={() => navigateWithTransition('/register')}
-                            className="group rounded-full bg-neutral-900 px-8 py-4 font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:bg-neutral-800 hover:shadow-2xl cursor-pointer"
                         >
                             Get Started for Free
-                        </button>
-                        <button className="rounded-full border border-neutral-900/10 bg-white/50 px-8 py-4 font-semibold text-neutral-900 backdrop-blur transition-all duration-300 hover:bg-white/80 hover:shadow-lg cursor-pointer">
+                        </Button>
+                        <Button
+                            variant="brandOutline"
+                            size="xl"
+                            className="border-neutral-900/10 bg-white/50 text-neutral-900 backdrop-blur hover:bg-white/80"
+                        >
                             View All Roadmaps
-                        </button>
+                        </Button>
                     </div>
                 </div>
                 {/* Decorative background elements */}

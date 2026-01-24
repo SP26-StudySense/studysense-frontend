@@ -13,7 +13,8 @@ import { env } from '@/shared/config/env';
 const API_PROXY_PREFIX = '/api/proxy';
 
 // Backend API URL (server-side only)
-const BACKEND_API_URL = process.env.API_URL || 'http://localhost:5254/api';
+const BACKEND_API_URL = process.env.API_URL || 'https://localhost:7243/api';
+const BACKEND_API_URL_HTTP = process.env.API_URL_HTTP || 'http://localhost:5254/api';
 
 /**
  * Handle API proxy requests
@@ -24,7 +25,16 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
   // Remove the /api/proxy prefix to get the actual API path
   const apiPath = pathname.replace(API_PROXY_PREFIX, '');
-  const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
+  // Use HTTP for development to avoid self-signed certificate issues
+  const targetUrl = `${BACKEND_API_URL_HTTP}${apiPath}${search}`;
+
+  console.log('[Proxy] Request:', {
+    method: request.method,
+    pathname,
+    apiPath,
+    targetUrl,
+    backendUrl: BACKEND_API_URL_HTTP,
+  });
 
   // Get access token from cookies
   const accessToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
@@ -33,10 +43,15 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
   // Prepare headers
   const headers = new Headers(request.headers);
   headers.delete('host');
-  
-  // Don't set Content-Type for GET/HEAD requests - prevents backend from trying to parse empty body as JSON
+
+  // Handle Content-Type header
+  const originalContentType = request.headers.get('Content-Type');
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
+    // Only set JSON if there's no Content-Type header
+    // For multipart/form-data, the original header is already in headers (includes boundary)
+    if (!originalContentType) {
+      headers.set('Content-Type', 'application/json');
+    }
   } else {
     headers.delete('Content-Type');
   }
@@ -47,9 +62,16 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
   try {
     // Get request body for non-GET requests
-    let body: string | undefined;
+    let body: BodyInit | undefined;
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      body = await request.text();
+      const contentType = request.headers.get('Content-Type') || '';
+
+      // For multipart/form-data, use arrayBuffer to preserve binary data
+      if (contentType.includes('multipart/form-data')) {
+        body = await request.arrayBuffer();
+      } else {
+        body = await request.text();
+      }
     }
 
     // Forward request to backend
@@ -105,6 +127,13 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     console.error('[Proxy Error]', error);
+    console.error('[Proxy Error Details]', {
+      message: error instanceof Error ? error.message : String(error),
+      cause: error instanceof Error ? (error as any).cause : undefined,
+      code: (error as any).code,
+      name: error instanceof Error ? error.name : undefined,
+      targetUrl,
+    });
     return NextResponse.json(
       { success: false, message: 'Proxy error', error: String(error) },
       { status: 502 }

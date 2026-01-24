@@ -1,3 +1,6 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
 import { AuthGuard } from '@/features/auth/components/auth-guard';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { UserProfile } from '@/components/dashboard/UserProfile';
@@ -7,7 +10,21 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+// Map routes to titles
+function getPageTitle(pathname: string): string {
+  if (pathname.startsWith('/profile')) return 'Profile';
+  if (pathname.startsWith('/study-plans')) return 'Study Plans';
+  if (pathname.startsWith('/roadmaps')) return 'Roadmaps';
+  if (pathname.startsWith('/sessions')) return 'Sessions';
+  if (pathname.startsWith('/community')) return 'Community';
+  if (pathname.startsWith('/settings')) return 'Settings';
+  return 'Dashboard';
+}
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const pathname = usePathname();
+  const pageTitle = getPageTitle(pathname);
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] font-sans text-neutral-900 selection:bg-[#00bae2] selection:text-white relative overflow-hidden">
@@ -45,7 +62,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Header */}
           <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-neutral-200/60 bg-white/60 px-8 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
             <div className="flex items-center gap-8">
-              <h1 className="text-xl font-bold tracking-tight text-neutral-900">Dashboard</h1>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900">{pageTitle}</h1>
             </div>
 
             <div className="flex items-center gap-6">

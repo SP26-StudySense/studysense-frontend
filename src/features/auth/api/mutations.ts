@@ -56,7 +56,7 @@ function clearAccessToken(): void {
 /**
  * Save user data to localStorage for persistence across page reloads
  */
-function saveUserToStorage(user: User): void {
+export function saveUserToStorage(user: User): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }
@@ -250,8 +250,8 @@ export function useConfirmEmail() {
       const encodedToken = encodeURIComponent(params.token);
       const encodedUserId = encodeURIComponent(params.userId);
 
-      // Build URL with properly encoded params
-      const url = `${env.NEXT_PUBLIC_API_URL}${endpoints.auth.confirmEmail}?userId=${encodedUserId}&token=${encodedToken}`;
+      // Use the API proxy to avoid CORS and SSL certificate issues
+      const url = `/api/proxy${endpoints.auth.confirmEmail}?userId=${encodedUserId}&token=${encodedToken}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -291,7 +291,7 @@ export function useGoogleLogin() {
       console.log('[Google Login] Received message:', event.origin, event.data);
 
       // Validate origin - should match API origin
-      const apiUrl = new URL(env.NEXT_PUBLIC_API_URL);
+      const apiUrl = new URL(env.NEXT_PUBLIC_API_URL_HTTP);
       console.log('[Google Login] Expected origin:', apiUrl.origin);
 
       if (event.origin !== apiUrl.origin) {

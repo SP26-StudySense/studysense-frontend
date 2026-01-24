@@ -6,7 +6,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
 
   // API
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:5254/api'),
+  NEXT_PUBLIC_API_URL: z.string().url().default('https://localhost:7243/api'),
+  NEXT_PUBLIC_API_URL_HTTP: z.string().url().default('http://localhost:15000/api'),
   NEXT_PUBLIC_API_TIMEOUT: z.coerce.number().default(30000),
 
   // Auth
@@ -25,6 +26,7 @@ function getEnv(): Env {
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    NEXT_PUBLIC_API_URL_HTTP: process.env.NEXT_PUBLIC_API_URL_HTTP,
     NEXT_PUBLIC_API_TIMEOUT: process.env.NEXT_PUBLIC_API_TIMEOUT,
     NEXT_PUBLIC_AUTH_TOKEN_KEY: process.env.NEXT_PUBLIC_AUTH_TOKEN_KEY,
     NEXT_PUBLIC_AUTH_REFRESH_KEY: process.env.NEXT_PUBLIC_AUTH_REFRESH_KEY,

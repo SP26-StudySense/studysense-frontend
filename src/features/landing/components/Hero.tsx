@@ -3,13 +3,26 @@
 import { useRef, useEffect } from 'react';
 import { ArrowRight, Search, Atom, CheckCircle2, Circle, Trophy } from 'lucide-react';
 import gsap from 'gsap';
+import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
+import { Button } from '@/shared/ui/button';
+
+// Register GSAP plugin
+gsap.registerPlugin(ScrambleTextPlugin);
 
 export const Hero = () => {
     const sectionRef = useRef<HTMLElement>(null);
     const card1Ref = useRef<HTMLDivElement>(null);
     const card2Ref = useRef<HTMLDivElement>(null);
     const { navigateWithTransition } = useTransitionRouter();
+
+    // Text content constants for scramble animation
+    const HERO_TEXT = {
+        badge: 'New: DevOps 2024 Roadmap Updated',
+        titleLine1: "Don't just learn code.",
+        titleLine2: 'Engineer your path.',
+        description: 'Step-by-step guides and curated learning paths for developers. Track your progress, verify your skills, and master the modern stack without the noise.',
+    };
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -22,18 +35,55 @@ export const Hero = () => {
 
         // Get elements
         const badge = section.querySelector('[data-hero-badge]');
-        const title = section.querySelector('[data-hero-title]');
+        const badgeText = section.querySelector('[data-hero-badge-text]');
+        const titleLine1 = section.querySelector('[data-hero-title-line1]');
+        const titleLine2 = section.querySelector('[data-hero-title-line2]');
         const desc = section.querySelector('[data-hero-desc]');
         const buttons = section.querySelector('[data-hero-buttons]');
 
         // Set initial states
-        gsap.set([badge, title, desc, buttons], { opacity: 0, y: 40 });
+        gsap.set([badge, desc, buttons], { opacity: 0, y: 40 });
 
-        // Animate entrance
-        tl.to(badge, { opacity: 1, y: 0, duration: 0.5 })
-            .to(title, { opacity: 1, y: 0, duration: 0.7 }, '-=0.3')
-            .to(desc, { opacity: 1, y: 0, duration: 0.5 }, '-=0.4')
-            .to(buttons, { opacity: 1, y: 0, duration: 0.5 }, '-=0.3');
+        // Animate entrance with scramble text effect
+        tl.to(badge, { opacity: 1, y: 0, duration: 0.4 })
+            .to(badgeText, {
+                duration: 0.4,
+                scrambleText: {
+                    text: HERO_TEXT.badge,
+                    chars: 'upperAndLowerCase',
+                    revealDelay: 0.3,
+                    speed: 0.4,
+                },
+            }, '-=0.2')
+            .to(titleLine1, {
+                duration: 0.6,
+                scrambleText: {
+                    text: HERO_TEXT.titleLine1,
+                    chars: 'upperAndLowerCase',
+                    revealDelay: 0.2,
+                    speed: 0.3,
+                },
+            }, '-=0.8')
+            .to(titleLine2, {
+                duration: 0.5,
+                scrambleText: {
+                    text: HERO_TEXT.titleLine2,
+                    chars: 'upperAndLowerCase',
+                    revealDelay: 0.3,
+                    speed: 0.3,
+                },
+            }, '-=0.8')
+            .to(desc, { opacity: 1, y: 0, duration: 0.4 }, '-=0.6')
+            .to(desc, {
+                duration: 1.8,
+                scrambleText: {
+                    text: HERO_TEXT.description,
+                    chars: 'lowerCase',
+                    revealDelay: 0.1,
+                    speed: 0.5,
+                },
+            }, '-=0.3')
+            .to(buttons, { opacity: 1, y: 0, duration: 0.5 }, '-=1.2');
 
         // Floating animation for cards
         if (card1Ref.current) {
@@ -80,16 +130,17 @@ export const Hero = () => {
                     className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/50 px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-sm backdrop-blur-sm"
                 >
                     <span className="h-2 w-2 rounded-full bg-[#00bae2] shadow-[0_0_8px_#00bae2] animate-pulse"></span>
-                    New: DevOps 2024 Roadmap Updated
+                    <span data-hero-badge-text></span>
                 </div>
 
                 <h1
                     data-hero-title
                     className="text-5xl font-medium tracking-tighter text-neutral-900 leading-[1.05] lg:text-7xl"
                 >
-                    Don&apos;t just learn code. <br />
+                    <span data-hero-title-line1></span>
+                    <br />
                     <span className="relative inline-block text-neutral-400">
-                        Engineer your path.
+                        <span data-hero-title-line2></span>
                         <svg
                             className="absolute -bottom-1 left-0 -z-10 h-3 w-full text-[#fec5fb] opacity-60"
                             viewBox="0 0 100 10"
@@ -108,26 +159,29 @@ export const Hero = () => {
                 <p
                     data-hero-desc
                     className="max-w-xl text-lg leading-relaxed text-neutral-500"
-                >
-                    Step-by-step guides and curated learning paths for developers. Track your progress,
-                    verify your skills, and master the modern stack without the noise.
-                </p>
+                ></p>
 
                 <div data-hero-buttons className="flex flex-col gap-4 pt-2 sm:flex-row">
-                    <button
+                    <Button
+                        variant="brand"
+                        size="xl"
                         onClick={() => navigateWithTransition('/register')}
-                        className="group relative overflow-hidden rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-8 py-4 font-semibold text-neutral-900 shadow-[0_4px_20px_rgba(0,186,226,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(0,186,226,0.4)] cursor-pointer"
+                        className="group relative overflow-hidden"
                     >
                         <span className="relative z-10 flex items-center gap-2">
                             Start Learning
                             <ArrowRight className="transition-transform duration-300 group-hover:translate-x-1" />
                         </span>
                         <div className="absolute inset-0 bg-white/20 transition-all duration-300 group-hover:bg-white/40"></div>
-                    </button>
-                    <button className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-8 py-4 font-semibold text-neutral-600 shadow-sm transition-all duration-300 hover:bg-neutral-50 hover:border-neutral-300 hover:shadow-md cursor-pointer">
+                    </Button>
+                    <Button
+                        variant="brandOutline"
+                        size="xl"
+                        className="gap-2"
+                    >
                         <Search className="w-[18px]" />
                         Browse Roles
-                    </button>
+                    </Button>
                 </div>
             </div>
 

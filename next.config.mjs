@@ -28,6 +28,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+        port: '7243',
+      },
     ],
   },
 
