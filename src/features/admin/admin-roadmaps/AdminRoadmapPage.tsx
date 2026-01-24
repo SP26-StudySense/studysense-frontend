@@ -58,7 +58,7 @@ export function AdminRoadmapPage({
           </button>
           <button
             onClick={handleAddNode}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#fec5fb] to-[#ff9bf5] px-5 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
+            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-5 py-3 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md"
           >
             <Plus className="h-4 w-4" />
             Add Node

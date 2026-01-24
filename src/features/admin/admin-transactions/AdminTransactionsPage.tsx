@@ -50,7 +50,7 @@ export function AdminTransactionsPage({
             View all payment transactions
           </p>
         </div>
-        <button className="rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#ff9bf5] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md">
+        <button className="rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2.5 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md">
           Export
         </button>
       </div>

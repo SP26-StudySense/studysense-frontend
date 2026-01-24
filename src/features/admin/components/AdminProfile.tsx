@@ -20,10 +20,10 @@ export function AdminProfile({ profile }: AdminProfileProps) {
     <div className="space-y-6">
       {/* Profile Card */}
       <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white/80 shadow-sm backdrop-blur-xl">
-        <div className="border-b border-neutral-200/60 bg-gradient-to-r from-[#fec5fb]/10 to-[#ff9bf5]/10 p-8">
+        <div className="border-b border-neutral-200/60 bg-gradient-to-r from-[#fec5fb]/10 to-[#00bae2]/10 p-8">
           <div className="flex items-center gap-6">
             {/* Avatar */}
-            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[#fec5fb] to-[#ff9bf5] p-1">
+            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[#fec5fb] to-[#00bae2] p-1">
               <div className="flex h-full w-full items-center justify-center rounded-full bg-white">
                 {profile.avatar ? (
                   <img

@@ -10,8 +10,10 @@ import {
   FolderTree,
   UserCog,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
 
 const sidebarItems = [
   {
@@ -49,53 +51,68 @@ const sidebarItems = [
 export function AdminSidebar() {
   const pathname = usePathname();
 
+  const isActive = (href: string) => {
+    if (href === "/admin-dashboard") {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
+
   return (
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-72 flex-col border-r border-neutral-200/60 bg-white/80 backdrop-blur-xl">
-      {/* Logo/Brand */}
-      <div className="flex h-20 items-center border-b border-neutral-200/60 px-8">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#fec5fb] to-[#ff9bf5]">
-            <span className="text-lg font-bold text-white">A</span>
+      {/* Logo */}
+      <div className="flex h-20 shrink-0 items-center px-6">
+        <Link href="/admin-dashboard" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-[#c1ff72] shadow-lg shadow-neutral-900/10">
+            <Shield className="h-[22px] w-[22px]" strokeWidth={2.5} />
           </div>
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-neutral-900">
-              Admin Panel
-            </h2>
-            <p className="text-xs text-neutral-500">Management</p>
-          </div>
-        </div>
+          <span className="text-xl font-bold tracking-tight text-neutral-900">
+            Study<span className="text-neutral-500">Sense</span>
+          </span>
+        </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-        {sidebarItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-
-          return (
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <nav className="flex flex-col gap-1">
+          <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+            Admin
+          </div>
+          {sidebarItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all",
-                isActive
-                  ? "bg-gradient-to-r from-[#fec5fb]/10 to-[#ff9bf5]/10 text-[#fec5fb] shadow-sm"
-                  : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                isActive(item.href)
+                  ? "bg-neutral-900 text-white shadow-lg shadow-neutral-900/10"
+                  : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span>{item.title}</span>
+              <item.icon
+                className={cn(
+                  "h-[18px] w-[18px] transition-colors",
+                  isActive(item.href)
+                    ? "text-[#c1ff72]"
+                    : "text-neutral-500 group-hover:text-neutral-900"
+                )}
+                strokeWidth={2}
+              />
+              {item.title}
             </Link>
-          );
-        })}
-      </nav>
+          ))}
+        </nav>
+      </div>
 
-      {/* Footer */}
-      <div className="border-t border-neutral-200/60 p-4">
-        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-neutral-600 transition-all hover:bg-neutral-50 hover:text-neutral-900">
-          <LogOut className="h-5 w-5" />
-          <span>Logout</span>
-        </button>
+      {/* Footer / Logout */}
+      <div className="border-t border-neutral-200 p-4">
+        <Button
+          variant="ghost"
+          className="flex w-full items-center justify-start gap-3 rounded-xl py-6 text-neutral-600 hover:bg-red-50 hover:text-red-600"
+        >
+          <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
+          <span className="text-sm font-medium">Log out</span>
+        </Button>
       </div>
     </aside>
   );
