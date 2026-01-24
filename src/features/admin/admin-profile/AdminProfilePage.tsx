@@ -11,8 +11,20 @@ export interface AdminProfileData {
 
 interface AdminProfilePageProps {
   profile: AdminProfileData;
+  onUpdateProfile?: (data: { name: string; email: string }) => void;
+  onChangePassword?: (data: { currentPassword: string; newPassword: string }) => void;
 }
 
-export function AdminProfilePage({ profile }: AdminProfilePageProps) {
-  return <AdminProfile profile={profile} />;
+export function AdminProfilePage({ 
+  profile, 
+  onUpdateProfile, 
+  onChangePassword 
+}: AdminProfilePageProps) {
+  return (
+    <AdminProfile 
+      profile={profile} 
+      onUpdateProfile={onUpdateProfile}
+      onChangePassword={onChangePassword}
+    />
+  );
 }

@@ -13,6 +13,7 @@ interface AdminTableProps<T> {
   data: T[];
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+  renderActions?: (item: T) => ReactNode;
 }
 
 export function AdminTable<T extends Record<string, any>>({
@@ -20,6 +21,7 @@ export function AdminTable<T extends Record<string, any>>({
   data,
   onEdit,
   onDelete,
+  renderActions,
 }: AdminTableProps<T>) {
   const handleEdit = (item: T) => {
     if (onEdit) {
@@ -32,6 +34,8 @@ export function AdminTable<T extends Record<string, any>>({
       onDelete(item);
     }
   };
+
+  const hasActions = onEdit || onDelete || renderActions;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white/80 shadow-sm backdrop-blur-xl">
@@ -47,7 +51,7 @@ export function AdminTable<T extends Record<string, any>>({
                   {column.label}
                 </th>
               ))}
-              {(onEdit || onDelete) && (
+              {hasActions && (
                 <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-neutral-600">
                   Actions
                 </th>
@@ -58,7 +62,7 @@ export function AdminTable<T extends Record<string, any>>({
             {data.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (onEdit || onDelete ? 1 : 0)}
+                  colSpan={columns.length + (hasActions ? 1 : 0)}
                   className="px-6 py-12 text-center text-sm text-neutral-500"
                 >
                   No data available
@@ -78,23 +82,29 @@ export function AdminTable<T extends Record<string, any>>({
                       {column.render ? column.render(item) : item[column.key]}
                     </td>
                   ))}
-                  {(onEdit || onDelete) && (
+                  {hasActions && (
                     <td className="space-x-3 whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                      {onEdit && (
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="rounded-lg px-3 py-1.5 text-[#00bae2] transition-all hover:bg-[#00bae2]/10"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={() => handleDelete(item)}
-                          className="rounded-lg px-3 py-1.5 text-red-600 transition-all hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
+                      {renderActions ? (
+                        renderActions(item)
+                      ) : (
+                        <>
+                          {onEdit && (
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="rounded-lg px-3 py-1.5 text-[#00bae2] transition-all hover:bg-[#00bae2]/10"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => handleDelete(item)}
+                              className="rounded-lg px-3 py-1.5 text-red-600 transition-all hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   )}

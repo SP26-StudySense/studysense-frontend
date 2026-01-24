@@ -12,6 +12,7 @@ export default function UsersPage() {
       role: "Student",
       status: "Active",
       joinDate: "2024-01-15",
+      isLocked: false,
     },
     {
       id: "2",
@@ -20,6 +21,7 @@ export default function UsersPage() {
       role: "Student",
       status: "Active",
       joinDate: "2024-02-20",
+      isLocked: false,
     },
     {
       id: "3",
@@ -28,6 +30,7 @@ export default function UsersPage() {
       role: "Instructor",
       status: "Active",
       joinDate: "2024-01-10",
+      isLocked: true,
     },
     {
       id: "4",
@@ -36,6 +39,7 @@ export default function UsersPage() {
       role: "Student",
       status: "Inactive",
       joinDate: "2024-03-05",
+      isLocked: false,
     },
     {
       id: "5",
@@ -44,16 +48,17 @@ export default function UsersPage() {
       role: "Student",
       status: "Active",
       joinDate: "2024-02-28",
+      isLocked: false,
     },
   ];
 
-  const handleEdit = (user: User) => {
-    console.log("Edit user:", user);
+  const handleLockUser = (user: User) => {
+    console.log("Lock user:", user);
   };
 
-  const handleDelete = (user: User) => {
-    console.log("Delete user:", user);
+  const handleUnlockUser = (user: User) => {
+    console.log("Unlock user:", user);
   };
 
-  return <AdminUsersPage users={users} onEdit={handleEdit} onDelete={handleDelete} />;
+  return <AdminUsersPage users={users} onLockUser={handleLockUser} onUnlockUser={handleUnlockUser} />;
 }

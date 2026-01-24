@@ -5,4 +5,5 @@ export interface User {
   role: string;
   status: string;
   joinDate: string;
+  isLocked?: boolean;
 }

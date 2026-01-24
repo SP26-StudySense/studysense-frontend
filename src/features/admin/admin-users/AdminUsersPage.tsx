@@ -1,19 +1,64 @@
 "use client";
 
+import { useState } from "react";
+import { Lock, Unlock } from "lucide-react";
 import { AdminTable, TableColumn } from "../components";
+import { ConfirmationModal } from "@/shared/ui";
 import { User } from "./types";
 
 interface AdminUsersPageProps {
   users?: User[];
-  onEdit?: (user: User) => void;
-  onDelete?: (user: User) => void;
+  onLockUser?: (user: User) => void;
+  onUnlockUser?: (user: User) => void;
 }
 
 export function AdminUsersPage({
   users = [],
-  onEdit,
-  onDelete,
+  onLockUser,
+  onUnlockUser,
 }: AdminUsersPageProps) {
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    user: User | null;
+    action: "lock" | "unlock";
+  }>({
+    isOpen: false,
+    user: null,
+    action: "lock",
+  });
+
+  const handleLockClick = (user: User) => {
+    setConfirmModal({
+      isOpen: true,
+      user,
+      action: "lock",
+    });
+  };
+
+  const handleUnlockClick = (user: User) => {
+    setConfirmModal({
+      isOpen: true,
+      user,
+      action: "unlock",
+    });
+  };
+
+  const handleConfirm = () => {
+    if (!confirmModal.user) return;
+
+    if (confirmModal.action === "lock" && onLockUser) {
+      onLockUser(confirmModal.user);
+    } else if (confirmModal.action === "unlock" && onUnlockUser) {
+      onUnlockUser(confirmModal.user);
+    }
+
+    setConfirmModal({ isOpen: false, user: null, action: "lock" });
+  };
+
+  const handleCloseModal = () => {
+    setConfirmModal({ isOpen: false, user: null, action: "lock" });
+  };
+
   const columns: TableColumn<User>[] = [
     { key: "id", label: "ID" },
     { key: "name", label: "Name" },
@@ -37,25 +82,91 @@ export function AdminUsersPage({
     { key: "joinDate", label: "Join Date" },
   ];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+  const renderActions = (user: User) => {
+    const isLocked = user.isLocked || false;
+
+    if (isLocked) {
+      return (
+        <button
+          onClick={() => handleUnlockClick(user)}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-green-600 transition-all hover:bg-green-50"
+        >
+          <Unlock className="h-4 w-4" />
+          Unlock
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => handleLockClick(user)}
+        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-amber-600 transition-all hover:bg-amber-50"
+      >
+        <Lock className="h-4 w-4" />
+        Lock
+      </button>
+    );
+  };
+
+  const getModalContent = () => {
+    if (!confirmModal.user) return { title: "", description: "" };
+
+    const isLock = confirmModal.action === "lock";
+    const { name, email } = confirmModal.user;
+
+    return {
+      title: isLock ? "Lock User Account" : "Unlock User Account",
+      description: (
         <div>
-          <p className="text-sm text-neutral-600">
-            Manage all registered users
+          <p className="mb-3">
+            Are you sure you want to {isLock ? "lock" : "unlock"} the account
+            for:
+          </p>
+          <div className="rounded-lg bg-neutral-100 p-3">
+            <p className="font-medium text-neutral-900">{name}</p>
+            <p className="text-sm text-neutral-600">{email}</p>
+          </div>
+          <p className="mt-3 text-xs text-neutral-500">
+            {isLock
+              ? "The user will not be able to access their account until unlocked."
+              : "The user will regain access to their account."}
           </p>
         </div>
-        <button className="rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2.5 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md">
-          Add User
-        </button>
+      ),
+      confirmText: isLock ? "Lock Account" : "Unlock Account",
+      variant: isLock ? ("default" as const) : ("default" as const),
+    };
+  };
+
+  const modalContent = getModalContent();
+
+  return (
+    <>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-neutral-600">
+              Manage all registered users
+            </p>
+          </div>
+        </div>
+
+        <AdminTable
+          columns={columns}
+          data={users}
+          renderActions={renderActions}
+        />
       </div>
 
-      <AdminTable
-        columns={columns}
-        data={users}
-        onEdit={onEdit}
-        onDelete={onDelete}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirm}
+        title={modalContent.title}
+        description={modalContent.description}
+        confirmText={modalContent.confirmText}
+        variant={modalContent.variant}
       />
-    </div>
+    </>
   );
 }
