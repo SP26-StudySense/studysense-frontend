@@ -6,7 +6,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
 
   // API
-  NEXT_PUBLIC_API_URL: z.string().url().default('https://localhost:7243/api'),
+  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:15000/api'),
   NEXT_PUBLIC_API_URL_HTTP: z.string().url().default('http://localhost:15000/api'),
   NEXT_PUBLIC_API_TIMEOUT: z.coerce.number().default(30000),
 

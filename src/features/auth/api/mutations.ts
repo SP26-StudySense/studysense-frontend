@@ -371,7 +371,7 @@ export function useGoogleLogin() {
 
     // Include opener origin so backend knows where to postMessage
     const openerOrigin = window.location.origin;
-    const googleLoginUrl = `${env.NEXT_PUBLIC_API_URL}${endpoints.auth.googleLogin}?returnUrl=${encodeURIComponent(returnUrl)}&opener=${encodeURIComponent(openerOrigin)}`;
+    const googleLoginUrl = `${env.NEXT_PUBLIC_API_URL_HTTP}${endpoints.auth.googleLogin}?returnUrl=${encodeURIComponent(returnUrl)}&opener=${encodeURIComponent(openerOrigin)}`;
 
     popupRef.current = window.open(
       googleLoginUrl,
