@@ -11,6 +11,7 @@ import {
   UserCog,
   LogOut,
   Shield,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -30,6 +31,11 @@ const sidebarItems = [
     title: "Categories",
     href: "/admin-categories",
     icon: FolderTree,
+  },
+  {
+    title: "Surveys",
+    href: "/admin-surveys",
+    icon: ClipboardList,
   },
   {
     title: "Roadmaps",

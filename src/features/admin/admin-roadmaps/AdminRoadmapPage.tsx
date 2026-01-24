@@ -66,7 +66,7 @@ function NodeFormModal({
       <div className="w-full max-w-lg rounded-3xl bg-white border border-neutral-200 shadow-2xl">
         <div className="p-6 border-b border-neutral-100">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-neutral-900">
+            <h2 className="text-xl font-bold text-neutral-900 m-0">
               {mode === 'create' ? 'Add New Node' : 'Edit Node'}
             </h2>
             <button
@@ -204,7 +204,7 @@ function ResourceFormModal({
       <div className="w-full max-w-md rounded-3xl bg-white border border-neutral-200 shadow-2xl">
         <div className="p-6 border-b border-neutral-100">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-neutral-900">
+            <h2 className="text-xl font-bold text-neutral-900 m-0">
               {mode === 'create' ? 'Add Resource' : 'Edit Resource'}
             </h2>
             <button
@@ -313,7 +313,7 @@ function TaskFormModal({
       <div className="w-full max-w-md rounded-3xl bg-white border border-neutral-200 shadow-2xl">
         <div className="p-6 border-b border-neutral-100">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-neutral-900">
+            <h2 className="text-xl font-bold text-neutral-900 m-0">
               {mode === 'create' ? 'Add Task' : 'Edit Task'}
             </h2>
             <button
@@ -410,7 +410,7 @@ function EdgeFormModal({
       <div className="w-full max-w-md rounded-3xl bg-white border border-neutral-200 shadow-2xl">
         <div className="p-6 border-b border-neutral-100">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-neutral-900">Create Edge</h2>
+            <h2 className="text-xl font-bold text-neutral-900 m-0">Create Edge</h2>
             <button
               onClick={onClose}
               className="p-2 rounded-xl hover:bg-neutral-100 transition-colors"
@@ -531,7 +531,7 @@ function AdminNodeDetailPanel({
       <div className="p-6 border-b border-neutral-100">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-neutral-900 mb-2">
+            <h2 className="text-xl font-bold text-neutral-900 m-0 mb-2">
               {node.title}
             </h2>
             <div className="flex items-center gap-2">

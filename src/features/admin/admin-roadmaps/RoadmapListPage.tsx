@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Filter, Plus, Eye, Edit, Trash2, X } from "lucide-react";
+import { Search, Filter, Plus, Eye, Edit, Trash2, X, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { ConfirmationModal } from "@/shared/ui";
 
@@ -26,7 +26,8 @@ type ModalState =
   | { type: 'none' }
   | { type: 'create' }
   | { type: 'edit'; roadmap: Roadmap }
-  | { type: 'delete'; id: string; title: string };
+  | { type: 'delete'; id: string; title: string }
+  | { type: 'aiGenerate' };
 
 // Roadmap Form Modal Component
 function RoadmapFormModal({
@@ -75,7 +76,7 @@ function RoadmapFormModal({
       <div className="w-full max-w-2xl rounded-3xl bg-white border border-neutral-200 shadow-2xl">
         <div className="p-6 border-b border-neutral-100">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-neutral-900">
+            <h2 className="text-xl font-bold text-neutral-900 m-0">
               {mode === 'create' ? 'Create New Roadmap' : 'Edit Roadmap'}
             </h2>
             <button
@@ -174,8 +175,164 @@ function RoadmapFormModal({
   );
 }
 
+// AI Generate Modal Component
+function AIGenerateModal({
+  isOpen,
+  onClose,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: { title: string; categoryId: string; subjectId: string; description: string }) => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: '',
+    categoryId: '1',
+    subjectId: '1',
+    description: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim()) return;
+    onSubmit(formData);
+    onClose();
+    setFormData({ title: '', categoryId: '1', subjectId: '1', description: '' });
+  };
+
+  if (!isOpen) return null;
+
+  // Mock categories and subjects
+  const categories = [
+    { id: '1', name: 'Programming' },
+    { id: '2', name: 'Design' },
+  ];
+
+  const subjects = [
+    { id: '1', name: 'Frontend Development' },
+    { id: '2', name: 'UI/UX Design' },
+    { id: '3', name: 'Backend Development' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-3xl bg-white border border-neutral-200 shadow-2xl">
+        <div className="p-6 border-b border-neutral-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-neutral-900 m-0">
+                Generate Roadmap with AI
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-neutral-100 transition-colors"
+            >
+              <X className="h-5 w-5 text-neutral-400" />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 p-4 border border-purple-100">
+            <p className="text-sm text-purple-900">
+              <strong>AI-Powered Generation:</strong> Our AI will create a comprehensive learning roadmap based on your inputs, including nodes, connections, and recommended resources.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
+              Roadmap Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+              placeholder="e.g., Complete Web Development Path"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+                required
+              >
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                Subject <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.subjectId}
+                onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+                required
+              >
+                {subjects.map((subj) => (
+                  <option key={subj.id} value={subj.id}>
+                    {subj.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
+              Learning Goal (Optional)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 min-h-[100px]"
+              placeholder="Describe what you want to learn or achieve with this roadmap..."
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function RoadmapListPage({ initialRoadmaps = [] }: RoadmapListPageProps) {
-  const [roadmaps] = useState<Roadmap[]>(initialRoadmaps);
+  const [roadmaps, setRoadmaps] = useState<Roadmap[]>(initialRoadmaps);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
@@ -214,6 +371,32 @@ export function RoadmapListPage({ initialRoadmaps = [] }: RoadmapListPageProps) 
 
   const handleDeleteRoadmap = () => {
     console.log("Delete roadmap:", modalState);
+    setModalState({ type: 'none' });
+  };
+
+  const handleAIGenerate = (data: { title: string; categoryId: string; subjectId: string; description: string }) => {
+    console.log("AI Generate roadmap:", data);
+    
+    // Mock: Create a new roadmap from AI generation
+    const categoryName = data.categoryId === '1' ? 'Programming' : 'Design';
+    const subjectName = data.subjectId === '1' ? 'Frontend Development' : 
+                       data.subjectId === '2' ? 'UI/UX Design' : 'Backend Development';
+    
+    const newRoadmap: Roadmap = {
+      id: `ai-${Date.now()}`,
+      title: data.title,
+      description: data.description || `AI-generated roadmap for ${data.title}`,
+      categoryId: data.categoryId,
+      categoryName,
+      subjectId: data.subjectId,
+      subjectName,
+      totalNodes: Math.floor(Math.random() * 10) + 5, // Random 5-15 nodes
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Add to list
+    setRoadmaps([newRoadmap, ...roadmaps]);
     setModalState({ type: 'none' });
   };
 
@@ -282,6 +465,15 @@ export function RoadmapListPage({ initialRoadmaps = [] }: RoadmapListPageProps) 
               ))}
             </select>
           </div>
+
+          {/* Generate with AI Button */}
+          <button
+            onClick={() => setModalState({ type: 'aiGenerate' })}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
+          >
+            <Sparkles className="h-4 w-4" />
+            Generate with AI
+          </button>
         </div>
       </div>
 
@@ -403,6 +595,13 @@ export function RoadmapListPage({ initialRoadmaps = [] }: RoadmapListPageProps) 
         onSubmit={modalState.type === 'create' ? handleCreateRoadmap : handleUpdateRoadmap}
         initialData={modalState.type === 'edit' ? modalState.roadmap : undefined}
         mode={modalState.type === 'create' ? 'create' : 'edit'}
+      />
+
+      {/* AI Generate Roadmap Modal */}
+      <AIGenerateModal
+        isOpen={modalState.type === 'aiGenerate'}
+        onClose={() => setModalState({ type: 'none' })}
+        onSubmit={handleAIGenerate}
       />
 
       {/* Delete Roadmap Confirmation */}
