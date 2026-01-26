@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { X, Clock, FileText, BookOpen, Video, Circle, Play } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { RoadmapNodeData, DifficultyLevel } from './RoadmapNode';
@@ -42,10 +43,16 @@ const resourceIcons = {
 };
 
 export function NodeDetailPanel({ node, onClose, className }: NodeDetailPanelProps) {
+    const router = useRouter();
+
     if (!node) return null;
 
     const difficulty = difficultyConfig[node.difficulty];
-    const progress = node.totalTasks > 0 ? (node.completedTasks / node.totalTasks) * 100 : 0;
+
+    const handleStartLearning = () => {
+        // Navigate to study plan page (hardcoded to /study-plans/1 for now)
+        router.push('/study-plans/1');
+    };
 
     return (
         <div className={cn(
@@ -87,22 +94,6 @@ export function NodeDetailPanel({ node, onClose, className }: NodeDetailPanelPro
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 lg:space-y-6">
-                {/* Progress */}
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-neutral-900">Progress</h3>
-                        <span className="text-sm text-neutral-500">
-                            {node.completedTasks}/{node.totalTasks} tasks ({Math.round(progress)}%)
-                        </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-neutral-100 overflow-hidden">
-                        <div
-                            className="h-full rounded-full bg-gradient-to-r from-[#00bae2] to-[#00a0c6] transition-all duration-500"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-                </div>
-
                 {/* Prerequisites */}
                 {node.prerequisites.length > 0 && (
                     <div>
@@ -150,44 +141,14 @@ export function NodeDetailPanel({ node, onClose, className }: NodeDetailPanelPro
                         </div>
                     </div>
                 )}
-
-                {/* Tasks */}
-                {node.tasks.length > 0 && (
-                    <div>
-                        <h3 className="font-semibold text-neutral-900 mb-3">Tasks</h3>
-                        <div className="space-y-2">
-                            {node.tasks.map(task => (
-                                <div
-                                    key={task.id}
-                                    className="flex items-center gap-3 text-sm"
-                                >
-                                    <div className={cn(
-                                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
-                                        task.isCompleted
-                                            ? "bg-[#00bae2] border-[#00bae2] text-white"
-                                            : "border-neutral-300"
-                                    )}>
-                                        {task.isCompleted && (
-                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        )}
-                                    </div>
-                                    <span className={cn(
-                                        task.isCompleted ? "text-neutral-400" : "text-neutral-700"
-                                    )}>
-                                        {task.title}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Footer */}
             <div className="p-6 border-t border-neutral-100">
-                <button className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 transition-all">
+                <button
+                    onClick={handleStartLearning}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-semibold text-white shadow-xl transition-all bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40"
+                >
                     <Play className="h-5 w-5" fill="currentColor" />
                     Start Learning
                 </button>
@@ -197,3 +158,4 @@ export function NodeDetailPanel({ node, onClose, className }: NodeDetailPanelPro
 }
 
 export type { NodeDetailData, NodeResource, NodeTask };
+

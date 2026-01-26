@@ -10,7 +10,8 @@ import {
     Users,
     Settings,
     LogOut,
-    GitFork
+    GitFork,
+    History
 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
@@ -26,7 +27,7 @@ const sidebarItems = [
     },
     {
         title: 'Study Plans',
-        href: '/study-plans',
+        href: '/study-plans/1',
         icon: BookOpen,
     },
     {
@@ -38,6 +39,11 @@ const sidebarItems = [
         title: 'Sessions',
         href: '/sessions',
         icon: Calendar,
+    },
+    {
+        title: 'History',
+        href: '/sessions/history',
+        icon: History,
     },
     {
         title: 'Community',
@@ -59,6 +65,14 @@ export function Sidebar() {
     const isActive = (href: string) => {
         if (href === '/dashboard') {
             return pathname === href;
+        }
+        // Specific exception: Don't highlight 'Sessions' when on 'History' page
+        if (href === '/sessions' && pathname.startsWith('/sessions/history')) {
+            return false;
+        }
+        // Exception: Highlight 'Study Plans' for any study plan page
+        if (href === '/study-plans/1' && pathname.startsWith('/study-plans')) {
+            return true;
         }
         return pathname.startsWith(href);
     };
