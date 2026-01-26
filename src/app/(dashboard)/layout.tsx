@@ -15,6 +15,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/profile')) return 'Profile';
   if (pathname.startsWith('/study-plans')) return 'Study Plans';
   if (pathname.startsWith('/roadmaps')) return 'Roadmaps';
+  if (pathname === '/sessions/history') return 'Session History';
   if (pathname.startsWith('/sessions')) return 'Sessions';
   if (pathname.startsWith('/community')) return 'Community';
   if (pathname.startsWith('/settings')) return 'Settings';
