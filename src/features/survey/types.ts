@@ -4,6 +4,14 @@
 
 import { BaseEntity } from '@/shared/types';
 
+// Survey Status Response (for checking if user needs to complete initial survey)
+export interface SurveyStatusResponse {
+  requiresInitialSurvey: boolean;
+  surveyId?: number;
+  surveyCode?: string;
+  redirectUrl?: string;
+}
+
 // Survey entity
 export interface Survey extends BaseEntity {
   userId: string;
@@ -59,6 +67,8 @@ export enum QuestionType {
   RATING = 'Rating',
   SCALE = 'Scale',
   TIME = 'Time',
+  SHORT_ANSWER = 'ShortAnswer',
+  FREE_TEXT = 'FreeText',
 }
 
 // Question option (for choice questions)
@@ -78,14 +88,48 @@ export interface QuestionValidation {
   pattern?: string;
 }
 
-// Survey response
+// Survey response (for UI state)
 export interface SurveyResponse {
   questionId: string;
   value: string | string[] | number;
   answeredAt: string;
 }
 
-// Submit survey request
+// Backend API types for TakeSurvey
+export enum SurveyTriggerReason {
+  INITIAL = 'Initial',
+  RESURVEY = 'Resurvey',
+  MANUAL = 'Manual',
+}
+
+export interface SurveyAnswerInput {
+  questionId: number;
+  optionId?: number | null;
+  numberValue?: number | null;
+  textValue?: string | null;
+  answeredAt: string;
+}
+
+export interface TakeSurveyRequest {
+  startedAt: string;
+  submittedAt: string | null;
+  triggerReason: SurveyTriggerReason;
+  answers: SurveyAnswerInput[];
+}
+
+export interface TakeSurveyResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    responseId: number;
+    status: string; // "InProgress" | "Completed"
+    answeredCount: number;
+    totalQuestions: number;
+    validationErrors?: string[];
+  };
+}
+
+// Legacy - for backward compatibility
 export interface SubmitSurveyRequest {
   surveyId: string;
   responses: SurveyResponse[];
