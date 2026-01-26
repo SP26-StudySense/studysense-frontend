@@ -48,6 +48,12 @@ export const routes = {
       history: '/sessions/history',
     },
 
+    // Surveys
+    surveys: {
+      list: '/surveys',
+      take: (id: string | number) => `/surveys/${id}`,
+    },
+
     // Profile & Settings
     profile: '/profile',
     settings: '/settings',

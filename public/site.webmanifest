@@ -1,0 +1,15 @@
+{
+  "name": "StudySense",
+  "short_name": "StudySense",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ],
+  "theme_color": "#00bae2",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/"
+}

@@ -29,6 +29,7 @@ import type {
   GoogleLoginCallbackData,
   User,
 } from '../types';
+import type { SurveyStatusResponse } from '@/features/survey/types';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
@@ -85,6 +86,26 @@ function clearUserFromStorage(): void {
 }
 
 /**
+ * Check survey status and redirect accordingly
+ * Returns the URL to redirect to (either survey or dashboard)
+ */
+async function checkSurveyStatusAndGetRedirectUrl(): Promise<string> {
+  try {
+    const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
+    
+    if (surveyStatus.requiresInitialSurvey && surveyStatus.redirectUrl) {
+      return surveyStatus.redirectUrl;
+    }
+    
+    return routes.dashboard.home;
+  } catch (error) {
+    console.error('[Survey Status] Failed to check survey status:', error);
+    // On error, proceed to dashboard
+    return routes.dashboard.home;
+  }
+}
+
+/**
  * Login mutation
  * Response includes accessToken directly (not nested in tokens)
  * Refresh token is automatically set via HttpOnly cookie by backend
@@ -96,7 +117,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginRequest) =>
       post<LoginResponse>(endpoints.auth.login, data),
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       // Store access token in cookie
       setAccessToken(response.accessToken, response.accessTokenExpiresUtc);
 
@@ -107,13 +128,15 @@ export function useLogin() {
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
 
       // Show success toast
-      // Show success toast
       toast.success('Login successful!', {
         description: `Welcome ${response.user.firstName || response.user.email}`,
       });
 
-      // Redirect to returnUrl or dashboard
-      router.push(response.returnUrl || routes.dashboard.home);
+      // Check if user needs to complete initial survey
+      const redirectUrl = await checkSurveyStatusAndGetRedirectUrl();
+      
+      console.log('[Login] Redirecting to:', redirectUrl);
+      router.push(redirectUrl);
     },
     onError: (error) => {
       // Clear any stale auth data
@@ -287,7 +310,7 @@ export function useGoogleLogin() {
   const popupRef = useRef<Window | null>(null);
 
   const handleMessage = useCallback(
-    (event: MessageEvent<GoogleLoginCallbackData>) => {
+    async (event: MessageEvent<GoogleLoginCallbackData>) => {
       console.log('[Google Login] Received message:', event.origin, event.data);
 
       // Validate origin - should match API origin
@@ -346,8 +369,12 @@ export function useGoogleLogin() {
           description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
         });
 
+        // Check if user needs to complete initial survey
+        const redirectUrl = await checkSurveyStatusAndGetRedirectUrl();
+        console.log('[Google Login] Redirecting to:', redirectUrl);
+        
         // Redirect
-        router.push(returnUrl || routes.dashboard.home);
+        router.push(redirectUrl);
       }
 
       // Close popup if still open

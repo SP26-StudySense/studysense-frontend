@@ -68,6 +68,13 @@ export const queryKeys = {
     initial: () => ['surveys', 'initial'] as const,
     resurvey: () => ['surveys', 'resurvey'] as const,
     results: (id: string) => ['surveys', 'detail', id, 'results'] as const,
+    questions: (id: string) => ['surveys', 'detail', id, 'questions'] as const,
+    options: (questionId: string) => ['surveys', 'questions', questionId, 'options'] as const,
+  },
+
+  // Survey status
+  survey: {
+    status: () => ['survey', 'status'] as const,
   },
 
   // Recommendations

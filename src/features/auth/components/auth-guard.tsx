@@ -37,20 +37,26 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const { data: user, isLoading, error } = useCurrentUser();
 
+  console.log('[AuthGuard] State:', { user: !!user, isLoading, error: error?.message });
+
   useEffect(() => {
     if (!isLoading && (!user || error)) {
+      console.log('[AuthGuard] Redirecting to login - no user');
       router.push(routes.auth.login);
     }
   }, [user, isLoading, error, router]);
 
   if (isLoading) {
+    console.log('[AuthGuard] Loading...');
     return fallback || <DefaultLoading />;
   }
 
   if (!user) {
+    console.log('[AuthGuard] No user, showing loading');
     return fallback || <DefaultLoading />;
   }
 
+  console.log('[AuthGuard] User authenticated, rendering children');
   return <>{children}</>;
 }
 
@@ -62,21 +68,30 @@ export function GuestGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser({ enabled: true });
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.push(routes.dashboard.home);
-    }
-  }, [user, isLoading, router]);
+  console.log('[GuestGuard] State:', { user: !!user, isLoading });
+
+  // TEMPORARY: Disable redirect to allow login
+  // useEffect(() => {
+  //   if (!isLoading && user) {
+  //     console.log('[GuestGuard] User exists, redirecting to dashboard');
+  //     router.push(routes.dashboard.home);
+  //   }
+  // }, [user, isLoading, router]);
 
   if (isLoading) {
+    console.log('[GuestGuard] Loading...');
     return fallback || <DefaultLoading />;
   }
 
-  if (user) {
-    return fallback || <DefaultLoading />;
-  }
-
+  // TEMPORARY: Always show login page
+  console.log('[GuestGuard] Rendering children (temp bypass)');
   return <>{children}</>;
+
+  // if (user) {
+  //   return fallback || <DefaultLoading />;
+  // }
+
+  // return <>{children}</>;
 }
 
 /**
