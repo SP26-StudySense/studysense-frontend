@@ -243,42 +243,42 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-5 pb-8">
       {/* Survey Header - Modern Banner Style */}
-      <div className="glass-panel rounded-3xl border border-white/60 bg-gradient-to-br from-white/60 to-white/40 p-8 shadow-xl backdrop-blur-xl">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-neutral-900">
+      <div className="glass-panel rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 to-white/40 p-5 shadow-xl backdrop-blur-xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-neutral-900">
               {survey?.title || 'Survey'}
             </h1>
-            <p className="text-neutral-600">
+            <p className="text-sm text-neutral-600">
               {survey?.description || 'Complete the questions below to help us personalize your experience'}
             </p>
           </div>
           
           {/* Progress Stats */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-neutral-900">{currentStep + 1}</div>
+              <div className="text-xl font-bold text-neutral-900">{currentStep + 1}</div>
               <div className="text-xs text-neutral-500">Current</div>
             </div>
-            <div className="h-12 w-px bg-neutral-200"></div>
+            <div className="h-10 w-px bg-neutral-200"></div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-neutral-900">{totalSteps}</div>
+              <div className="text-xl font-bold text-neutral-900">{totalSteps}</div>
               <div className="text-xs text-neutral-500">Total</div>
             </div>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="mt-6 space-y-2">
+        <div className="mt-4 space-y-1.5">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-neutral-700">Overall Progress</span>
             <span className="font-bold text-neutral-900">
               {Math.round(((currentStep + 1) / totalSteps) * 100)}%
             </span>
           </div>
-          <div className="h-3 overflow-hidden rounded-full bg-neutral-100 shadow-inner">
+          <div className="h-2.5 overflow-hidden rounded-full bg-neutral-100 shadow-inner">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] shadow-lg transition-all duration-500 ease-out"
               style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
@@ -288,17 +288,17 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
       </div>
 
       {/* Question Card - Enhanced Design */}
-      <div className="glass-panel group rounded-3xl border border-white/60 bg-white/40 p-8 shadow-xl backdrop-blur-xl transition-all hover:shadow-2xl hover:border-[#00bae2]/30 hover:-translate-y-1">
+      <div className="glass-panel group rounded-2xl border border-white/60 bg-white/40 p-6 shadow-xl backdrop-blur-xl transition-all hover:shadow-2xl hover:border-[#00bae2]/30 hover:-translate-y-1">
         {optionsLoading ? (
-          <div className="flex flex-col items-center justify-center py-16">
+          <div className="flex flex-col items-center justify-center py-12">
             <LoadingSpinner size="lg" />
-            <p className="mt-4 text-sm text-neutral-500">Loading question...</p>
+            <p className="mt-3 text-sm text-neutral-500">Loading question...</p>
           </div>
         ) : currentQuestionWithOptions ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Question Number Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#fec5fb]/20 to-[#00bae2]/20 px-4 py-2 text-sm font-semibold text-neutral-700">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] text-xs font-bold text-neutral-900">
+            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#fec5fb]/20 to-[#00bae2]/20 px-3 py-1.5 text-sm font-semibold text-neutral-700">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] text-xs font-bold text-neutral-900">
                 {currentStep + 1}
               </span>
               Question {currentStep + 1} of {totalSteps}
@@ -314,9 +314,9 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
 
         {/* Validation Error */}
         {validationError && (
-          <div className="mt-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-600 backdrop-blur-sm">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
-              <AlertCircle className="h-4 w-4" />
+          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600 backdrop-blur-sm">
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
+              <AlertCircle className="h-3.5 w-3.5" />
             </div>
             <span className="font-medium">{validationError}</span>
           </div>
@@ -324,10 +324,10 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
       </div>
 
       {/* Navigation Section - Enhanced */}
-      <div className="glass-panel rounded-3xl border border-white/60 bg-white/40 p-6 shadow-xl backdrop-blur-xl">
-        <div className="flex flex-col gap-6">
+      <div className="glass-panel rounded-2xl border border-white/60 bg-white/40 p-4 shadow-xl backdrop-blur-xl">
+        <div className="flex flex-col gap-4">
           {/* Step Indicators */}
-          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
+          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1">
             {questions.map((_, index) => (
               <button
                 key={index}
