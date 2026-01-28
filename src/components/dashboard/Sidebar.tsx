@@ -26,13 +26,13 @@ const sidebarItems = [
         icon: LayoutDashboard,
     },
     {
-        title: 'Study Plans',
+        title: 'Study Schedule',
         href: '/study-plans/1',
         icon: BookOpen,
     },
     {
-        title: 'Roadmaps',
-        href: '/roadmaps',
+        title: 'My Roadmap',
+        href: '/roadmaps/user-frontend-1',
         icon: Map,
     },
     {
