@@ -25,7 +25,7 @@ export const Header = () => {
 
                 <nav className="hidden items-center gap-x-8 md:flex">
                     <Link
-                        href="#roadmaps"
+                        href="/roadmaps"
                         className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
                     >
                         Roadmaps

@@ -29,7 +29,6 @@ import type {
   GoogleLoginCallbackData,
   User,
 } from '../types';
-import type { SurveyStatusResponse } from '@/features/survey/types';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
@@ -87,22 +86,15 @@ function clearUserFromStorage(): void {
 
 /**
  * Check survey status and redirect accordingly
- * Returns the URL to redirect to (either survey or dashboard)
+ * Returns the URL to redirect to: /roadmaps (default after login)
+ * Survey redirects are handled separately when selecting template roadmaps
  */
-async function checkSurveyStatusAndGetRedirectUrl(): Promise<string> {
-  try {
-    const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
-    
-    if (surveyStatus.requiresInitialSurvey && surveyStatus.redirectUrl) {
-      return surveyStatus.redirectUrl;
-    }
-    
-    return routes.dashboard.home;
-  } catch (error) {
-    console.error('[Survey Status] Failed to check survey status:', error);
-    // On error, proceed to dashboard
-    return routes.dashboard.home;
-  }
+async function getPostLoginRedirectUrl(): Promise<string> {
+  // After login, always redirect to roadmaps selection page
+  // User will choose either:
+  // - Continue learning (My Learning Roadmaps) → goes to dashboard
+  // - Start new roadmap (Explore Templates) → goes to survey
+  return routes.dashboard.roadmaps.list;
 }
 
 /**
@@ -132,9 +124,9 @@ export function useLogin() {
         description: `Welcome ${response.user.firstName || response.user.email}`,
       });
 
-      // Check if user needs to complete initial survey
-      const redirectUrl = await checkSurveyStatusAndGetRedirectUrl();
-      
+      // Redirect to roadmaps selection page
+      const redirectUrl = await getPostLoginRedirectUrl();
+
       console.log('[Login] Redirecting to:', redirectUrl);
       router.push(redirectUrl);
     },
@@ -369,10 +361,10 @@ export function useGoogleLogin() {
           description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
         });
 
-        // Check if user needs to complete initial survey
-        const redirectUrl = await checkSurveyStatusAndGetRedirectUrl();
+        // Redirect to roadmaps selection page
+        const redirectUrl = await getPostLoginRedirectUrl();
         console.log('[Google Login] Redirecting to:', redirectUrl);
-        
+
         // Redirect
         router.push(redirectUrl);
       }

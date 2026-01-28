@@ -53,7 +53,11 @@ const MOCK_NODE_DETAILS: Record<string, Omit<NodeDetailData, keyof RoadmapNodeDa
     },
 };
 
-export function RoadmapsPage() {
+export interface RoadmapDetailProps {
+    roadmapId?: string;
+}
+
+export function RoadmapDetail({ roadmapId }: RoadmapDetailProps) {
     const [selectedNode, setSelectedNode] = useState<RoadmapNodeData | null>(null);
 
     const handleNodeSelect = (node: RoadmapNodeData) => {

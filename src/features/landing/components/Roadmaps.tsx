@@ -73,7 +73,7 @@ export const Roadmaps = () => {
                     Explore Roadmaps
                 </h2>
                 <Link
-                    href="#"
+                    href="/roadmaps"
                     className="hidden items-center text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-900 md:flex link-underline"
                 >
                     View all paths <ArrowRight className="ml-1" />
