@@ -53,7 +53,7 @@ export default function SurveyLayout({ children }: SurveyLayoutProps) {
                         </Link>
                     </header>
 
-                    <main className="container mx-auto px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <main className="px-8 lg:px-16 xl:px-24 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         {children}
                     </main>
                 </div>
