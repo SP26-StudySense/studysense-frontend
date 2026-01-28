@@ -243,140 +243,165 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 pb-12">
-      {/* Welcome Message for Initial Survey */}
-      {isInitialSurvey && currentStep === 0 && (
-        <div className="glass-panel rounded-3xl border border-blue-200 bg-blue-50/40 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex items-start gap-4">
-            <Info className="mt-1 h-6 w-6 flex-shrink-0 text-blue-600" />
-            <div>
-              <h3 className="mb-2 text-lg font-semibold text-neutral-900">
-                Welcome to StudySense! 🎓
-              </h3>
-              <p className="mb-3 text-sm text-neutral-700">
-                To personalize your learning experience, please complete this brief survey about your learning preferences and goals.
-              </p>
-              <p className="text-xs text-neutral-600">
-                <strong>Note:</strong> This survey is required to access the platform. Your responses will help us create a customized learning path just for you.
-              </p>
+    <div className="space-y-8 pb-12">
+      {/* Survey Header - Modern Banner Style */}
+      <div className="glass-panel rounded-3xl border border-white/60 bg-gradient-to-br from-white/60 to-white/40 p-8 shadow-xl backdrop-blur-xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-neutral-900">
+              {survey?.title || 'Survey'}
+            </h1>
+            <p className="text-neutral-600">
+              {survey?.description || 'Complete the questions below to help us personalize your experience'}
+            </p>
+          </div>
+          
+          {/* Progress Stats */}
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-neutral-900">{currentStep + 1}</div>
+              <div className="text-xs text-neutral-500">Current</div>
+            </div>
+            <div className="h-12 w-px bg-neutral-200"></div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-neutral-900">{totalSteps}</div>
+              <div className="text-xs text-neutral-500">Total</div>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Survey Header */}
-      <div className="text-center">
-        <div className="mb-4 flex items-center justify-center gap-2">
-          <h1 className="text-3xl font-bold text-neutral-900">
-            {survey?.title || 'Survey'}
-          </h1>
-          {/* Auto-save indicator */}
-          <div className="flex items-center gap-1 text-xs text-neutral-500">
-            <Save className="h-3 w-3" />
-            <span>Auto-saving</span>
+        {/* Progress Bar */}
+        <div className="mt-6 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-neutral-700">Overall Progress</span>
+            <span className="font-bold text-neutral-900">
+              {Math.round(((currentStep + 1) / totalSteps) * 100)}%
+            </span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-neutral-100 shadow-inner">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] shadow-lg transition-all duration-500 ease-out"
+              style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+            />
           </div>
         </div>
-        <p className="text-sm text-neutral-500">
-          Step {currentStep + 1} of {totalSteps}
-        </p>
       </div>
 
-      {/* Progress Bar */}
-      <div className="glass-panel rounded-full border border-white/60 bg-white/40 p-2 shadow-lg backdrop-blur-xl">
-        <div className="h-2 overflow-hidden rounded-full bg-neutral-200">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] transition-all duration-500"
-            style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Question Card */}
-      <div className="glass-panel rounded-3xl border border-white/60 bg-white/40 p-8 shadow-xl backdrop-blur-xl">
+      {/* Question Card - Enhanced Design */}
+      <div className="glass-panel group rounded-3xl border border-white/60 bg-white/40 p-8 shadow-xl backdrop-blur-xl transition-all hover:shadow-2xl hover:border-[#00bae2]/30 hover:-translate-y-1">
         {optionsLoading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-16">
             <LoadingSpinner size="lg" />
+            <p className="mt-4 text-sm text-neutral-500">Loading question...</p>
           </div>
         ) : currentQuestionWithOptions ? (
-          <QuestionRenderer
-            question={currentQuestionWithOptions}
-            value={responses[currentQuestionWithOptions.id]?.value || null}
-            onChange={handleResponseChange}
-          />
+          <div className="space-y-6">
+            {/* Question Number Badge */}
+            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#fec5fb]/20 to-[#00bae2]/20 px-4 py-2 text-sm font-semibold text-neutral-700">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] text-xs font-bold text-neutral-900">
+                {currentStep + 1}
+              </span>
+              Question {currentStep + 1} of {totalSteps}
+            </div>
+
+            <QuestionRenderer
+              question={currentQuestionWithOptions}
+              value={responses[currentQuestionWithOptions.id]?.value || null}
+              onChange={handleResponseChange}
+            />
+          </div>
         ) : null}
 
         {/* Validation Error */}
         {validationError && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-            <AlertCircle className="h-4 w-4" />
-            {validationError}
+          <div className="mt-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-600 backdrop-blur-sm">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
+              <AlertCircle className="h-4 w-4" />
+            </div>
+            <span className="font-medium">{validationError}</span>
           </div>
         )}
       </div>
 
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-between gap-4">
-        <Button
-          onClick={handlePrevious}
-          disabled={isFirstStep}
-          variant="brandOutline"
-          size="lg"
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Previous
-        </Button>
+      {/* Navigation Section - Enhanced */}
+      <div className="glass-panel rounded-3xl border border-white/60 bg-white/40 p-6 shadow-xl backdrop-blur-xl">
+        <div className="flex flex-col gap-6">
+          {/* Step Indicators */}
+          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2">
+            {questions.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentStep(index)}
+                className={`group relative flex-shrink-0 transition-all ${
+                  index === currentStep
+                    ? 'h-4 w-4 rounded-full bg-orange-500 shadow-md shadow-orange-500/50 ring-2 ring-orange-200'
+                    : responses[questions[index].id]
+                    ? 'h-3 w-3 rounded-full bg-[#00bae2] hover:scale-125'
+                    : 'h-3 w-3 rounded-full bg-neutral-300 hover:scale-125 hover:bg-neutral-400'
+                }`}
+                aria-label={`Go to question ${index + 1}`}
+              >
+                {/* Tooltip */}
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block whitespace-nowrap rounded-lg bg-neutral-900 px-2 py-1 text-xs text-white shadow-lg">
+                  Question {index + 1}
+                </span>
+              </button>
+            ))}
+          </div>
 
-        <div className="flex gap-2">
-          {questions.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentStep(index)}
-              className={`h-2 w-2 rounded-full transition-all ${
-                index === currentStep
-                  ? 'w-8 bg-gradient-to-r from-[#fec5fb] to-[#00bae2]'
-                  : responses[questions[index].id]
-                  ? 'bg-[#00bae2]'
-                  : 'bg-neutral-300'
-              }`}
-              aria-label={`Go to question ${index + 1}`}
-            />
-          ))}
-        </div>
+          {/* Navigation Buttons */}
+          <div className="flex items-center justify-between gap-4">
+            <Button
+              onClick={handlePrevious}
+              disabled={isFirstStep}
+              variant="brandOutline"
+              size="lg"
+              className="gap-2 min-w-[120px]"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Previous
+            </Button>
 
-        <Button
-          onClick={handleNext}
-          disabled={submitMutation.isPending}
-          variant="brand"
-          size="lg"
-          className="gap-2"
-        >
-          {isLastStep ? (
-            <>
-              {submitMutation.isPending ? (
+            {/* Progress Text */}
+            <div className="text-center">
+              <div className="text-sm font-medium text-neutral-700">
+                {Object.keys(responses).length} of {totalSteps} answered
+              </div>
+              <div className="mt-1 text-xs text-neutral-500">
+                {totalSteps - Object.keys(responses).length} remaining
+              </div>
+            </div>
+
+            <Button
+              onClick={handleNext}
+              disabled={submitMutation.isPending}
+              variant="brand"
+              size="lg"
+              className="gap-2 min-w-[120px] shadow-lg shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30"
+            >
+              {isLastStep ? (
                 <>
-                  <LoadingSpinner size="sm" />
-                  Submitting...
+                  {submitMutation.isPending ? (
+                    <>
+                      <LoadingSpinner size="sm" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Submit
+                      <CheckCircle className="h-4 w-4" />
+                    </>
+                  )}
                 </>
               ) : (
                 <>
-                  Submit
-                  <CheckCircle className="h-4 w-4" />
+                  Next
+                  <ArrowRight className="h-4 w-4" />
                 </>
               )}
-            </>
-          ) : (
-            <>
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Question Counter */}
-      <div className="text-center text-sm text-neutral-500">
-        {Object.keys(responses).length} of {totalSteps} questions answered
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
