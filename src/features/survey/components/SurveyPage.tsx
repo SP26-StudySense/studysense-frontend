@@ -11,14 +11,15 @@ import { useSurvey, useSurveyQuestionsWithOptions, useQuestionOptions, prefetchQ
 import { useSubmitSurvey } from '../api/mutations';
 import { QuestionRenderer } from './questions';
 import { useSurveyAutoSave, loadSurveyDraft, clearSurveyDraft } from '../hooks/useSurveyAutoSave';
+import { SurveyTriggerReason } from '../types';
 import type { SurveyResponse, SurveyQuestion, QuestionType } from '../types';
 
 interface SurveyPageProps {
   surveyId: number;
-  isInitialSurvey?: boolean; // Mark as initial required survey
+  triggerReason: SurveyTriggerReason; // Survey trigger reason for submission
 }
 
-export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProps) {
+export function SurveyPage({ surveyId, triggerReason }: SurveyPageProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [startedAt] = useState(() => new Date()); // Track when user started
@@ -29,7 +30,7 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
 
   // Prevent back navigation for initial survey
   useEffect(() => {
-    if (isInitialSurvey) {
+    if (triggerReason === SurveyTriggerReason.INITIAL) {
       // Prevent browser back button
       const preventBack = () => {
         window.history.pushState(null, '', window.location.href);
@@ -45,11 +46,11 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
         window.removeEventListener('popstate', preventBack);
       };
     }
-  }, [isInitialSurvey]);
+  }, [triggerReason]);
 
   // Warn before leaving page if survey not completed
   useEffect(() => {
-    if (isInitialSurvey) {
+    if (triggerReason === SurveyTriggerReason.INITIAL) {
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         e.preventDefault();
         return (e.returnValue = 'Your progress will be lost. Are you sure you want to leave?');
@@ -61,7 +62,7 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     }
-  }, [isInitialSurvey]);
+  }, [triggerReason]);
 
   // Load draft on mount
   useEffect(() => {
@@ -93,8 +94,8 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
   // Auto-save to localStorage every 30s
   useSurveyAutoSave(surveyId, responses, startedAt, draftLoaded);
 
-  // Submit mutation with question types and startedAt
-  const submitMutation = useSubmitSurvey(surveyId, questionTypes, startedAt);
+  // Submit mutation with question types, startedAt, and triggerReason
+  const submitMutation = useSubmitSurvey(surveyId, questionTypes, startedAt, triggerReason);
 
   const currentQuestion = questions?.[currentStep];
   const totalSteps = questions?.length || 0;
@@ -252,7 +253,7 @@ export function SurveyPage({ surveyId, isInitialSurvey = false }: SurveyPageProp
               {survey?.title || 'Survey'}
             </h1>
             <p className="text-sm text-neutral-600">
-              {survey?.description || 'Complete the questions below to help us personalize your experience'}
+              { 'Complete the questions below to help us personalize your experience'}
             </p>
           </div>
           

@@ -1,35 +1,8 @@
 import { SurveyPage } from '@/features/survey/components/SurveyPage';
-import { cookies } from 'next/headers';
-import { env } from '@/shared/config';
+import { SurveyTriggerReason } from '@/features/survey/types';
 
 interface PageProps {
   params: Promise<{ surveyId: string }>;
-}
-
-// Check if this survey is the initial required survey
-async function checkIsInitialSurvey(surveyId: number): Promise<boolean> {
-  try {
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
-    
-    if (!accessToken) return false;
-
-    const response = await fetch(`${env.NEXT_PUBLIC_API_URL_HTTP}/users/survey-status`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      cache: 'no-store',
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      // Check if this survey ID matches the required initial survey
-      return data.requiresInitialSurvey && data.surveyId === surveyId;
-    }
-  } catch (error) {
-    console.error('[Survey Page] Failed to check initial survey status:', error);
-  }
-  return false;
 }
 
 export default async function SurveyResponsePage({ params }: PageProps) {
@@ -49,8 +22,10 @@ export default async function SurveyResponsePage({ params }: PageProps) {
     );
   }
 
-  // Check if this is the initial survey (dynamic check from API)
-  const isInitialSurvey = await checkIsInitialSurvey(surveyId);
-
-  return <SurveyPage surveyId={surveyId} isInitialSurvey={isInitialSurvey} />;
+  return (
+    <SurveyPage 
+      surveyId={surveyId}
+      triggerReason={SurveyTriggerReason.MANUAL}
+    />
+  );
 }
