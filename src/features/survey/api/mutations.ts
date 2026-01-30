@@ -126,7 +126,8 @@ function transformResponseToAnswers(
 export function useSubmitSurvey(
   surveyId: number,
   questionTypes: Record<string, QuestionType>,
-  startedAt: Date
+  startedAt: Date,
+  triggerReason: SurveyTriggerReason
 ) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -148,7 +149,7 @@ export function useSubmitSurvey(
         const payload: TakeSurveyRequest = {
           startedAt: startedAt.toISOString(),
           submittedAt: new Date().toISOString(),
-          triggerReason: SurveyTriggerReason.MANUAL,
+          triggerReason,
           answers,
         };
 
