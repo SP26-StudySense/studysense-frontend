@@ -29,6 +29,7 @@ import type {
   GoogleLoginCallbackData,
   User,
 } from '../types';
+import type { SurveyStatusResponse } from '@/features/survey/types';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
@@ -118,6 +119,27 @@ export function useLogin() {
 
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
+
+      // Check if user needs to complete initial survey
+      try {
+        const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
+        
+        if (surveyStatus.requiresInitialSurvey && surveyStatus.surveyId) {
+          console.log('[Login] User needs to complete initial survey, redirecting...');
+          
+          // Show info toast about survey
+          toast.info('Welcome! Please complete the initial survey', {
+            description: 'This helps us personalize your learning experience',
+          });
+          
+          // Redirect to initial survey page
+          router.push('/surveys/initial-survey');
+          return; // Stop here, don't proceed to dashboard
+        }
+      } catch (error) {
+        console.error('[Login] Failed to check survey status:', error);
+        // If survey status check fails, continue with normal login flow
+      }
 
       // Show success toast
       toast.success('Login successful!', {
@@ -355,6 +377,32 @@ export function useGoogleLogin() {
 
         // Update user cache with NORMALIZED data
         queryClient.setQueryData(queryKeys.auth.me(), normalizedUser);
+
+        // Check if user needs to complete initial survey
+        try {
+          const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
+          
+          if (surveyStatus.requiresInitialSurvey && surveyStatus.surveyId) {
+            console.log('[Google Login] User needs to complete initial survey, redirecting...');
+            
+            // Show info toast about survey
+            toast.info('Welcome! Please complete the initial survey', {
+              description: 'This helps us personalize your learning experience',
+            });
+            
+            // Close popup if still open
+            if (popupRef.current && !popupRef.current.closed) {
+              popupRef.current.close();
+            }
+            
+            // Redirect to initial survey page
+            router.push('/surveys/initial-survey');
+            return; // Stop here, don't proceed to dashboard
+          }
+        } catch (error) {
+          console.error('[Google Login] Failed to check survey status:', error);
+          // If survey status check fails, continue with normal login flow
+        }
 
         // Show success toast
         toast.success('Login successful!', {
