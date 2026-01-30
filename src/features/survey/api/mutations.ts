@@ -218,9 +218,9 @@ export function useSubmitSurvey(
           });
         }
 
-        // Redirect to dashboard or survey results
-        console.log('[Survey Submit] Redirecting to:', routes.dashboard.home);
-        router.push(routes.dashboard.home);
+        // Redirect to homepage
+        console.log('[Survey Submit] Redirecting to: /');
+        router.push('/');
       } catch (err) {
         console.error('[Survey Submit] Error in onSuccess:', err);
         throw err;
