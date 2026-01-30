@@ -31,7 +31,7 @@ export function RoadmapCard({ roadmap, variant, onPreview }: RoadmapCardProps) {
             router.push('/dashboard');
         } else {
             // Start new template roadmap -> go to survey first
-            router.push('/surveys/1');
+            router.push('/surveys/initial-survey');
         }
     };
 
