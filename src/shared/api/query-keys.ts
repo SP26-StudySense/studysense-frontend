@@ -67,6 +67,7 @@ export const queryKeys = {
     ...createQueryKeys('surveys'),
     initial: () => ['surveys', 'initial'] as const,
     resurvey: () => ['surveys', 'resurvey'] as const,
+    byCode: (code: string) => ['surveys', 'code', code] as const,
     results: (id: string) => ['surveys', 'detail', id, 'results'] as const,
     questions: (id: string) => ['surveys', 'detail', id, 'questions'] as const,
     options: (questionId: string) => ['surveys', 'questions', questionId, 'options'] as const,

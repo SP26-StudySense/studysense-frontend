@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ArrowLeft, ArrowRight, CheckCircle, AlertCircle, Save, Info } from 'lucide-react';
 import { toast } from '@/shared/lib';
-import { useSurvey, useSurveyQuestionsWithOptions, useQuestionOptions, prefetchQuestionOptions } from '../api/queries';
+import { useSurveyByCode, useSurveyQuestionsWithOptions, useQuestionOptions, prefetchQuestionOptions } from '../api/queries';
 import { useSubmitSurvey } from '../api/mutations';
 import { QuestionRenderer } from './questions';
 import { useSurveyAutoSave, loadSurveyDraft, clearSurveyDraft } from '../hooks/useSurveyAutoSave';
@@ -15,11 +15,11 @@ import { SurveyTriggerReason } from '../types';
 import type { SurveyResponse, SurveyQuestion, QuestionType } from '../types';
 
 interface SurveyPageProps {
-  surveyId: number;
+  surveyCode: string;
   triggerReason: SurveyTriggerReason; // Survey trigger reason for submission
 }
 
-export function SurveyPage({ surveyId, triggerReason }: SurveyPageProps) {
+export function SurveyPage({ surveyCode, triggerReason }: SurveyPageProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [startedAt] = useState(() => new Date()); // Track when user started
@@ -27,6 +27,10 @@ export function SurveyPage({ surveyId, triggerReason }: SurveyPageProps) {
   const [responses, setResponses] = useState<Record<string, SurveyResponse>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
+
+  // Fetch survey by code
+  const { data: survey, isLoading: surveyLoading, error: surveyError } = useSurveyByCode(surveyCode);
+  const surveyId = survey?.id; // Get surveyId from survey data
 
   // Prevent back navigation for initial survey
   useEffect(() => {
@@ -64,8 +68,10 @@ export function SurveyPage({ surveyId, triggerReason }: SurveyPageProps) {
     }
   }, [triggerReason]);
 
-  // Load draft on mount
+  // Load draft on mount (only when surveyId is available)
   useEffect(() => {
+    if (!surveyId) return;
+    
     const draft = loadSurveyDraft(surveyId);
     if (draft) {
       setResponses(draft.responses);
@@ -75,12 +81,11 @@ export function SurveyPage({ surveyId, triggerReason }: SurveyPageProps) {
   }, [surveyId]);
 
   // Fetch survey data
-  const { data: survey, isLoading: surveyLoading, error: surveyError } = useSurvey(surveyId);
   const {
     data: questions,
     isLoading: questionsLoading,
     error: questionsError,
-  } = useSurveyQuestionsWithOptions(surveyId);
+  } = useSurveyQuestionsWithOptions(surveyId || 0, { enabled: !!surveyId });
 
   // Create question types map for submission
   const questionTypes = useMemo(() => {
@@ -91,11 +96,11 @@ export function SurveyPage({ surveyId, triggerReason }: SurveyPageProps) {
     }, {} as Record<string, QuestionType>);
   }, [questions]);
 
-  // Auto-save to localStorage every 30s
-  useSurveyAutoSave(surveyId, responses, startedAt, draftLoaded);
+  // Auto-save to localStorage every 30s (only when surveyId is available)
+  useSurveyAutoSave(surveyId || 0, responses, startedAt, draftLoaded && !!surveyId);
 
   // Submit mutation with question types, startedAt, and triggerReason
-  const submitMutation = useSubmitSurvey(surveyId, questionTypes, startedAt, triggerReason);
+  const submitMutation = useSubmitSurvey(surveyId || 0, questionTypes, startedAt, triggerReason);
 
   const currentQuestion = questions?.[currentStep];
   const totalSteps = questions?.length || 0;
@@ -181,6 +186,11 @@ export function SurveyPage({ surveyId, triggerReason }: SurveyPageProps) {
 
   // Submit survey
   const handleSubmit = () => {
+    if (!surveyId) {
+      toast.error('Survey ID not available');
+      return;
+    }
+
     // Validate all required questions
     const unansweredRequired = questions?.filter(
       (q) => q.isRequired && !responses[q.id]
