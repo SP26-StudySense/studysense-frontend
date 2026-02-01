@@ -158,7 +158,7 @@ export function RoadmapPreviewModal({ roadmap, isOpen, onClose }: RoadmapPreview
                     <button
                         onClick={() => {
                             onClose();
-                            window.location.href = `/surveys/1`;
+                            window.location.href = `/surveys/initial-survey`;
                         }}
                         className="flex-1 px-6 py-3 rounded-2xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8d0] transition-colors shadow-lg shadow-[#00bae2]/20"
                     >

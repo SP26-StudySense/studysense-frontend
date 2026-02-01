@@ -2,12 +2,12 @@ import { SurveyPage } from '@/features/survey/components/SurveyPage';
 import { SurveyTriggerReason } from '@/features/survey/types';
 
 export default async function InitialSurveyPage() {
-  // Hardcoded surveyId = 1 for initial survey
-  const surveyId = 1;
+  // Hardcoded surveyCode for initial survey
+  const surveyCode = 'LEARNING_BEHAVIOR';
 
   return (
     <SurveyPage 
-      surveyId={surveyId}
+      surveyCode={surveyCode}
       triggerReason={SurveyTriggerReason.INITIAL}
     />
   );

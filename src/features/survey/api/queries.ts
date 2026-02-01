@@ -28,6 +28,7 @@ interface PaginatedData<T> {
 
 // Backend DTO types
 interface SurveyDto {
+  id: number;
   title: string;
   code: string;
   status: 'Draft' | 'Published' | 'Archived';
@@ -65,6 +66,37 @@ export function useSurvey(surveyId: number, options?: { enabled?: boolean }) {
       console.log('[Survey Query] Fetching survey:', surveyId);
       const response = await get<ApiResponse<SurveyDto> | SurveyDto>(
         `/surveys/${surveyId}`
+      );
+      
+      console.log('[Survey Query] Response:', response);
+      
+      // Check if response has success wrapper or is direct data
+      if ('success' in response) {
+        if (!response.success || !response.data) {
+          console.error('[Survey Query] Failed:', response);
+          throw new Error(response.message || 'Failed to fetch survey');
+        }
+        return response.data;
+      }
+      
+      // Direct response
+      return response as SurveyDto;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    ...options,
+  });
+}
+
+/**
+ * Get survey by Code
+ */
+export function useSurveyByCode(surveyCode: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.surveys.byCode(surveyCode),
+    queryFn: async () => {
+      console.log('[Survey Query] Fetching survey by code:', surveyCode);
+      const response = await get<ApiResponse<SurveyDto> | SurveyDto>(
+        `/surveys/code/${surveyCode}`
       );
       
       console.log('[Survey Query] Response:', response);
@@ -235,8 +267,8 @@ export async function prefetchQuestionOptions(queryClient: QueryClient, question
  * Note: This is a simplified version that fetches options on-demand per question
  * For better performance, consider batch loading options from backend
  */
-export function useSurveyQuestionsWithOptions(surveyId: number) {
-  const { data: questions, isLoading, error } = useSurveyQuestions(surveyId);
+export function useSurveyQuestionsWithOptions(surveyId: number, options?: { enabled?: boolean }) {
+  const { data: questions, isLoading, error } = useSurveyQuestions(surveyId, options);
 
   return {
     data: questions,
