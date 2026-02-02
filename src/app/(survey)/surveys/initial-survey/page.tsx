@@ -1,9 +1,9 @@
 import { SurveyPage } from '@/features/survey/components/SurveyPage';
 import { SurveyTriggerReason } from '@/features/survey/types';
+import { SURVEY_CODES } from '@/shared/constants/survey-codes';
 
 export default async function InitialSurveyPage() {
-  // Hardcoded surveyCode for initial survey
-  const surveyCode = 'LEARNING_BEHAVIOR';
+  const surveyCode = SURVEY_CODES.LEARNING_BEHAVIOR;
 
   return (
     <SurveyPage 
