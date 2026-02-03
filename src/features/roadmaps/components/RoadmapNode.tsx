@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Clock, Circle, Lock } from 'lucide-react';
+import { CheckCircle2, Circle, Lock } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
 export type NodeStatus = 'done' | 'in_progress' | 'not_started' | 'locked';
@@ -30,32 +30,24 @@ const statusConfig = {
         border: 'border-[#00bae2]',
         icon: CheckCircle2,
         iconColor: 'text-[#00bae2]',
-        badge: 'bg-[#00bae2]/20 text-[#00889e]',
-        badgeText: 'Done',
     },
     in_progress: {
         bg: 'bg-gradient-to-br from-amber-100/80 to-amber-50/50',
         border: 'border-amber-400',
         icon: Circle,
         iconColor: 'text-amber-500',
-        badge: 'bg-amber-100 text-amber-700',
-        badgeText: 'In Progress',
     },
     not_started: {
         bg: 'bg-white/80',
         border: 'border-neutral-200',
         icon: Circle,
         iconColor: 'text-neutral-400',
-        badge: 'bg-neutral-100 text-neutral-500',
-        badgeText: 'Not Started',
     },
     locked: {
         bg: 'bg-neutral-50/80',
         border: 'border-neutral-200 border-dashed',
         icon: Lock,
         iconColor: 'text-neutral-400',
-        badge: 'bg-neutral-100 text-neutral-400',
-        badgeText: 'Locked',
     },
 };
 
@@ -73,7 +65,7 @@ export function RoadmapNode({ node, isSelected, onClick }: RoadmapNodeProps) {
         <button
             onClick={() => onClick(node)}
             className={cn(
-                "absolute w-48 h-[120px] rounded-2xl border-2 p-4 backdrop-blur-xl shadow-lg transition-all duration-300 text-left flex flex-col justify-between",
+                "absolute w-48 rounded-2xl border-2 p-4 backdrop-blur-xl shadow-lg transition-all duration-300 text-left flex items-center gap-3",
                 config.bg,
                 config.border,
                 isSelected && "ring-4 ring-violet-500/30 scale-105 shadow-xl",
@@ -89,30 +81,14 @@ export function RoadmapNode({ node, isSelected, onClick }: RoadmapNodeProps) {
                 difficultyColors[node.difficulty]
             )} />
 
-            {/* Title */}
-            <div className="flex items-start gap-2 mb-2">
-                <StatusIcon className={cn("h-4 w-4 mt-0.5 shrink-0", config.iconColor)} />
-                <h4 className="font-semibold text-sm text-neutral-900 line-clamp-2">
-                    {node.title}
-                </h4>
-            </div>
+            {/* Status Icon */}
+            <StatusIcon className={cn("h-5 w-5 shrink-0", config.iconColor)} />
 
-            {/* Status badge */}
-            <div className={cn(
-                "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium mb-2",
-                config.badge
-            )}>
-                {config.badgeText}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between text-xs text-neutral-500">
-                <span>{node.completedTasks}/{node.totalTasks} tasks</span>
-                <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {node.duration}m
-                </span>
-            </div>
+            {/* Title only */}
+            <h4 className="font-semibold text-sm text-neutral-900 line-clamp-2">
+                {node.title}
+            </h4>
         </button>
     );
 }
+

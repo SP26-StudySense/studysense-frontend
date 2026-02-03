@@ -1,11 +1,56 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useQueries } from '@tanstack/react-query';
 import { RoadmapCard } from './components/RoadmapCard';
 import { SearchFilterBar } from './components/SearchFilterBar';
 import { RoadmapPreviewModal } from './components/RoadmapPreviewModal';
-import { TEMPLATE_ROADMAPS, USER_LEARNING_ROADMAPS, filterRoadmaps } from './mock-data';
+import { USER_LEARNING_ROADMAPS, filterRoadmaps } from './mock-data';
+import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
+import { get } from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
 import type { RoadmapFilters, RoadmapTemplate } from './types';
+
+// Map API response to RoadmapTemplate format
+function mapApiToTemplate(item: RoadmapListItemDTO, nodeCount?: number): RoadmapTemplate {
+    return {
+        id: String(item.id),
+        title: item.title,
+        description: item.description || 'No description available',
+        difficulty: 'intermediate', // Default, could be derived from nodes later
+        category: 'other', // Default category
+        estimatedHours: 20, // No longer displayed
+        totalNodes: nodeCount ?? 0,
+        icon: 'Map', // Default icon
+    };
+}
+
+// Hook to fetch node counts for multiple roadmaps
+function useRoadmapNodeCounts(roadmapIds: number[]) {
+    const queries = useQueries({
+        queries: roadmapIds.map((id) => ({
+            queryKey: ['roadmaps', 'nodeCount', id],
+            queryFn: async () => {
+                const data = await get<RoadmapGraphDTO>(endpoints.roadmaps.byId(String(id)));
+                return { id, count: data?.nodes?.length ?? 0 };
+            },
+            staleTime: 5 * 60 * 1000, // 5 minutes
+        })),
+    });
+
+    const nodeCounts = useMemo(() => {
+        const map = new Map<number, number>();
+        queries.forEach((q) => {
+            if (q.data) {
+                map.set(q.data.id, q.data.count);
+            }
+        });
+        return map;
+    }, [queries]);
+
+    return nodeCounts;
+}
 
 export function RoadmapsList() {
     const [filters, setFilters] = useState<RoadmapFilters>({
@@ -16,12 +61,45 @@ export function RoadmapsList() {
 
     const [previewRoadmap, setPreviewRoadmap] = useState<RoadmapTemplate | null>(null);
 
-    // Filter roadmaps based on current filters
-    const filteredTemplates = useMemo(
-        () => filterRoadmaps(TEMPLATE_ROADMAPS, filters),
-        [filters]
-    );
+    // Fetch roadmaps from API
+    const { data: roadmapsData, isLoading, error } = useRoadmaps({
+        pageIndex: 1,
+        pageSize: 50,
+        q: filters.search || undefined,
+        isLatest: true,
+    });
 
+    // Get roadmap IDs for fetching node counts
+    const roadmapIds = useMemo(() => {
+        if (!roadmapsData?.roadmaps?.items) return [];
+        return roadmapsData.roadmaps.items.map((item) => item.id);
+    }, [roadmapsData]);
+
+    // Fetch node counts for all roadmaps
+    const nodeCounts = useRoadmapNodeCounts(roadmapIds);
+
+    // Map API data to template format with node counts
+    const apiTemplates = useMemo(() => {
+        if (!roadmapsData?.roadmaps?.items) return [];
+        return roadmapsData.roadmaps.items.map((item) =>
+            mapApiToTemplate(item, nodeCounts.get(item.id))
+        );
+    }, [roadmapsData, nodeCounts]);
+
+    // Filter templates based on filters (difficulty and category)
+    const filteredTemplates = useMemo(() => {
+        return apiTemplates.filter(roadmap => {
+            if (filters.difficulty !== 'all' && roadmap.difficulty !== filters.difficulty) {
+                return false;
+            }
+            if (filters.category !== 'all' && roadmap.category !== filters.category) {
+                return false;
+            }
+            return true;
+        });
+    }, [apiTemplates, filters]);
+
+    // Filter learning roadmaps (still using mock data)
     const filteredLearningRoadmaps = useMemo(
         () => filterRoadmaps(USER_LEARNING_ROADMAPS, filters),
         [filters]
@@ -73,12 +151,22 @@ export function RoadmapsList() {
                     <h2 className="text-2xl font-semibold text-neutral-900">
                         {hasActiveFilters ? 'Search Results' : 'Explore Templates'}
                     </h2>
-                    <span className="text-sm text-neutral-500">
-                        {filteredTemplates.length} roadmap{filteredTemplates.length !== 1 ? 's' : ''}
-                    </span>
+                    {!isLoading && (
+                        <span className="text-sm text-neutral-500">
+                            {filteredTemplates.length} roadmap{filteredTemplates.length !== 1 ? 's' : ''}
+                        </span>
+                    )}
                 </div>
 
-                {filteredTemplates.length > 0 ? (
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
+                    </div>
+                ) : error ? (
+                    <div className="flex items-center justify-center py-16">
+                        <p className="text-neutral-500">Failed to load roadmaps. Please try again.</p>
+                    </div>
+                ) : filteredTemplates.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredTemplates.map((roadmap) => (
                             <RoadmapCard
@@ -135,3 +223,4 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
         </div>
     );
 }
+

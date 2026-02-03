@@ -94,15 +94,9 @@ export function RoadmapCard({ roadmap, variant, onPreview }: RoadmapCardProps) {
                 {/* Stats */}
                 {variant === 'template' ? (
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-xs text-neutral-500">
-                            <div className="flex items-center gap-1.5">
-                                <LucideIcons.Clock className="h-3.5 w-3.5" />
-                                <span>{roadmap.estimatedHours}h</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <LucideIcons.Target className="h-3.5 w-3.5" />
-                                <span>{roadmap.totalNodes} nodes</span>
-                            </div>
+                        <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+                            <LucideIcons.Target className="h-3.5 w-3.5" />
+                            <span>{roadmap.totalNodes} nodes</span>
                         </div>
                         {/* Eye Icon for Preview */}
                         <button

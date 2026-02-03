@@ -44,6 +44,7 @@ export const endpoints = {
     byId: (id: string) => `/roadmaps/${id}`,
     nodes: (roadmapId: string) => `/roadmaps/${roadmapId}/nodes`,
     nodeById: (roadmapId: string, nodeId: string) => `/roadmaps/${roadmapId}/nodes/${nodeId}`,
+    nodeContents: (roadmapId: string, nodeId: string) => `/roadmaps/${roadmapId}/nodes/${nodeId}/contents`,
     nodeProgress: (roadmapId: string, nodeId: string) => `/roadmaps/${roadmapId}/nodes/${nodeId}/progress`,
   },
 
