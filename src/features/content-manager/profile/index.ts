@@ -1,0 +1,1 @@
+export { ContentManagerProfilePage } from './ContentManagerProfilePage';

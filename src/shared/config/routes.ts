@@ -77,6 +77,17 @@ export const routes = {
     settings: '/admin/settings',
   },
 
+  // Content Manager routes
+  contentManager: {
+    dashboard: '/content-dashboard',
+    roadmaps: {
+      list: '/content-roadmaps',
+      detail: (id: string) => `/content-roadmaps/${id}`,
+      create: '/content-roadmaps/create',
+    },
+    profile: '/content-profile',
+  },
+
   // API routes
   api: {
     auth: {
@@ -107,6 +118,8 @@ export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/ses
 
 export const adminRoutes = ['/admin'];
 
+export const contentManagerRoutes = ['/content-dashboard', '/content-roadmaps', '/content-profile'];
+
 // Helper to check route type
 export function isPublicRoute(pathname: string): boolean {
   return publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -122,4 +135,8 @@ export function isProtectedRoute(pathname: string): boolean {
 
 export function isAdminRoute(pathname: string): boolean {
   return adminRoutes.some((route) => pathname.startsWith(route));
+}
+
+export function isContentManagerRoute(pathname: string): boolean {
+  return contentManagerRoutes.some((route) => pathname.startsWith(route));
 }
