@@ -44,17 +44,7 @@ const sidebarItems = [
         title: 'History',
         href: '/sessions/history',
         icon: History,
-    },
-    {
-        title: 'Community',
-        href: '/community',
-        icon: Users,
-    },
-    {
-        title: 'Settings',
-        href: '/settings',
-        icon: Settings,
-    },
+    },    
 ];
 
 export function Sidebar() {
