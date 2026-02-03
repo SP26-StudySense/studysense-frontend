@@ -87,15 +87,12 @@ function clearUserFromStorage(): void {
 
 /**
  * Check survey status and redirect accordingly
- * Returns the URL to redirect to: /roadmaps (default after login)
+ * Returns the URL to redirect to: / (landing page after login)
  * Survey redirects are handled separately when selecting template roadmaps
  */
 async function getPostLoginRedirectUrl(): Promise<string> {
-  // After login, always redirect to roadmaps selection page
-  // User will choose either:
-  // - Continue learning (My Learning Roadmaps) → goes to dashboard
-  // - Start new roadmap (Explore Templates) → goes to survey
-  return routes.dashboard.roadmaps.list;
+  // After login, redirect to landing page
+  return routes.public.home;
 }
 
 /**
@@ -123,15 +120,15 @@ export function useLogin() {
       // Check if user needs to complete initial survey
       try {
         const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
-        
+
         if (surveyStatus.requiresInitialSurvey && surveyStatus.surveyId) {
           console.log('[Login] User needs to complete initial survey, redirecting...');
-          
+
           // Show info toast about survey
           toast.info('Welcome! Please complete the initial survey', {
             description: 'This helps us personalize your learning experience',
           });
-          
+
           // Redirect to initial survey page
           router.push('/surveys/initial-survey');
           return; // Stop here, don't proceed to dashboard
@@ -381,20 +378,20 @@ export function useGoogleLogin() {
         // Check if user needs to complete initial survey
         try {
           const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
-          
+
           if (surveyStatus.requiresInitialSurvey && surveyStatus.surveyId) {
             console.log('[Google Login] User needs to complete initial survey, redirecting...');
-            
+
             // Show info toast about survey
             toast.info('Welcome! Please complete the initial survey', {
               description: 'This helps us personalize your learning experience',
             });
-            
+
             // Close popup if still open
             if (popupRef.current && !popupRef.current.closed) {
               popupRef.current.close();
             }
-            
+
             // Redirect to initial survey page
             router.push('/surveys/initial-survey');
             return; // Stop here, don't proceed to dashboard

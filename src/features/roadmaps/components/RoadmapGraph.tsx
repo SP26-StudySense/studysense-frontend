@@ -26,7 +26,7 @@ export function RoadmapGraph({ nodes, edges, selectedNodeId, onNodeSelect, class
     const containerRef = useRef<HTMLDivElement>(null);
 
     const NODE_WIDTH = 192;
-    const NODE_HEIGHT = 120;
+    const NODE_HEIGHT = 52; // Simplified node height (icon + title + padding)
 
     // Get bottom center of node (for edge start)
     const getNodeBottom = (nodeId: string) => {

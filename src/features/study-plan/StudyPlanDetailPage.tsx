@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Share2, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { StatsCard } from './components/StatsCard';
 import { RoadmapTimeline, RoadmapModule } from './components/RoadmapTimeline';
 import { ModuleTasksPanel, ModuleData } from './components/ModuleTasksPanel';
@@ -221,13 +221,9 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                         </div>
 
                         <div className="flex gap-3">
-                            <button className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 transition-all">
-                                <Share2 className="h-4 w-4" />
-                                Share Progress
-                            </button>
                             <button className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-600/25 hover:bg-violet-700 transition-all">
                                 <RefreshCw className="h-4 w-4" />
-                                Sync / Update Plan
+                                Update Plan
                             </button>
                         </div>
                     </div>
