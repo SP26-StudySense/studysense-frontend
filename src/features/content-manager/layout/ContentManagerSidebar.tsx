@@ -7,8 +7,7 @@ import {
   Map,
   UserCog,
   LogOut,
-  Layers,
-  Sparkles,
+  GitFork,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -43,11 +42,11 @@ export function ContentManagerSidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-72 flex-col border-r border-neutral-200/60 bg-white/80 backdrop-blur-xl">
-      {/* Logo */}
+      {/* Logo - Matching StudySense branding */}
       <div className="flex h-20 shrink-0 items-center px-6">
         <Link href="/content-dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#fec5fb] to-[#00bae2] shadow-lg shadow-[#00bae2]/20">
-            <Layers className="h-[22px] w-[22px] text-neutral-900" strokeWidth={2.5} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-[#c1ff72] shadow-lg shadow-neutral-900/10">
+            <GitFork className="h-[22px] w-[22px]" strokeWidth={2.5} />
           </div>
           <span className="text-xl font-bold tracking-tight text-neutral-900">
             Study<span className="text-neutral-500">Sense</span>
@@ -91,25 +90,29 @@ export function ContentManagerSidebar() {
         <div className="mb-3 rounded-xl bg-neutral-50 p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#fec5fb] to-[#00bae2] text-sm font-bold text-neutral-900">
-              SJ
+              CM
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium text-neutral-900">
-                Sarah Johnson
+                Content Manager
               </p>
               <p className="truncate text-xs text-neutral-500">
-                Frontend Development
+                manager@studysense.com
               </p>
             </div>
           </div>
         </div>
+
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-          size="sm"
+          className="w-full justify-start gap-2 text-neutral-600 hover:text-red-600 hover:bg-red-50"
+          onClick={() => {
+            // Handle logout
+            window.location.href = '/login';
+          }}
         >
-          <LogOut className="h-4 w-4" />
-          Logout
+          <LogOut className="h-[18px] w-[18px]" />
+          <span>Logout</span>
         </Button>
       </div>
     </aside>
