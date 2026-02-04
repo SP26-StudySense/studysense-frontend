@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { X, Clock, FileText, BookOpen, Video, Circle, Play } from 'lucide-react';
+
+import { X, Clock, FileText, BookOpen, Video, Circle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { RoadmapNodeData, DifficultyLevel } from './RoadmapNode';
 
@@ -43,16 +43,13 @@ const resourceIcons = {
 };
 
 export function NodeDetailPanel({ node, onClose, className }: NodeDetailPanelProps) {
-    const router = useRouter();
+
 
     if (!node) return null;
 
     const difficulty = difficultyConfig[node.difficulty];
 
-    const handleStartLearning = () => {
-        // Navigate to study plan page (hardcoded to /study-plans/1 for now)
-        router.push('/study-plans/1');
-    };
+
 
     return (
         <div className={cn(
@@ -143,16 +140,7 @@ export function NodeDetailPanel({ node, onClose, className }: NodeDetailPanelPro
                 )}
             </div>
 
-            {/* Footer */}
-            <div className="p-6 border-t border-neutral-100">
-                <button
-                    onClick={handleStartLearning}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-semibold text-white shadow-xl transition-all bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40"
-                >
-                    <Play className="h-5 w-5" fill="currentColor" />
-                    Start Learning
-                </button>
-            </div>
+
         </div>
     );
 }

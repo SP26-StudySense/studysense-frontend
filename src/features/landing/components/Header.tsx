@@ -25,6 +25,12 @@ export const Header = () => {
 
                 <nav className="hidden items-center gap-x-8 md:flex">
                     <Link
+                        href="/"
+                        className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+                    >
+                        Home
+                    </Link>
+                    <Link
                         href="/roadmaps"
                         className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
                     >
@@ -36,14 +42,6 @@ export const Header = () => {
                     >
                         Community
                     </Link>
-                    {isAuthenticated && (
-                        <Link
-                            href="/dashboard"
-                            className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
-                        >
-                            Dashboard
-                        </Link>
-                    )}
                 </nav>
 
                 <div className="flex items-center gap-x-4">

@@ -3,7 +3,7 @@
 import { X, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { RoadmapTemplate } from '../types';
-import { RoadmapDetail } from '../RoadmapDetail';
+import { RoadmapPreviewGraph } from './RoadmapPreviewGraph';
 import * as LucideIcons from 'lucide-react';
 
 interface RoadmapPreviewModalProps {
@@ -65,8 +65,8 @@ export function RoadmapPreviewModal({ roadmap, isOpen, onClose }: RoadmapPreview
                                 <button
                                     onClick={() => setActiveTab('overview')}
                                     className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${activeTab === 'overview'
-                                            ? 'bg-white text-[#00bae2] shadow-md'
-                                            : 'bg-transparent text-neutral-600 hover:bg-white/50'
+                                        ? 'bg-white text-[#00bae2] shadow-md'
+                                        : 'bg-transparent text-neutral-600 hover:bg-white/50'
                                         }`}
                                 >
                                     Overview
@@ -74,8 +74,8 @@ export function RoadmapPreviewModal({ roadmap, isOpen, onClose }: RoadmapPreview
                                 <button
                                     onClick={() => setActiveTab('roadmap')}
                                     className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${activeTab === 'roadmap'
-                                            ? 'bg-white text-[#00bae2] shadow-md'
-                                            : 'bg-transparent text-neutral-600 hover:bg-white/50'
+                                        ? 'bg-white text-[#00bae2] shadow-md'
+                                        : 'bg-transparent text-neutral-600 hover:bg-white/50'
                                         }`}
                                 >
                                     Roadmap Graph
@@ -142,7 +142,7 @@ export function RoadmapPreviewModal({ roadmap, isOpen, onClose }: RoadmapPreview
                         </div>
                     ) : (
                         <div className="h-[600px] bg-neutral-50">
-                            <RoadmapDetail roadmapId={roadmap.id} />
+                            <RoadmapPreviewGraph roadmapId={roadmap.id} />
                         </div>
                     )}
                 </div>
