@@ -245,3 +245,64 @@ export function useDeleteQuestion() {
     },
   });
 }
+
+// ============ Question Option Mutations ============
+
+/**
+ * Create question option mutation
+ */
+export function useCreateOption() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: surveyApi.CreateOptionRequest) => surveyApi.createOption(data),
+    onSuccess: (_, variables) => {
+      // Invalidate options list for this question
+      queryClient.invalidateQueries({ queryKey: surveyKeys.options(variables.questionId) });
+      toast.success('Option created successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Failed to create option:', error);
+      toast.error('Failed to create option');
+    },
+  });
+}
+
+/**
+ * Update question option mutation
+ */
+export function useUpdateOption() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: surveyApi.UpdateOptionRequest) => surveyApi.updateOption(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: surveyKeys.options(variables.questionId) });
+      toast.success('Option updated successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update option:', error);
+      toast.error('Failed to update option');
+    },
+  });
+}
+
+/**
+ * Delete question option mutation
+ */
+export function useDeleteOption() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { id: number; questionId: number }) => surveyApi.deleteOption(data.id),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: surveyKeys.options(variables.questionId) });
+      toast.success('Option deleted successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete option:', error);
+      toast.error('Failed to delete option');
+    },
+  });
+}
+

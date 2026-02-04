@@ -215,6 +215,7 @@ export function useQuestionOptions(questionId: string, options?: { enabled?: boo
         value: opt.id.toString(), // Store numeric ID as value for submission
         label: opt.displayText,
         order: opt.orderNo,
+        allowFreeText: opt.allowFreeText,
       }));
 
       return options;

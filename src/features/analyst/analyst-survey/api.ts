@@ -157,14 +157,30 @@ export async function getOptionsByQuestion(
   pageIndex: number = 1,
   pageSize: number = 100
 ): Promise<PaginatedResponse<SurveyQuestionOptionDto>> {
-  const response = await get<{ data: PaginatedResponse<SurveyQuestionOptionDto> }>(
+  const response = await get<SurveyQuestionOptionDto[] & {
+    pageIndex: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  }>(
     `/surveys/question/option`,
     { params: { questionId, pageIndex, pageSize } }
   );
-  if (!response.data) {
+  
+  if (!response || !Array.isArray(response)) {
     throw new Error('Failed to load options');
   }
-  return response.data;
+  
+  // Convert PaginatedList format to PaginatedResponse format
+  return {
+    items: response,
+    pageIndex: (response as any).pageIndex || pageIndex,
+    pageSize,
+    totalPages: (response as any).totalPages || 1,
+    totalCount: response.length,
+    hasPreviousPage: (response as any).hasPreviousPage || false,
+    hasNextPage: (response as any).hasNextPage || false,
+  };
 }
 
 // ============ Survey Question CRUD ============
@@ -211,4 +227,46 @@ export async function updateQuestion(data: UpdateQuestionRequest): Promise<Surve
  */
 export async function deleteQuestion(id: number): Promise<void> {
   await del(`/surveys/question/${id}`);
+}
+
+// ============ Survey Question Option CRUD ============
+
+export interface CreateOptionRequest {
+  questionId: number;
+  valueKey: string;
+  displayText: string;
+  weight: number | null;
+  orderNo: number;
+  allowFreeText: boolean;
+}
+
+export interface UpdateOptionRequest {
+  id: number;
+  questionId: number;
+  valueKey: string;
+  displayText: string;
+  weight: number | null;
+  orderNo: number;
+  allowFreeText: boolean;
+}
+
+/**
+ * Create survey question option
+ */
+export async function createOption(data: CreateOptionRequest): Promise<SurveyQuestionOptionDto> {
+  return await post<SurveyQuestionOptionDto>('/surveys/question/option', data);
+}
+
+/**
+ * Update survey question option
+ */
+export async function updateOption(data: UpdateOptionRequest): Promise<SurveyQuestionOptionDto> {
+  return await patch<SurveyQuestionOptionDto>('/surveys/question/option', data);
+}
+
+/**
+ * Delete survey question option
+ */
+export async function deleteOption(id: number): Promise<void> {
+  await del(`/surveys/question/option/${id}`);
 }
