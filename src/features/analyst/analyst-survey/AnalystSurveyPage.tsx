@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Edit, Trash2, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
 import { ConfirmationModal } from "@/shared/ui";
-import { useSurvey, useSurveyQuestions, useCreateQuestion, useUpdateQuestion, useDeleteQuestion } from "./hooks";
+import { useSurvey, useSurveyQuestions, useCreateQuestion, useUpdateQuestion, useDeleteQuestion, useCreateOption, useUpdateOption, useDeleteOption, useQuestionOptions } from "./hooks";
 import type {
   Survey,
   SurveyQuestion,
@@ -413,6 +413,15 @@ function QuestionItem({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
+  const hasOptions = question.type === 'SingleChoice' || question.type === 'MultipleChoice';
+  
+  // Fetch options when expanded
+  const { data: optionsData, isLoading: optionsLoading } = useQuestionOptions(
+    isExpanded && hasOptions ? question.id : 0
+  );
+  
+  const options = optionsData?.items || [];
+
   // Map question type to display
   const getQuestionTypeBadge = (type: SurveyQuestion["type"]) => {
     const styles = {
@@ -435,8 +444,6 @@ function QuestionItem({
       </span>
     );
   };
-
-  const hasOptions = question.type === 'SingleChoice' || question.type === 'MultipleChoice';
 
   return (
     <div className="rounded-xl border border-neutral-200 bg-white">
@@ -513,46 +520,56 @@ function QuestionItem({
       {/* Options List (Expanded) */}
       {isExpanded && hasOptions && (
         <div className="border-t border-neutral-200 bg-neutral-50 p-4">
-          <div className="space-y-2">
-            {(question.options || []).map((option) => (
-              <div
-                key={option.id}
-                className="flex items-center justify-between rounded-lg bg-white p-3"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-neutral-500">
-                      #{option.orderNo}
-                    </span>
-                    <span className="font-mono text-xs text-neutral-600">{option.valueKey}</span>
-                    <span className="text-sm text-neutral-900">{option.displayText}</span>
-                    {option.allowFreeText && (
-                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                        Free Text
+          {optionsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-[#00bae2]" />
+            </div>
+          ) : options.length === 0 ? (
+            <div className="text-center py-8 text-neutral-500">
+              No options yet. Click the + button to add one.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {options.map((option) => (
+                <div
+                  key={option.id}
+                  className="flex items-center justify-between rounded-lg bg-white p-3"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-neutral-500">
+                        #{option.orderNo}
                       </span>
-                    )}
+                      <span className="font-mono text-xs text-neutral-600">{option.valueKey}</span>
+                      <span className="text-sm text-neutral-900">{option.displayText}</span>
+                      {option.allowFreeText && (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                          Free Text
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-xs text-neutral-500">Weight: {option.weight}</div>
                   </div>
-                  <div className="mt-1 text-xs text-neutral-500">Weight: {option.weight}</div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onEditOption(question.id, option)}
+                      className="rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+                      title="Edit Option"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteOption(question.id, option.id, option.displayText)}
+                      className="rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-red-50 hover:text-red-600"
+                      title="Delete Option"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onEditOption(question.id, option)}
-                    className="rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
-                    title="Edit Option"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => onDeleteOption(question.id, option.id, option.displayText)}
-                    className="rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-red-50 hover:text-red-600"
-                    title="Delete Option"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -647,23 +664,51 @@ export function AnalystSurveyPage({ surveyId }: { surveyId: string }) {
     });
   };
 
-  // Option Handlers (TODO: Implement API calls)
+  // Option Handlers
+  const createOptionMutation = useCreateOption();
+  const updateOptionMutation = useUpdateOption();
+  const deleteOptionMutation = useDeleteOption();
+
   const handleCreateOption = (data: OptionFormData) => {
-    console.log('Create option:', data);
-    // TODO: Call API to create option
-    setModalState({ type: "none" });
+    if (modalState.type !== "createOption") return;
+    
+    createOptionMutation.mutate({
+      questionId: modalState.questionId,
+      valueKey: data.valueKey,
+      displayText: data.displayText,
+      weight: data.weight,
+      orderNo: data.orderNo,
+      allowFreeText: data.allowFreeText,
+    }, {
+      onSuccess: () => setModalState({ type: "none" }),
+    });
   };
 
   const handleUpdateOption = (data: OptionFormData) => {
-    console.log('Update option:', data);
-    // TODO: Call API to update option
-    setModalState({ type: "none" });
+    if (modalState.type !== "editOption") return;
+    
+    updateOptionMutation.mutate({
+      id: modalState.option.id,
+      questionId: modalState.questionId,
+      valueKey: data.valueKey,
+      displayText: data.displayText,
+      weight: data.weight,
+      orderNo: data.orderNo,
+      allowFreeText: data.allowFreeText,
+    }, {
+      onSuccess: () => setModalState({ type: "none" }),
+    });
   };
 
   const handleDeleteOption = () => {
-    console.log('Delete option');
-    // TODO: Call API to delete option
-    setModalState({ type: "none" });
+    if (modalState.type !== "deleteOption") return;
+    
+    deleteOptionMutation.mutate({
+      id: modalState.optionId,
+      questionId: modalState.questionId,
+    }, {
+      onSuccess: () => setModalState({ type: "none" }),
+    });
   };
 
   // Sort questions by orderNo
