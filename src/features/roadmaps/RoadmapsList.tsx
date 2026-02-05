@@ -6,11 +6,12 @@ import { useQueries } from '@tanstack/react-query';
 import { RoadmapCard } from './components/RoadmapCard';
 import { SearchFilterBar } from './components/SearchFilterBar';
 import { RoadmapPreviewModal } from './components/RoadmapPreviewModal';
-import { USER_LEARNING_ROADMAPS, filterRoadmaps } from './mock-data';
+import { filterRoadmaps } from './mock-data';
 import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
-import type { RoadmapFilters, RoadmapTemplate } from './types';
+import { useStudyPlans, StudyPlanItem } from '@/features/study-plan/api';
+import type { RoadmapFilters, RoadmapTemplate, UserLearningRoadmap } from './types';
 
 // Map API response to RoadmapTemplate format
 function mapApiToTemplate(item: RoadmapListItemDTO, nodeCount?: number): RoadmapTemplate {
@@ -23,6 +24,26 @@ function mapApiToTemplate(item: RoadmapListItemDTO, nodeCount?: number): Roadmap
         estimatedHours: 20, // No longer displayed
         totalNodes: nodeCount ?? 0,
         icon: 'Map', // Default icon
+    };
+}
+
+// Map Study Plan Item to UserLearningRoadmap format for "Continue" cards
+function mapStudyPlanToLearningRoadmap(item: StudyPlanItem): UserLearningRoadmap {
+    return {
+        id: String(item.roadmapId), // Roadmap ID for display
+        studyPlanId: String(item.id), // Study Plan ID for navigation
+        templateId: String(item.roadmapId),
+        title: item.roadmapTitle,
+        description: item.roadmapDescription || 'No description available',
+        difficulty: 'intermediate',
+        category: 'other',
+        progress: 0, // TODO: Calculate from tasks
+        completedNodes: 0, // TODO: Calculate from modules
+        totalNodes: 0, // TODO: Calculate from modules
+        estimatedHours: 0,
+        lastAccessed: new Date(item.createdAt),
+        timeSpent: 0,
+        icon: 'Map',
     };
 }
 
@@ -60,6 +81,13 @@ export function RoadmapsList() {
     });
 
     const [previewRoadmap, setPreviewRoadmap] = useState<RoadmapTemplate | null>(null);
+
+    // Fetch user's study plans from API
+    const { 
+        data: studyPlans = [], 
+        isLoading: isLoadingStudyPlans, 
+        error: studyPlansError 
+    } = useStudyPlans();
 
     // Fetch roadmaps from API
     const { data: roadmapsData, isLoading, error } = useRoadmaps({
@@ -99,10 +127,16 @@ export function RoadmapsList() {
         });
     }, [apiTemplates, filters]);
 
-    // Filter learning roadmaps (still using mock data)
-    const filteredLearningRoadmaps = useMemo(
-        () => filterRoadmaps(USER_LEARNING_ROADMAPS, filters),
-        [filters]
+    // Map study plans to learning roadmaps - NO FILTER for My Learning Roadmaps
+    const learningRoadmaps = useMemo(
+        () => studyPlans.map(mapStudyPlanToLearningRoadmap),
+        [studyPlans]
+    );
+
+    // Create set of roadmap IDs that already have study plans
+    const existingRoadmapIds = useMemo(
+        () => new Set(studyPlans.map((plan) => plan.roadmapId)),
+        [studyPlans]
     );
 
     const hasActiveFilters = Boolean(filters.search || filters.difficulty !== 'all' || filters.category !== 'all');
@@ -123,18 +157,40 @@ export function RoadmapsList() {
             <SearchFilterBar filters={filters} onFiltersChange={setFilters} />
 
             {/* My Learning Roadmaps Section */}
-            {filteredLearningRoadmaps.length > 0 && (
+            {isLoadingStudyPlans ? (
+                <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-semibold text-neutral-900">
+                            My Learning Roadmaps
+                        </h2>
+                    </div>
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
+                    </div>
+                </section>
+            ) : studyPlansError ? (
+                <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-semibold text-neutral-900">
+                            My Learning Roadmaps
+                        </h2>
+                    </div>
+                    <div className="flex items-center justify-center py-12">
+                        <p className="text-neutral-500">Failed to load your roadmaps. Please try again.</p>
+                    </div>
+                </section>
+            ) : learningRoadmaps.length > 0 ? (
                 <section className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-2xl font-semibold text-neutral-900">
                             My Learning Roadmaps
                         </h2>
                         <span className="text-sm text-neutral-500">
-                            {filteredLearningRoadmaps.length} active
+                            {learningRoadmaps.length} active
                         </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredLearningRoadmaps.map((roadmap) => (
+                        {learningRoadmaps.map((roadmap) => (
                             <RoadmapCard
                                 key={roadmap.id}
                                 roadmap={roadmap}
@@ -143,7 +199,7 @@ export function RoadmapsList() {
                         ))}
                     </div>
                 </section>
-            )}
+            ) : null}
 
             {/* Template Roadmaps Section */}
             <section className="space-y-4">
@@ -174,6 +230,7 @@ export function RoadmapsList() {
                                 roadmap={roadmap}
                                 variant="template"
                                 onPreview={() => setPreviewRoadmap(roadmap)}
+                                existingRoadmapIds={existingRoadmapIds}
                             />
                         ))}
                     </div>

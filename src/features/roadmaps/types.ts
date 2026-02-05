@@ -14,6 +14,7 @@ export interface RoadmapTemplate {
 
 export interface UserLearningRoadmap {
     id: string;
+    studyPlanId: string; // ID of the study plan for navigation
     templateId: string;
     title: string;
     description: string;

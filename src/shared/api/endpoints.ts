@@ -32,10 +32,21 @@ export const endpoints = {
     base: '/study-plans',
     byId: (id: string) => `/study-plans/${id}`,
     create: '/study-plans',
+    byRoadmap: (roadmapId: string) => `/study-plans/by-roadmap/${roadmapId}`,
+    user: '/study-plans/user',
     current: '/study-plans/current',
     archive: (id: string) => `/study-plans/${id}/archive`,
     adjust: (id: string) => `/study-plans/${id}/adjust`,
     progress: (id: string) => `/study-plans/${id}/progress`,
+  },
+
+  // Tasks
+  tasks: {
+    base: '/tasks',
+    byId: (id: string) => `/tasks/${id}`,
+    batch: '/tasks/batch',
+    byPlan: (studyPlanId: string) => `/tasks/by-plan/${studyPlanId}`,
+    byModule: (moduleId: string) => `/tasks/by-module/${moduleId}`,
   },
 
   // Roadmaps

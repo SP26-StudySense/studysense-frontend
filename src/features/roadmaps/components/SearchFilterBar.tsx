@@ -48,7 +48,7 @@ export function SearchFilterBar({ filters, onFiltersChange }: SearchFilterBarPro
                     onChange={(e) =>
                         onFiltersChange({ ...filters, search: e.target.value })
                     }
-                    className="w-full rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur-xl py-3 pl-11 pr-4 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+                    className="w-full rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur-xl py-3 pl-11 pr-4 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
                 />
             </div>
 

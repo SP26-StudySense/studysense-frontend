@@ -40,9 +40,9 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     const headers = new Headers(request.headers);
     headers.delete('host');
 
-    // Handle Content-Type header
+    // Handle Content-Type header - only set for requests with body (POST, PUT, PATCH)
     const originalContentType = request.headers.get('Content-Type');
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'DELETE') {
         if (!originalContentType) {
             headers.set('Content-Type', 'application/json');
         }
@@ -55,9 +55,10 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     }
 
     try {
-        // Get request body for non-GET requests
+        // Get request body for non-GET/HEAD/DELETE requests
+        // DELETE requests typically don't have a body
         let body: BodyInit | undefined;
-        if (request.method !== 'GET' && request.method !== 'HEAD') {
+        if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'DELETE') {
             const contentType = request.headers.get('Content-Type') || '';
 
             if (contentType.includes('multipart/form-data')) {

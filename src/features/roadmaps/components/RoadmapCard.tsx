@@ -1,14 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as LucideIcons from 'lucide-react';
 import { RoadmapTemplate, UserLearningRoadmap } from '../types';
 import { cn } from '@/shared/lib/utils';
+import { useStartLearning } from '../hooks/useStartLearning';
+import { StartLearningOverlay } from './StartLearningOverlay';
+import { useSessionStore } from '@/store/session.store';
 
 interface RoadmapCardProps {
     roadmap: RoadmapTemplate | UserLearningRoadmap;
     variant: 'template' | 'learning';
     onPreview?: () => void;
+    existingRoadmapIds?: Set<number>; // Track existing study plans
 }
 
 const difficultyColors = {
@@ -17,22 +22,66 @@ const difficultyColors = {
     advanced: 'bg-red-100 text-red-700 border-red-200',
 };
 
-export function RoadmapCard({ roadmap, variant, onPreview }: RoadmapCardProps) {
+export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }: RoadmapCardProps) {
     const router = useRouter();
+    const [showOverlay, setShowOverlay] = useState(false);
+
+    // Check if this roadmap already has a study plan
+    // Check if this roadmap already has a study plan
+    const hasExistingPlan = existingRoadmapIds?.has(Number(roadmap.id)) ?? false;
+
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
+
+    const { startLearning, currentStep, error, reset, isLoading } = useStartLearning({
+        onSuccess: () => {
+            // Close overlay after redirect
+            setShowOverlay(false);
+        },
+        onError: () => {
+            // Keep overlay open to show error
+        },
+    });
+
     const Icon = LucideIcons[roadmap.icon as keyof typeof LucideIcons] as React.ComponentType<{ className?: string }> || LucideIcons.Map;
 
     const isLearningRoadmap = (r: RoadmapTemplate | UserLearningRoadmap): r is UserLearningRoadmap => {
         return 'progress' in r;
     };
 
-    const handleClick = () => {
+    const handleClick = async () => {
         if (variant === 'learning' && isLearningRoadmap(roadmap)) {
             // Continue learning -> go to dashboard
+            setActiveStudyPlanId(roadmap.studyPlanId);
             router.push('/dashboard');
         } else {
-            // Start new template roadmap -> go to survey first
-            router.push('/surveys/initial-survey');
+            // Check if roadmap already has a study plan, redirect instead of creating
+            if (hasExistingPlan) {
+                // Find the existing study plan
+                const existingStudyPlan = (roadmap as any).studyPlanId;
+                if (existingStudyPlan) {
+                    setActiveStudyPlanId(String(existingStudyPlan));
+                    router.push('/dashboard');
+                    return;
+                }
+            }
+            // Start new template roadmap -> create study plan directly
+            setShowOverlay(true);
+            await startLearning(Number(roadmap.id));
         }
+    };
+
+    const handleRetry = async () => {
+        reset();
+        await startLearning(Number(roadmap.id));
+    };
+
+    const handleCloseOverlay = () => {
+        // If error suggests plan already exists, redirect to dashboard on close
+        if (error && error.toLowerCase().includes('already exists')) {
+            router.push('/dashboard');
+        }
+        setShowOverlay(false);
+        reset();
     };
 
     const formatDate = (date: Date) => {
@@ -156,6 +205,16 @@ export function RoadmapCard({ roadmap, variant, onPreview }: RoadmapCardProps) {
 
             {/* Glow effect on hover */}
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#00bae2]/0 via-[#00bae2]/0 to-[#fec5fb]/0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" />
+
+            {/* Start Learning Overlay */}
+            <StartLearningOverlay
+                isOpen={showOverlay}
+                currentStep={currentStep}
+                roadmapTitle={roadmap.title}
+                error={error || undefined}
+                onRetry={handleRetry}
+                onClose={handleCloseOverlay}
+            />
         </div>
     );
 }
