@@ -54,3 +54,21 @@ export interface OptionFormData {
   orderNo: number;
   allowFreeText: boolean;
 }
+
+// Survey Field Semantic (linked to questions)
+export interface SurveyFieldSemantic {
+  id: number;
+  surveyQuestionId: number;
+  dimensionCode: string;
+  evaluates: string;
+  aiHint: string | null;
+  weight: number | null;
+  createdAt: string;
+}
+
+export interface FieldSemanticFormData {
+  dimensionCode: string;
+  evaluates: string;
+  aiHint: string;
+  weight: number;
+}

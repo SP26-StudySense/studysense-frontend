@@ -36,6 +36,16 @@ export interface SurveyQuestionOptionDto {
   allowFreeText: boolean;
 }
 
+export interface SurveyFieldSemanticDto {
+  id: number;
+  surveyQuestionId: number;
+  dimensionCode: string;
+  evaluates: string;
+  aiHint: string | null;
+  weight: number | null;
+  createdAt: string;
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   pageIndex: number;
@@ -269,4 +279,74 @@ export async function updateOption(data: UpdateOptionRequest): Promise<SurveyQue
  */
 export async function deleteOption(id: number): Promise<void> {
   await del(`/surveys/question/option/${id}`);
+}
+
+// ============ Survey Field Semantic CRUD ============
+
+export interface CreateFieldSemanticRequest {
+  surveyQuestionId: number;
+  dimensionCode: string;
+  evaluates: string;
+  aiHint: string | null;
+  weight: number | null;
+  createdAt?: string;
+}
+
+export interface UpdateFieldSemanticRequest {
+  id: number;
+  surveyQuestionId: number;
+  dimensionCode: string;
+  evaluates: string;
+  aiHint: string | null;
+  weight: number | null;
+  createdAt?: string;
+}
+
+/**
+ * Get field semantics by question ID
+ */
+export async function getFieldSemanticsByQuestion(
+  questionId: number,
+  pageIndex: number = 1,
+  pageSize: number = 100
+): Promise<PaginatedResponse<SurveyFieldSemanticDto>> {
+  // API client auto-unwraps response, returns data directly (single object or null)
+  const data = await get<SurveyFieldSemanticDto | null>(
+    `/surveys/question/surveyfieldsemantic`,
+    { params: { questionId, pageIndex, pageSize } }
+  );
+  
+  // Backend returns single object in data, wrap it in array
+  const items = data ? [data] : [];
+  
+  return {
+    items,
+    pageIndex,
+    pageSize,
+    totalPages: 1,
+    totalCount: items.length,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  };
+}
+
+/**
+ * Create field semantic
+ */
+export async function createFieldSemantic(data: CreateFieldSemanticRequest): Promise<SurveyFieldSemanticDto> {
+  return await post<SurveyFieldSemanticDto>('/surveys/question/surveyfieldsemantic', data);
+}
+
+/**
+ * Update field semantic
+ */
+export async function updateFieldSemantic(data: UpdateFieldSemanticRequest): Promise<SurveyFieldSemanticDto> {
+  return await patch<SurveyFieldSemanticDto>('/surveys/question/surveyfieldsemantic', data);
+}
+
+/**
+ * Delete field semantic
+ */
+export async function deleteFieldSemantic(id: number): Promise<void> {
+  await del(`/surveys/question/surveyfieldsemantic/${id}`);
 }

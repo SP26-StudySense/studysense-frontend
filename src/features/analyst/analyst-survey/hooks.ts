@@ -17,6 +17,7 @@ const surveyKeys = {
   detail: (id: number) => [...surveyKeys.all, 'detail', id] as const,
   questions: (surveyId: number) => [...surveyKeys.all, 'questions', surveyId] as const,
   options: (questionId: number) => [...surveyKeys.all, 'options', questionId] as const,
+  fieldSemantics: (questionId: number) => [...surveyKeys.all, 'fieldSemantics', questionId] as const,
 };
 
 /**
@@ -302,6 +303,78 @@ export function useDeleteOption() {
     onError: (error: Error) => {
       console.error('Failed to delete option:', error);
       toast.error('Failed to delete option');
+    },
+  });
+}
+
+// ============ Field Semantic Queries & Mutations ============
+
+/**
+ * Fetch field semantics for a question
+ */
+export function useFieldSemantics(questionId: number) {
+  return useQuery({
+    queryKey: surveyKeys.fieldSemantics(questionId),
+    queryFn: () => surveyApi.getFieldSemanticsByQuestion(questionId),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!questionId,
+    refetchOnWindowFocus: false, // Don't refetch when user returns to tab
+  });
+}
+
+/**
+ * Create field semantic mutation
+ */
+export function useCreateFieldSemantic() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: surveyApi.CreateFieldSemanticRequest) => surveyApi.createFieldSemantic(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: surveyKeys.fieldSemantics(variables.surveyQuestionId) });
+      toast.success('Field semantic created successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Failed to create field semantic:', error);
+      toast.error('Failed to create field semantic');
+    },
+  });
+}
+
+/**
+ * Update field semantic mutation
+ */
+export function useUpdateFieldSemantic() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: surveyApi.UpdateFieldSemanticRequest) => surveyApi.updateFieldSemantic(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: surveyKeys.fieldSemantics(variables.surveyQuestionId) });
+      toast.success('Field semantic updated successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update field semantic:', error);
+      toast.error('Failed to update field semantic');
+    },
+  });
+}
+
+/**
+ * Delete field semantic mutation
+ */
+export function useDeleteFieldSemantic() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { id: number; questionId: number }) => surveyApi.deleteFieldSemantic(data.id),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: surveyKeys.fieldSemantics(variables.questionId) });
+      toast.success('Field semantic deleted successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Failed to delete field semantic:', error);
+      toast.error('Failed to delete field semantic');
     },
   });
 }

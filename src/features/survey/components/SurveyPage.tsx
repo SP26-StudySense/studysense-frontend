@@ -27,6 +27,7 @@ export function SurveyPage({ surveyCode, triggerReason }: SurveyPageProps) {
   const [responses, setResponses] = useState<Record<string, SurveyResponse>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track submission state
 
   // Fetch survey by code
   const { data: survey, isLoading: surveyLoading, error: surveyError } = useSurveyByCode(surveyCode);
@@ -96,8 +97,8 @@ export function SurveyPage({ surveyCode, triggerReason }: SurveyPageProps) {
     }, {} as Record<string, QuestionType>);
   }, [questions]);
 
-  // Auto-save to localStorage every 30s (only when surveyId is available)
-  useSurveyAutoSave(surveyId || 0, responses, startedAt, draftLoaded && !!surveyId);
+  // Auto-save to localStorage every 30s (only when surveyId is available and NOT submitting)
+  useSurveyAutoSave(surveyId || 0, responses, startedAt, draftLoaded && !!surveyId && !isSubmitting);
 
   // Submit mutation with question types, startedAt, and triggerReason
   const submitMutation = useSubmitSurvey(surveyId || 0, questionTypes, startedAt, triggerReason);
@@ -203,15 +204,20 @@ export function SurveyPage({ surveyCode, triggerReason }: SurveyPageProps) {
       return;
     }
 
-    // Convert responses to array
-    const responseArray = Object.values(responses);
+    // Get valid question IDs for this survey
+    const validQuestionIds = new Set(questions?.map(q => q.id) || []);
     
-    // Submit and clear draft on success
-    submitMutation.mutate(responseArray, {
-      onSuccess: () => {
-        clearSurveyDraft(surveyId);
-      },
-    });
+    // Filter responses to only include questions that belong to this survey
+    const allResponses = Object.values(responses);
+    const validResponses = allResponses.filter(response => 
+      validQuestionIds.has(response.questionId)
+    );
+    
+    // Disable auto-save before submitting
+    setIsSubmitting(true);
+    
+    // Submit (draft will be cleared in mutation onSuccess handler)
+    submitMutation.mutate(validResponses);
   };
 
   // Loading state
