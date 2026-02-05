@@ -16,6 +16,7 @@ import type {
   TakeSurveyResponse,
   SurveyAnswerInput,
 } from '../types';
+import { clearSurveyDraft } from '../hooks/useSurveyAutoSave';
 
 /**
  * Transform UI response to backend answer format
@@ -195,7 +196,8 @@ export function useSubmitSurvey(
     },
     onSuccess: (data) => {
       try {
-        console.log('[Survey Submit] Success! Data:', data);
+        // Clear survey draft from localStorage FIRST
+        clearSurveyDraft(surveyId);
         
         // Invalidate related queries
         queryClient.invalidateQueries({ 
@@ -219,7 +221,6 @@ export function useSubmitSurvey(
         }
 
         // Redirect to homepage
-        console.log('[Survey Submit] Redirecting to: /');
         router.push('/');
       } catch (err) {
         console.error('[Survey Submit] Error in onSuccess:', err);

@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Plus, Edit, Trash2, Eye, X, Loader2 } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Eye, X, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { ConfirmationModal } from "@/shared/ui";
-import type { Survey, SurveyFormData } from "./types";
+import type { Survey, SurveyFormData, SurveyFieldSemantic, FieldSemanticFormData } from "./types";
 import { useSurveys, useCreateSurvey, useUpdateSurvey, useDeleteSurvey } from "./hooks";
 
 type ModalState =
   | { type: "none" }
   | { type: "create" }
   | { type: "edit"; survey: Survey }
-  | { type: "delete"; id: number; title: string };
+  | { type: "delete"; id: number; title: string }
+  | { type: "createFieldSemantic"; surveyId: number }
+  | { type: "editFieldSemantic"; surveyId: number; fieldSemantic: SurveyFieldSemantic }
+  | { type: "deleteFieldSemantic"; surveyId: number; fieldSemanticId: number; dimensionCode: string };
 
 // Survey Form Modal Component
 function SurveyFormModal({

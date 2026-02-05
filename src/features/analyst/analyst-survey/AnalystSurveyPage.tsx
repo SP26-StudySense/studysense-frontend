@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Edit, Trash2, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
 import { ConfirmationModal } from "@/shared/ui";
-import { useSurvey, useSurveyQuestions, useCreateQuestion, useUpdateQuestion, useDeleteQuestion, useCreateOption, useUpdateOption, useDeleteOption, useQuestionOptions } from "./hooks";
+import { useSurvey, useSurveyQuestions, useCreateQuestion, useUpdateQuestion, useDeleteQuestion, useCreateOption, useUpdateOption, useDeleteOption, useQuestionOptions, useFieldSemantics, useCreateFieldSemantic, useUpdateFieldSemantic, useDeleteFieldSemantic } from "./hooks";
 import type {
   Survey,
   SurveyQuestion,
@@ -12,6 +12,8 @@ import type {
   SurveyQuestionOption,
   QuestionFormData,
   OptionFormData,
+  SurveyFieldSemantic,
+  FieldSemanticFormData,
 } from "./types";
 
 type ModalState =
@@ -21,7 +23,10 @@ type ModalState =
   | { type: "deleteQuestion"; id: number; text: string }
   | { type: "createOption"; questionId: number }
   | { type: "editOption"; questionId: number; option: SurveyQuestionOption }
-  | { type: "deleteOption"; questionId: number; optionId: number; displayText: string };
+  | { type: "deleteOption"; questionId: number; optionId: number; displayText: string }
+  | { type: "createFieldSemantic"; questionId: number }
+  | { type: "editFieldSemantic"; questionId: number; fieldSemantic: SurveyFieldSemantic }
+  | { type: "deleteFieldSemantic"; questionId: number; fieldSemanticId: number; dimensionCode: string };
 
 // Question Form Modal
 function QuestionFormModal({
@@ -248,6 +253,20 @@ function OptionFormModal({
 
   const [valueKeyError, setValueKeyError] = useState("");
 
+  // Update form data when modal opens or initialData changes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        valueKey: initialData?.valueKey || "",
+        displayText: initialData?.displayText || "",
+        weight: initialData?.weight || 1,
+        orderNo: initialData?.orderNo || 1,
+        allowFreeText: initialData?.allowFreeText || false,
+      });
+      setValueKeyError("");
+    }
+  }, [isOpen, initialData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -393,6 +412,146 @@ function OptionFormModal({
   );
 }
 
+// Field Semantic Form Modal
+function FieldSemanticFormModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData,
+  mode,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: FieldSemanticFormData) => void;
+  initialData?: SurveyFieldSemantic;
+  mode: "create" | "edit";
+}) {
+  const [formData, setFormData] = useState<FieldSemanticFormData>({
+    dimensionCode: initialData?.dimensionCode || "",
+    evaluates: initialData?.evaluates || "",
+    aiHint: initialData?.aiHint || "",
+    weight: initialData?.weight || 0,
+  });
+
+  // Update form data when modal opens or initialData changes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        dimensionCode: initialData?.dimensionCode || "",
+        evaluates: initialData?.evaluates || "",
+        aiHint: initialData?.aiHint || "",
+        weight: initialData?.weight || 0,
+      });
+    }
+  }, [isOpen, initialData]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="mb-4 flex items-start justify-between">
+          <h3 className="text-lg font-semibold text-neutral-900">
+            {mode === "create" ? "Create Field Semantic" : "Edit Field Semantic"}
+          </h3>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Dimension Code */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+              Dimension Code <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.dimensionCode}
+              onChange={(e) => setFormData({ ...formData, dimensionCode: e.target.value })}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+              placeholder="e.g., learning_style_visual"
+              required
+            />
+          </div>
+
+          {/* Evaluates */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+              Evaluates <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={formData.evaluates}
+              onChange={(e) => setFormData({ ...formData, evaluates: e.target.value })}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 resize-none"
+              placeholder="Describe what this field evaluates..."
+              rows={3}
+              required
+            />
+          </div>
+
+          {/* AI Hint */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+              AI Hint <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={formData.aiHint}
+              onChange={(e) => setFormData({ ...formData, aiHint: e.target.value })}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 resize-none"
+              placeholder="Provide hints for AI processing..."
+              rows={3}
+              required
+            />
+          </div>
+
+          {/* Weight */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+              Weight <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={formData.weight}
+              onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) })}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+              required
+            />
+            <p className="mt-1 text-xs text-neutral-500">Value between 0 and 1</p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
+            >
+              {mode === "create" ? "Create Field Semantic" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Question Item Component with expand/collapse
 function QuestionItem({
   question,
@@ -401,6 +560,9 @@ function QuestionItem({
   onCreateOption,
   onEditOption,
   onDeleteOption,
+  onCreateFieldSemantic,
+  onEditFieldSemantic,
+  onDeleteFieldSemantic,
   isExpanded,
   onToggle,
 }: {
@@ -410,6 +572,9 @@ function QuestionItem({
   onCreateOption: (questionId: number) => void;
   onEditOption: (questionId: number, option: SurveyQuestionOption) => void;
   onDeleteOption: (questionId: number, optionId: number, displayText: string) => void;
+  onCreateFieldSemantic: (questionId: number) => void;
+  onEditFieldSemantic: (questionId: number, fieldSemantic: SurveyFieldSemantic) => void;
+  onDeleteFieldSemantic: (questionId: number, fieldSemanticId: number, dimensionCode: string) => void;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
@@ -421,6 +586,13 @@ function QuestionItem({
   );
   
   const options = optionsData?.items || [];
+  
+  // Fetch field semantics when expanded
+  const { data: semanticsData, isLoading: semanticsLoading } = useFieldSemantics(
+    isExpanded ? question.id : 0
+  );
+  
+  const semantics = semanticsData?.items || [];
 
   // Map question type to display
   const getQuestionTypeBadge = (type: SurveyQuestion["type"]) => {
@@ -449,19 +621,17 @@ function QuestionItem({
     <div className="rounded-xl border border-neutral-200 bg-white">
       {/* Question Header */}
       <div className="flex items-start gap-4 p-4">
-        {/* Expand/Collapse Button */}
-        {hasOptions && (
-          <button
-            onClick={onToggle}
-            className="mt-1 rounded-lg p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
-          >
-            {isExpanded ? (
-              <ChevronDown className="h-5 w-5" />
-            ) : (
-              <ChevronRight className="h-5 w-5" />
-            )}
-          </button>
-        )}
+        {/* Expand/Collapse Button - Always show for all question types */}
+        <button
+          onClick={onToggle}
+          className="mt-1 rounded-lg p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-5 w-5" />
+          ) : (
+            <ChevronRight className="h-5 w-5" />
+          )}
+        </button>
 
         {/* Question Content */}
         <div className="flex-1">
@@ -565,6 +735,81 @@ function QuestionItem({
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Field Semantics Section (Always show when expanded) */}
+      {isExpanded && (
+        <div className="border-t border-neutral-200 bg-neutral-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-neutral-900">Field Semantics</h4>
+            <button
+              onClick={() => onCreateFieldSemantic(question.id)}
+              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:shadow-md"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Field Semantic
+            </button>
+          </div>
+
+          {semanticsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-[#00bae2]" />
+            </div>
+          ) : semantics.length === 0 ? (
+            <div className="text-center py-6 text-neutral-500 text-sm">
+              No field semantics yet. Click "Add Field Semantic" to create one.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {semantics.map((semantic) => (
+                <div
+                  key={semantic.id}
+                  className="rounded-lg bg-white p-4 border border-neutral-200"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-semibold text-[#00bae2]">
+                          {semantic.dimensionCode}
+                        </span>
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                          Weight: {semantic.weight}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-neutral-500">Evaluates:</p>
+                        <p className="text-sm text-neutral-900">{semantic.evaluates}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-neutral-500">AI Hint:</p>
+                        <p className="text-sm text-neutral-700 italic">{semantic.aiHint}</p>
+                      </div>
+                      <div className="text-xs text-neutral-400">
+                        Created: {new Date(semantic.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 ml-4">
+                      <button
+                        onClick={() => onEditFieldSemantic(question.id, semantic)}
+                        className="rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+                        title="Edit Field Semantic"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteFieldSemantic(question.id, semantic.id, semantic.dimensionCode)}
+                        className="rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-red-50 hover:text-red-600"
+                        title="Delete Field Semantic"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -711,6 +956,53 @@ export function AnalystSurveyPage({ surveyId }: { surveyId: string }) {
     });
   };
 
+  // Field Semantic Handlers with API
+  const createFieldSemanticMutation = useCreateFieldSemantic();
+  const updateFieldSemanticMutation = useUpdateFieldSemantic();
+  const deleteFieldSemanticMutation = useDeleteFieldSemantic();
+
+  const handleCreateFieldSemantic = (data: FieldSemanticFormData) => {
+    if (modalState.type !== "createFieldSemantic") return;
+    
+    createFieldSemanticMutation.mutate({
+      surveyQuestionId: modalState.questionId,
+      dimensionCode: data.dimensionCode,
+      evaluates: data.evaluates,
+      aiHint: data.aiHint,
+      weight: data.weight,
+      createdAt: new Date().toISOString(),
+    }, {
+      onSuccess: () => setModalState({ type: "none" }),
+    });
+  };
+
+  const handleUpdateFieldSemantic = (data: FieldSemanticFormData) => {
+    if (modalState.type !== "editFieldSemantic") return;
+    
+    updateFieldSemanticMutation.mutate({
+      id: modalState.fieldSemantic.id,
+      surveyQuestionId: modalState.questionId,
+      dimensionCode: data.dimensionCode,
+      evaluates: data.evaluates,
+      aiHint: data.aiHint,
+      weight: data.weight,
+      createdAt: modalState.fieldSemantic.createdAt,
+    }, {
+      onSuccess: () => setModalState({ type: "none" }),
+    });
+  };
+
+  const handleDeleteFieldSemantic = () => {
+    if (modalState.type !== "deleteFieldSemantic") return;
+    
+    deleteFieldSemanticMutation.mutate({
+      id: modalState.fieldSemanticId,
+      questionId: modalState.questionId,
+    }, {
+      onSuccess: () => setModalState({ type: "none" }),
+    });
+  };
+
   // Sort questions by orderNo
   const sortedQuestions = useMemo(() => 
     [...questions].sort((a, b) => a.orderNo - b.orderNo),
@@ -802,6 +1094,15 @@ export function AnalystSurveyPage({ surveyId }: { surveyId: string }) {
             onDeleteOption={(questionId, optionId, displayText) =>
               setModalState({ type: "deleteOption", questionId, optionId, displayText })
             }
+            onCreateFieldSemantic={(questionId) => 
+              setModalState({ type: "createFieldSemantic", questionId })
+            }
+            onEditFieldSemantic={(questionId, fieldSemantic) =>
+              setModalState({ type: "editFieldSemantic", questionId, fieldSemantic })
+            }
+            onDeleteFieldSemantic={(questionId, fieldSemanticId, dimensionCode) =>
+              setModalState({ type: "deleteFieldSemantic", questionId, fieldSemanticId, dimensionCode })
+            }
           />
         ))}
 
@@ -875,6 +1176,35 @@ export function AnalystSurveyPage({ surveyId }: { surveyId: string }) {
             </div>
           }
           confirmText="Delete Option"
+          variant="danger"
+        />
+      )}
+
+      {/* Field Semantic Modals */}
+      <FieldSemanticFormModal
+        isOpen={modalState.type === "createFieldSemantic" || modalState.type === "editFieldSemantic"}
+        onClose={() => setModalState({ type: "none" })}
+        onSubmit={modalState.type === "createFieldSemantic" ? handleCreateFieldSemantic : handleUpdateFieldSemantic}
+        initialData={modalState.type === "editFieldSemantic" ? modalState.fieldSemantic : undefined}
+        mode={modalState.type === "createFieldSemantic" ? "create" : "edit"}
+      />
+
+      {modalState.type === "deleteFieldSemantic" && (
+        <ConfirmationModal
+          isOpen={true}
+          onClose={() => setModalState({ type: "none" })}
+          onConfirm={handleDeleteFieldSemantic}
+          title="Delete Field Semantic"
+          description={
+            <div>
+              <p className="mb-3">Are you sure you want to delete this field semantic?</p>
+              <div className="rounded-lg bg-neutral-100 p-3">
+                <p className="font-mono font-medium text-neutral-900">{modalState.dimensionCode}</p>
+              </div>
+              <p className="mt-3 text-xs text-neutral-500">This action cannot be undone.</p>
+            </div>
+          }
+          confirmText="Delete Field Semantic"
           variant="danger"
         />
       )}
