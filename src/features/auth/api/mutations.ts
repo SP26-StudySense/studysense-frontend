@@ -322,14 +322,10 @@ export function useGoogleLogin() {
 
   const handleMessage = useCallback(
     async (event: MessageEvent<GoogleLoginCallbackData>) => {
-      console.log('[Google Login] Received message:', event.origin, event.data);
-
       // Validate origin - should match API origin
       const apiUrl = new URL(env.NEXT_PUBLIC_API_URL_HTTP);
-      console.log('[Google Login] Expected origin:', apiUrl.origin);
 
       if (event.origin !== apiUrl.origin) {
-        console.log('[Google Login] Origin mismatch, ignoring');
         return;
       }
 
@@ -346,7 +342,6 @@ export function useGoogleLogin() {
       if (token && user) {
         // ALWAYS normalize user data - backend may send PascalCase keys
         const anyUser = user as any;
-        console.log('[Google Login] Raw user data:', JSON.stringify(anyUser));
 
         const normalizedUser = {
           id: anyUser.id || anyUser.Id || '',
@@ -363,9 +358,6 @@ export function useGoogleLogin() {
           roles: anyUser.roles || anyUser.Roles || [],
         };
 
-
-        console.log('[Google Login] Normalized user data:', JSON.stringify(normalizedUser));
-
         // Store access token
         setAccessToken(token);
 
@@ -380,8 +372,6 @@ export function useGoogleLogin() {
           const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
 
           if (surveyStatus.requiresInitialSurvey && surveyStatus.surveyId) {
-            console.log('[Google Login] User needs to complete initial survey, redirecting...');
-
             // Show info toast about survey
             toast.info('Welcome! Please complete the initial survey', {
               description: 'This helps us personalize your learning experience',
@@ -397,7 +387,7 @@ export function useGoogleLogin() {
             return; // Stop here, don't proceed to dashboard
           }
         } catch (error) {
-          console.error('[Google Login] Failed to check survey status:', error);
+          console.error('Failed to check survey status:', error);
           // If survey status check fails, continue with normal login flow
         }
 
@@ -408,7 +398,6 @@ export function useGoogleLogin() {
 
         // Redirect to roadmaps selection page
         const redirectUrl = await getPostLoginRedirectUrl();
-        console.log('[Google Login] Redirecting to:', redirectUrl);
 
         // Redirect
         router.push(redirectUrl);

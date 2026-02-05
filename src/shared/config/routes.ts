@@ -40,6 +40,9 @@ export const routes = {
       node: (roadmapId: string, nodeId: string) => `/roadmaps/${roadmapId}/nodes/${nodeId}`,
     },
 
+    // My Roadmap (dashboard view)
+    myRoadmap: (id: string) => `/my-roadmap/${id}`,
+
     // Study Sessions
     sessions: {
       list: '/sessions',

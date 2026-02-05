@@ -24,9 +24,9 @@ export default function SurveyLayout({ children }: SurveyLayoutProps) {
                         className="absolute inset-0 opacity-[0.03]"
                         style={{
                             backgroundImage: `
-                  linear-gradient(to right, #000 1px, transparent 1px),
-                  linear-gradient(to bottom, #000 1px, transparent 1px)
-              `,
+                                linear-gradient(to right, #000 1px, transparent 1px),
+                                linear-gradient(to bottom, #000 1px, transparent 1px)
+                            `,
                             backgroundSize: '60px 60px'
                         }}
                     />
@@ -45,7 +45,7 @@ export default function SurveyLayout({ children }: SurveyLayoutProps) {
                     {/* Header */}
                     <header className="flex h-16 items-center px-6 lg:px-12 backdrop-blur-sm bg-white/30 border-b border-white/50 sticky top-0 z-50">
                         <Link
-                            href="/"
+                            href="/dashboard"
                             className="flex items-center gap-2 text-sm font-medium text-neutral-600 hover:text-[#00bae2] transition-colors bg-white/50 px-3 py-1.5 rounded-full hover:bg-white/80"
                         >
                             <ArrowLeft className="w-4 h-4" />

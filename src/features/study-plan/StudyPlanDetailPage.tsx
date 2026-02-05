@@ -1,188 +1,187 @@
 'use client';
 
-import { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { StatsCard } from './components/StatsCard';
 import { RoadmapTimeline, RoadmapModule } from './components/RoadmapTimeline';
-import { ModuleTasksPanel, ModuleData } from './components/ModuleTasksPanel';
+import { ModuleTasksPanel, ModuleData, ModuleTask } from './components/ModuleTasksPanel';
 import { CalendarView } from './components/CalendarView';
-
-// Mock data matching Roadmap Nodes
-const MOCK_MODULES_WITH_TASKS: ModuleData[] = [
-    {
-        id: '1',
-        title: 'HTML Basics',
-        status: 'completed',
-        tasks: [
-            { id: 't1-1', title: 'HTML Document Structure', estimatedMinutes: 30, isCompleted: true },
-            { id: 't1-2', title: 'Text Formatting Tags', estimatedMinutes: 30, isCompleted: true },
-            { id: 't1-3', title: 'Lists and Links', estimatedMinutes: 30, isCompleted: true },
-            { id: 't1-4', title: 'Images and Media', estimatedMinutes: 30, isCompleted: true },
-        ]
-    },
-    {
-        id: '2',
-        title: 'CSS Fundamentals',
-        status: 'completed',
-        tasks: [
-            { id: 't2-1', title: 'Selectors and Specificity', estimatedMinutes: 45, isCompleted: true },
-            { id: 't2-2', title: 'Box Model', estimatedMinutes: 45, isCompleted: true },
-            { id: 't2-3', title: 'Flexbox Layout', estimatedMinutes: 45, isCompleted: true },
-            { id: 't2-4', title: 'Grid Layout', estimatedMinutes: 45, isCompleted: true },
-        ]
-    },
-    {
-        id: '3',
-        title: 'JavaScript Basics',
-        status: 'completed',
-        tasks: [
-            { id: 't3-1', title: 'Variables and Data Types', estimatedMinutes: 45, isCompleted: true },
-            { id: 't3-2', title: 'Functions and Scope', estimatedMinutes: 45, isCompleted: true },
-            { id: 't3-3', title: 'Arrays and Objects', estimatedMinutes: 50, isCompleted: true },
-            { id: 't3-4', title: 'DOM Manipulation', estimatedMinutes: 50, isCompleted: true },
-            { id: 't3-5', title: 'Events Handling', estimatedMinutes: 50, isCompleted: true },
-        ]
-    },
-    {
-        id: '4',
-        title: 'Tailwind CSS',
-        status: 'in_progress',
-        tasks: [
-            { id: 't4-1', title: 'Utility First Concept', estimatedMinutes: 30, isCompleted: true },
-            { id: 't4-2', title: 'Responsive Design', estimatedMinutes: 40, isCompleted: true },
-            { id: 't4-3', title: 'Flexbox & Grid in Tailwind', estimatedMinutes: 40, isCompleted: false },
-            { id: 't4-4', title: 'Custom Configuration', estimatedMinutes: 40, isCompleted: false },
-        ]
-    },
-    {
-        id: '5',
-        title: 'React Fundamentals',
-        status: 'in_progress',
-        tasks: [
-            { id: 't5-1', title: 'JSX and Components', estimatedMinutes: 60, isCompleted: true },
-            { id: 't5-2', title: 'Props and State', estimatedMinutes: 60, isCompleted: true },
-            { id: 't5-3', title: 'Handling Events', estimatedMinutes: 60, isCompleted: true },
-            { id: 't5-4', title: 'Conditional Rendering', estimatedMinutes: 60, isCompleted: false },
-            { id: 't5-5', title: 'Lists and Keys', estimatedMinutes: 60, isCompleted: false },
-        ]
-    },
-    {
-        id: '6',
-        title: 'Git & Version Control',
-        status: 'completed',
-        tasks: [
-            { id: 't6-1', title: 'Basic Commands', estimatedMinutes: 30, isCompleted: true },
-            { id: 't6-2', title: 'Branching and Merging', estimatedMinutes: 30, isCompleted: true },
-            { id: 't6-3', title: 'Remote Repositories', estimatedMinutes: 30, isCompleted: true },
-            { id: 't6-4', title: 'Pull Requests', estimatedMinutes: 30, isCompleted: true },
-        ]
-    },
-    {
-        id: '7',
-        title: 'Component Libraries',
-        status: 'not_started',
-        tasks: [
-            { id: 't7-1', title: 'Introduction to Shadcn UI', estimatedMinutes: 45, isCompleted: false },
-            { id: 't7-2', title: 'Radix UI Primitives', estimatedMinutes: 45, isCompleted: false },
-            { id: 't7-3', title: 'Styling and Theming', estimatedMinutes: 45, isCompleted: false },
-            { id: 't7-4', title: 'Building Reusable Components', estimatedMinutes: 45, isCompleted: false },
-        ]
-    },
-    {
-        id: '8',
-        title: 'TypeScript',
-        status: 'not_started',
-        tasks: [
-            { id: 't8-1', title: 'Basic Types', estimatedMinutes: 45, isCompleted: false },
-            { id: 't8-2', title: 'Interfaces and Types', estimatedMinutes: 45, isCompleted: false },
-            { id: 't8-3', title: 'Generics', estimatedMinutes: 50, isCompleted: false },
-            { id: 't8-4', title: 'Utility Types', estimatedMinutes: 50, isCompleted: false },
-            { id: 't8-5', title: 'TypeScript with React', estimatedMinutes: 50, isCompleted: false },
-        ]
-    },
-    {
-        id: '9',
-        title: 'React Hooks Deep',
-        status: 'not_started',
-        tasks: [
-            { id: 't9-1', title: 'Master useState and useReducer', estimatedMinutes: 50, isCompleted: false },
-            { id: 't9-2', title: 'Understand useEffect lifecycle', estimatedMinutes: 50, isCompleted: false },
-            { id: 't9-3', title: 'Use useContext for state sharing', estimatedMinutes: 50, isCompleted: false },
-            { id: 't9-4', title: 'Create custom reusable hooks', estimatedMinutes: 50, isCompleted: false },
-        ]
-    },
-    {
-        id: '10',
-        title: 'CI/CD Pipelines',
-        status: 'locked',
-        tasks: [
-            { id: 't10-1', title: 'GitHub Actions Basics', estimatedMinutes: 50, isCompleted: false },
-            { id: 't10-2', title: 'Building and Testing', estimatedMinutes: 50, isCompleted: false },
-            { id: 't10-3', title: 'Deployment Strategies', estimatedMinutes: 50, isCompleted: false },
-        ]
-    },
-    {
-        id: '11',
-        title: 'Next.js Fundamentals',
-        status: 'locked',
-        tasks: [
-            { id: 't11-1', title: 'App Router Basics', estimatedMinutes: 50, isCompleted: false },
-            { id: 't11-2', title: 'Server Components', estimatedMinutes: 50, isCompleted: false },
-            { id: 't11-3', title: 'Data Fetching', estimatedMinutes: 50, isCompleted: false },
-            { id: 't11-4', title: 'Layouts and Templates', estimatedMinutes: 50, isCompleted: false },
-            { id: 't11-5', title: 'API Routes', estimatedMinutes: 50, isCompleted: false },
-            { id: 't11-6', title: 'Deployment on Vercel', estimatedMinutes: 50, isCompleted: false },
-        ]
-    },
-];
+import { useStudyPlan, useTasksByPlan } from './api/queries';
+import { ModuleStatus, TaskStatus, StudyModuleDto, TaskItemDto } from './api/types';
 
 interface StudyPlanDetailPageProps {
     planId?: string;
 }
 
+// Map API module status to UI status
+function mapModuleStatus(status?: ModuleStatus, isFirstModule: boolean = false): 'completed' | 'in_progress' | 'not_started' | 'locked' {
+    // Special case: First module should never be locked on initial creation
+    if (isFirstModule && status === ModuleStatus.Locked) {
+        return 'not_started';
+    }
+
+    switch (status) {
+        case ModuleStatus.Completed:
+            return 'completed';
+        case ModuleStatus.Active:
+            return 'in_progress';
+        case ModuleStatus.Locked:
+            return 'locked';
+        case ModuleStatus.Skipped:
+            return 'completed';
+        default:
+            return 'not_started';
+    }
+}
+
+// Check if task is completed
+function isTaskCompleted(status?: TaskStatus): boolean {
+    return status === TaskStatus.Completed;
+}
+
 export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
-    const [selectedModuleId, setSelectedModuleId] = useState<string | null>('4'); // Default to first in-progress module
+    const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
 
-    // Transform full data to simplified roadmap module format
-    const roadmapModules: RoadmapModule[] = MOCK_MODULES_WITH_TASKS.map(m => ({
+    // Fetch study plan and tasks from API
+    const { data: studyPlan, isLoading: isLoadingPlan, error: planError } = useStudyPlan(planId);
+    const { data: tasks = [], isLoading: isLoadingTasks } = useTasksByPlan(planId);
+
+    // Transform API data to UI format
+    const modulesWithTasks: ModuleData[] = useMemo(() => {
+        if (!studyPlan?.modules) return [];
+
+        console.log('🔄 [StudyPlanDetailPage] Transforming modules and tasks...');
+        console.log('Study Plan:', studyPlan);
+        console.log('Raw Tasks:', tasks);
+
+        return studyPlan.modules.map((module: StudyModuleDto, index: number) => {
+            const isFirstModule = index === 0;
+            const moduleTasks = tasks
+                .filter((task: TaskItemDto) => task.studyPlanModuleId === module.id)
+                .map((task: TaskItemDto): ModuleTask => ({
+                    id: String(task.id),
+                    title: task.title,
+                    description: task.description,
+                    estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
+                    isCompleted: isTaskCompleted(task.status),
+                    scheduledDate: task.scheduledDate,
+                }));
+
+            const mappedStatus = mapModuleStatus(module.status, isFirstModule);
+
+            console.log(`Module #${module.id} "${module.roadmapNodeName}":`, {
+                status: module.status,
+                mappedStatus: mappedStatus,
+                isFirstModule,
+                tasksCount: moduleTasks.length,
+                tasks: moduleTasks
+            });
+
+            return {
+                id: String(module.id),
+                title: module.roadmapNodeName,
+                status: mappedStatus,
+                tasks: moduleTasks,
+            };
+        });
+    }, [studyPlan, tasks]);
+
+    // Set first in-progress module as default selected
+    useMemo(() => {
+        if (modulesWithTasks.length > 0 && selectedModuleId === null) {
+            const firstInProgress = modulesWithTasks.find(m => m.status === 'in_progress');
+            const firstNotStarted = modulesWithTasks.find(m => m.status === 'not_started');
+            const defaultModule = firstInProgress || firstNotStarted || modulesWithTasks[0];
+            if (defaultModule) {
+                setSelectedModuleId(defaultModule.id);
+            }
+        }
+    }, [modulesWithTasks, selectedModuleId]);
+
+    // Transform to roadmap timeline format
+    const roadmapModules: RoadmapModule[] = modulesWithTasks.map(m => ({
         id: m.id,
         title: m.title,
         status: m.status,
         taskCount: m.tasks.length,
-        // Mock dates for display
-        completedDate: m.status === 'completed' ? 'Oct 15' : undefined,
-        dueDate: m.status === 'in_progress' ? 'Oct 30' : undefined,
+        completedDate: m.status === 'completed' ? 'Completed' : undefined,
+        dueDate: m.status === 'in_progress' ? 'In Progress' : undefined,
     }));
 
-    const selectedModule = MOCK_MODULES_WITH_TASKS.find(m => m.id === selectedModuleId) || null;
+    const selectedModule = modulesWithTasks.find(m => m.id === selectedModuleId) || null;
 
     // Derived stats
-    const totalTasks = MOCK_MODULES_WITH_TASKS.reduce((acc, m) => acc + m.tasks.length, 0);
-    const completedTasks = MOCK_MODULES_WITH_TASKS.reduce((acc, m) => acc + m.tasks.filter(t => t.isCompleted).length, 0);
-    const progress = Math.round((completedTasks / totalTasks) * 100);
+    const totalTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.length, 0);
+    const completedTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.filter(t => t.isCompleted).length, 0);
+    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Calculate hours from tasks
+    const totalMinutes = modulesWithTasks.reduce((acc, m) =>
+        acc + m.tasks.reduce((taskAcc, t) => taskAcc + t.estimatedMinutes, 0), 0);
+    const completedMinutes = modulesWithTasks.reduce((acc, m) =>
+        acc + m.tasks.filter(t => t.isCompleted).reduce((taskAcc, t) => taskAcc + t.estimatedMinutes, 0), 0);
 
     const planData = {
-        trackName: 'Frontend Development',
-        title: 'React Professional Path',
-        week: 4,
-        totalWeeks: 12,
+        trackName: studyPlan?.roadmapName || 'Learning Path',
+        title: studyPlan?.roadmapName || 'Study Plan',
         progress: progress,
-        hoursStudied: 18.5,
-        totalHours: 60,
+        hoursStudied: Math.round(completedMinutes / 60 * 10) / 10,
+        totalHours: Math.round(totalMinutes / 60 * 10) / 10,
         tasksDone: completedTasks,
         totalTasks: totalTasks,
+        totalModules: modulesWithTasks.length,
+        completedModules: modulesWithTasks.filter(m => m.status === 'completed').length,
     };
 
-    // Dates with tasks (for calendar indicators)
-    const taskDates = [
-        new Date(2023, 9, 20),
-        new Date(2023, 9, 21),
-        new Date(2023, 9, 24),
-        new Date(2023, 9, 27),
-        new Date(2023, 9, 28),
-        selectedDate,
-    ];
+    // Dates with tasks (for calendar indicators) - from actual task dates
+    const taskDates = useMemo(() => {
+        const dates: Date[] = [];
+        tasks.forEach((task: TaskItemDto) => {
+            if (task.scheduledDate) {
+                dates.push(new Date(task.scheduledDate));
+            }
+        });
+        dates.push(selectedDate);
+        return dates;
+    }, [tasks, selectedDate]);
+
+    // Loading state
+    if (isLoadingPlan || isLoadingTasks) {
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-[#00bae2] mx-auto mb-4" />
+                    <p className="text-neutral-600">Loading your study plan...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (planError || !studyPlan) {
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                        <span className="text-2xl">😔</span>
+                    </div>
+                    <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                        Study Plan Not Found
+                    </h2>
+                    <p className="text-neutral-600 mb-4">
+                        {planError?.message || 'The study plan you\'re looking for doesn\'t exist.'}
+                    </p>
+                    <a
+                        href="/roadmaps"
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#00bae2] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#00a5c9] transition-all"
+                    >
+                        Browse Roadmaps
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] pb-10">
@@ -207,7 +206,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                                 {planData.title}
                             </h1>
                             <p className="text-neutral-500">
-                                Week {planData.week} of {planData.totalWeeks} • {planData.progress}% Completed
+                                {planData.completedModules} of {planData.totalModules} modules • {planData.progress}% Completed
                             </p>
                             {/* Progress Bar */}
                             <div className="mt-3 w-64">
@@ -221,9 +220,9 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                         </div>
 
                         <div className="flex gap-3">
-                            <button className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-600/25 hover:bg-violet-700 transition-all">
-                                <RefreshCw className="h-4 w-4" />
-                                Update Plan
+                            <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-5 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-[#00bae2]/25 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 transition-all duration-300">
+                                <Sparkles className="h-4 w-4" />
+                                Generate plan with AI
                             </button>
                         </div>
                     </div>
@@ -267,6 +266,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                                 module={selectedModule}
                                 onClose={() => setSelectedModuleId(null)}
                                 className="h-[calc(100vh-450px)] min-h-[400px]"
+                                studyPlanId={planId}
                             />
                         ) : (
                             <div className="h-[calc(100vh-450px)] min-h-[400px] flex items-center justify-center rounded-3xl bg-white/50 border border-neutral-200/60 p-6 text-neutral-400">

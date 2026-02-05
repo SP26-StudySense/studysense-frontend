@@ -1,7 +1,7 @@
 'use client';
 
 
-import { X, Clock, FileText, BookOpen, Video, Circle } from 'lucide-react';
+import { X, Clock, FileText, BookOpen, Video, Circle, ExternalLink } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { RoadmapNodeData, DifficultyLevel } from './RoadmapNode';
 
@@ -9,6 +9,10 @@ interface NodeResource {
     id: string;
     title: string;
     type: 'docs' | 'article' | 'video';
+    url?: string | null;
+    description?: string | null;
+    estimatedMinutes?: number | null;
+    isRequired?: boolean;
 }
 
 interface NodeTask {
@@ -116,21 +120,54 @@ export function NodeDetailPanel({ node, onClose, className }: NodeDetailPanelPro
                         <div className="space-y-2">
                             {node.resources.map(resource => {
                                 const Icon = resourceIcons[resource.type];
+                                const handleResourceClick = () => {
+                                    if (resource.url) {
+                                        window.open(resource.url, '_blank');
+                                    }
+                                };
+                                
                                 return (
                                     <div
                                         key={resource.id}
-                                        className="flex items-center gap-3 rounded-xl bg-neutral-50 p-3 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                        onClick={handleResourceClick}
+                                        className={cn(
+                                            "flex items-start gap-3 rounded-xl bg-neutral-50 p-3 transition-colors",
+                                            resource.url ? "hover:bg-neutral-100 cursor-pointer" : "cursor-default"
+                                        )}
                                     >
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-sm">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-sm flex-shrink-0">
                                             <Icon className="h-4 w-4 text-neutral-600" />
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-neutral-900">
-                                                {resource.title}
-                                            </p>
-                                            <p className="text-xs text-neutral-500 capitalize">
-                                                {resource.type}
-                                            </p>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="text-sm font-medium text-neutral-900 line-clamp-2">
+                                                    {resource.title}
+                                                    {resource.isRequired && (
+                                                        <span className="ml-2 text-xs text-red-600 font-semibold">*Required</span>
+                                                    )}
+                                                </p>
+                                                {resource.url && (
+                                                    <ExternalLink className="h-4 w-4 text-neutral-400 flex-shrink-0" />
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-xs text-neutral-500 capitalize">
+                                                    {resource.type}
+                                                </p>
+                                                {resource.estimatedMinutes && (
+                                                    <>
+                                                        <span className="text-xs text-neutral-300">•</span>
+                                                        <p className="text-xs text-neutral-500">
+                                                            {resource.estimatedMinutes} min
+                                                        </p>
+                                                    </>
+                                                )}
+                                            </div>
+                                            {resource.description && (
+                                                <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
+                                                    {resource.description}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 );
