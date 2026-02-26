@@ -1,163 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Search, Plus, Edit, Trash2, Eye, X, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Eye, Loader2 } from "lucide-react";
 import { ConfirmationModal } from "@/shared/ui";
-import type { Survey, SurveyFormData, SurveyFieldSemantic, FieldSemanticFormData } from "./types";
-import { useSurveys, useCreateSurvey, useUpdateSurvey, useDeleteSurvey } from "./hooks";
+import { SurveyFormModal } from "./components";
+import type { Survey, SurveyFormData } from "./types";
+import { useSurveyManager } from "./hooks/use-survey-manager";
 
 type ModalState =
   | { type: "none" }
   | { type: "create" }
   | { type: "edit"; survey: Survey }
-  | { type: "delete"; id: number; title: string }
-  | { type: "createFieldSemantic"; surveyId: number }
-  | { type: "editFieldSemantic"; surveyId: number; fieldSemantic: SurveyFieldSemantic }
-  | { type: "deleteFieldSemantic"; surveyId: number; fieldSemanticId: number; dimensionCode: string };
+  | { type: "delete"; id: number; title: string };
 
-// Survey Form Modal Component
-function SurveyFormModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  initialData,
-  mode,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: SurveyFormData) => void;
-  initialData?: Survey;
-  mode: "create" | "edit";
-}) {
-  const [formData, setFormData] = useState<SurveyFormData>({
-    title: initialData?.title || null,
-    code: initialData?.code || "",
-    status: initialData?.status || "Draft",
-  });
-
-  // Reset form data when modal opens/closes or initialData changes
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        title: initialData?.title || null,
-        code: initialData?.code || "",
-        status: initialData?.status || "Draft",
-      });
-    }
-  }, [isOpen, initialData]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl p-6">
-        {/* Header */}
-        <div className="mb-4 flex items-start justify-between">
-          <h3 className="text-lg font-semibold text-neutral-900">
-            {mode === "create" ? "Create New Survey" : "Edit Survey"}
-          </h3>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-              Title
-            </label>
-            <input
-              type="text"
-              value={formData.title || ""}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value || null })}
-              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
-            />
-          </div>
-
-          {/* Code */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-              Code <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
-              placeholder="e.g., INITIAL_SURVEY"
-              required
-            />
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700">
-              Status <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) =>
-                setFormData({ ...formData, status: e.target.value as Survey["status"] })
-              }
-              className="w-full rounded-xl border border-neutral-200 px-4 py-3 outline-none transition-all focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
-              required
-            >
-              <option value="Draft">Draft</option>
-              <option value="Published">Published</option>
-              <option value="Archived">Archived</option>
-            </select>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={false}
-              className="flex-1 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {mode === "create" ? "Create Survey" : "Save Changes"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-export function SurveyListPage() {
+export function SurveyList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [modalState, setModalState] = useState<ModalState>({ type: "none" });
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize] = useState(10);
 
-  // React Query hooks - with automatic caching and refetching
-  const { data, isLoading, isError, error } = useSurveys(pageIndex, pageSize);
-  const createMutation = useCreateSurvey();
-  const updateMutation = useUpdateSurvey();
-  const deleteMutation = useDeleteSurvey();
+  // High-level facade hook - simplified API
+  const {
+    surveys,
+    pagination,
+    isLoading,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    createSurvey,
+    updateSurvey,
+    deleteSurvey,
+    error,
+  } = useSurveyManager({ pageIndex, pageSize });
 
-  const surveys = data?.items || [];
-  const totalPages = data?.totalPages || 0;
-  const totalCount = data?.totalCount || 0;
+  const totalPages = pagination.totalPages;
+  const totalCount = pagination.totalCount;
 
   // Filter surveys
   const filteredSurveys = surveys.filter((survey) => {
@@ -168,28 +47,34 @@ export function SurveyListPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Handlers using React Query mutations
-  const handleCreateSurvey = (data: SurveyFormData) => {
-    createMutation.mutate(data, {
-      onSuccess: () => setModalState({ type: "none" }),
-    });
+  // Handlers using facade hook's simplified API
+  const handleCreateSurvey = async (data: SurveyFormData) => {
+    try {
+      await createSurvey(data);
+      setModalState({ type: "none" });
+    } catch (error) {
+      // Error handling done by mutation hook (toast)
+    }
   };
 
-  const handleUpdateSurvey = (data: SurveyFormData) => {
+  const handleUpdateSurvey = async (data: SurveyFormData) => {
     if (modalState.type !== "edit") return;
-    updateMutation.mutate(
-      { id: modalState.survey.id, data: data as any },
-      {
-        onSuccess: () => setModalState({ type: "none" }),
-      }
-    );
+    try {
+      await updateSurvey(modalState.survey.id, data as any);
+      setModalState({ type: "none" });
+    } catch (error) {
+      // Error handling done by mutation hook (toast)
+    }
   };
 
-  const handleDeleteSurvey = () => {
+  const handleDeleteSurvey = async () => {
     if (modalState.type !== "delete") return;
-    deleteMutation.mutate(modalState.id, {
-      onSuccess: () => setModalState({ type: "none" }),
-    });
+    try {
+      await deleteSurvey(modalState.id);
+      setModalState({ type: "none" });
+    } catch (error) {
+      // Error handling done by mutation hook (toast)
+    }
   };
 
   const getStatusBadge = (status: Survey["status"]) => {
@@ -262,7 +147,7 @@ export function SurveyListPage() {
             <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
             <p className="mt-3 text-sm text-neutral-600">Loading surveys...</p>
           </div>
-        ) : isError ? (
+        ) : error ? (
           <div className="py-12 text-center">
             <p className="text-sm text-red-600">Failed to load surveys</p>
             <p className="mt-1 text-xs text-neutral-500">{error?.message}</p>
@@ -367,9 +252,7 @@ export function SurveyListPage() {
         </div>
       )}
 
-      {/* All Modals */}
-
-      {/* Create/Edit Survey Modal */}
+      {/* Modals */}
       <SurveyFormModal
         isOpen={modalState.type === "create" || modalState.type === "edit"}
         onClose={() => setModalState({ type: "none" })}
@@ -378,7 +261,6 @@ export function SurveyListPage() {
         mode={modalState.type === "create" ? "create" : "edit"}
       />
 
-      {/* Delete Survey Confirmation */}
       {modalState.type === "delete" && (
         <ConfirmationModal
           isOpen={true}

@@ -8,12 +8,13 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
 import Cookies from 'js-cookie';
 
-import { post, get } from '@/shared/api/client';
+import { post } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { queryKeys } from '@/shared/api/query-keys';
 import { routes } from '@/shared/config/routes';
 import { env } from '@/shared/config';
 import { toast } from '@/shared/lib';
+import { UserRole } from '@/shared/types';
 import type {
   LoginRequest,
   LoginResponse,
@@ -29,7 +30,9 @@ import type {
   GoogleLoginCallbackData,
   User,
 } from '../types';
-import type { SurveyStatusResponse } from '@/features/survey/types';
+import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
+import { SurveyTriggerType } from '@/features/survey/api/types';
+import { SurveyTriggerReason } from '@/features/survey/types';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
@@ -86,13 +89,23 @@ function clearUserFromStorage(): void {
 }
 
 /**
- * Check survey status and redirect accordingly
- * Returns the URL to redirect to: / (landing page after login)
- * Survey redirects are handled separately when selecting template roadmaps
+ * Check ON_REGISTER trigger mapping and return the survey redirect URL if pending.
+ * Returns null if no pending survey or if the check fails (fail-safe).
  */
-async function getPostLoginRedirectUrl(): Promise<string> {
-  // After login, redirect to landing page
-  return routes.public.home;
+async function getOnRegisterSurveyUrl(): Promise<string | null> {
+  try {
+    const result = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_REGISTER);
+    if (result.hasPendingSurvey && result.surveyCode) {
+      const params = new URLSearchParams({
+        returnTo: routes.public.home,
+        triggerReason: SurveyTriggerReason.INITIAL,
+      });
+      return `/surveys/${result.surveyCode}?${params.toString()}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -117,37 +130,25 @@ export function useLogin() {
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
 
-      // Check if user needs to complete initial survey
-      try {
-        const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
-
-        if (surveyStatus.requiresInitialSurvey && surveyStatus.surveyId) {
-          console.log('[Login] User needs to complete initial survey, redirecting...');
-
-          // Show info toast about survey
-          toast.info('Welcome! Please complete the initial survey', {
-            description: 'This helps us personalize your learning experience',
-          });
-
-          // Redirect to initial survey page
-          router.push('/surveys/initial-survey');
-          return; // Stop here, don't proceed to dashboard
-        }
-      } catch (error) {
-        console.error('[Login] Failed to check survey status:', error);
-        // If survey status check fails, continue with normal login flow
-      }
-
       // Show success toast
       toast.success('Login successful!', {
         description: `Welcome ${response.user.firstName || response.user.email}`,
       });
 
-      // Redirect to roadmaps selection page
-      const redirectUrl = await getPostLoginRedirectUrl();
+      // Check ON_REGISTER trigger (only for regular users)
+      const isRegularUser = response.user.roles?.includes(UserRole.USER);
+      if (isRegularUser) {
+        const surveyUrl = await getOnRegisterSurveyUrl();
+        if (surveyUrl) {
+          toast.info('Please complete a quick survey', {
+            description: 'This helps us personalize your learning experience',
+          });
+          router.push(surveyUrl);
+          return;
+        }
+      }
 
-      console.log('[Login] Redirecting to:', redirectUrl);
-      router.push(redirectUrl);
+      router.push(routes.public.home);
     },
     onError: (error) => {
       // Clear any stale auth data
@@ -367,40 +368,30 @@ export function useGoogleLogin() {
         // Update user cache with NORMALIZED data
         queryClient.setQueryData(queryKeys.auth.me(), normalizedUser);
 
-        // Check if user needs to complete initial survey
-        try {
-          const surveyStatus = await get<SurveyStatusResponse>('/users/survey-status');
-
-          if (surveyStatus.requiresInitialSurvey && surveyStatus.surveyId) {
-            // Show info toast about survey
-            toast.info('Welcome! Please complete the initial survey', {
-              description: 'This helps us personalize your learning experience',
-            });
-
-            // Close popup if still open
-            if (popupRef.current && !popupRef.current.closed) {
-              popupRef.current.close();
-            }
-
-            // Redirect to initial survey page
-            router.push('/surveys/initial-survey');
-            return; // Stop here, don't proceed to dashboard
-          }
-        } catch (error) {
-          console.error('Failed to check survey status:', error);
-          // If survey status check fails, continue with normal login flow
-        }
-
         // Show success toast
         toast.success('Login successful!', {
           description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
         });
 
-        // Redirect to roadmaps selection page
-        const redirectUrl = await getPostLoginRedirectUrl();
+        // Check ON_REGISTER trigger (only for regular users)
+        const isRegularUser = normalizedUser.roles?.includes(UserRole.USER);
+        if (isRegularUser) {
+          const surveyUrl = await getOnRegisterSurveyUrl();
+          if (surveyUrl) {
+            toast.info('Please complete a quick survey', {
+              description: 'This helps us personalize your learning experience',
+            });
+            // Close popup before redirecting
+            if (popupRef.current && !popupRef.current.closed) {
+              popupRef.current.close();
+            }
+            router.push(surveyUrl);
+            return;
+          }
+        }
 
-        // Redirect
-        router.push(redirectUrl);
+        // Redirect to landing page
+        router.push(routes.public.home);
       }
 
       // Close popup if still open
