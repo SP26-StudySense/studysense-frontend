@@ -1,5 +1,5 @@
-import { SurveyListPage } from "@/features/analyst/analyst-survey/SurveyListPage";
+import { SurveyList } from "@/features/analyst/analyst-survey";
 
 export default function AnalystSurveyPage() {
-  return <SurveyListPage />;
+  return <SurveyList />;
 }

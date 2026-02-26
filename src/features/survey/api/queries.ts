@@ -1,119 +1,40 @@
 /**
- * Survey API queries using React Query
+ * Survey Taking API — React Query hooks (queries only)
+ * Each hook delegates the actual HTTP call to api.ts (pure functions).
  */
 
 import { useQuery, QueryClient } from '@tanstack/react-query';
-import { get } from '@/shared/api/client';
-import { endpoints } from '@/shared/api/endpoints';
 import { queryKeys } from '@/shared/api/query-keys';
-import type { Survey, SurveyQuestion, QuestionOption, SurveyStatusResponse } from '../types';
-import { QuestionType } from '../types';
-
-// API Response types matching backend
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T | null;
-}
-
-interface PaginatedData<T> {
-  items: T[];
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  totalCount: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
-}
-
-// Backend DTO types
-interface SurveyDto {
-  id: number;
-  title: string;
-  code: string;
-  status: 'Draft' | 'Published' | 'Archived';
-}
-
-interface SurveyQuestionDto {
-  id: number;
-  surveyId: number;
-  questionKey: string;
-  prompt: string;
-  type: 'SingleChoice' | 'MultipleChoice' | 'Scale' | 'ShortAnswer' | 'FreeText';
-  orderNo: number;
-  isRequired: boolean;
-  scaleMin: number | null;
-  scaleMax: number | null;
-}
-
-interface SurveyQuestionOptionDto {
-  id: number;
-  questionId: number;
-  valueKey: string;
-  displayText: string;
-  weight: number | null;
-  orderNo: number;
-  allowFreeText: boolean;
-}
+import {
+  fetchSurveyById,
+  fetchSurveyByCode,
+  fetchSurveyQuestions,
+  fetchQuestionOptions,
+  fetchSurveyStatus,
+  fetchPendingTriggerSurvey,
+} from './api';
+import type { PendingTriggerSurveyResult } from './types';
 
 /**
  * Get survey by ID
  */
 export function useSurvey(surveyId: number, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: queryKeys.surveys.detail(surveyId.toString()),
-    queryFn: async () => {
-      console.log('[Survey Query] Fetching survey:', surveyId);
-      const response = await get<ApiResponse<SurveyDto> | SurveyDto>(
-        `/surveys/${surveyId}`
-      );
-      
-      console.log('[Survey Query] Response:', response);
-      
-      // Check if response has success wrapper or is direct data
-      if ('success' in response) {
-        if (!response.success || !response.data) {
-          console.error('[Survey Query] Failed:', response);
-          throw new Error(response.message || 'Failed to fetch survey');
-        }
-        return response.data;
-      }
-      
-      // Direct response
-      return response as SurveyDto;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: queryKeys.surveyTaking.detail(surveyId.toString()),
+    queryFn: () => fetchSurveyById(surveyId),
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
 
 /**
- * Get survey by Code
+ * Get survey by code
  */
 export function useSurveyByCode(surveyCode: string, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: queryKeys.surveys.byCode(surveyCode),
-    queryFn: async () => {
-      console.log('[Survey Query] Fetching survey by code:', surveyCode);
-      const response = await get<ApiResponse<SurveyDto> | SurveyDto>(
-        `/surveys/code/${surveyCode}`
-      );
-      
-      console.log('[Survey Query] Response:', response);
-      
-      // Check if response has success wrapper or is direct data
-      if ('success' in response) {
-        if (!response.success || !response.data) {
-          console.error('[Survey Query] Failed:', response);
-          throw new Error(response.message || 'Failed to fetch survey');
-        }
-        return response.data;
-      }
-      
-      // Direct response
-      return response as SurveyDto;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: queryKeys.surveyTaking.byCode(surveyCode),
+    queryFn: () => fetchSurveyByCode(surveyCode),
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
@@ -123,142 +44,32 @@ export function useSurveyByCode(surveyCode: string, options?: { enabled?: boolea
  */
 export function useSurveyQuestions(surveyId: number, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: queryKeys.surveys.questions(surveyId.toString()),
-    queryFn: async () => {
-      console.log('[Questions Query] Fetching questions for survey:', surveyId);
-      const response = await get<ApiResponse<PaginatedData<SurveyQuestionDto>> | SurveyQuestionDto[]>(
-        `/surveys/${surveyId}/questions`
-      );
-      
-      console.log('[Questions Query] Response:', response);
-      
-      // Check if response is wrapped or direct array
-      let questionDtos: SurveyQuestionDto[];
-      
-      if (Array.isArray(response)) {
-        // Direct array response
-        questionDtos = response;
-      } else if ('success' in response) {
-        // Wrapped response
-        if (!response.success || !response.data) {
-          console.error('[Questions Query] Failed:', response);
-          throw new Error(response.message || 'Failed to fetch questions');
-        }
-        questionDtos = response.data.items;
-      } else {
-        console.error('[Questions Query] Unexpected response format:', response);
-        throw new Error('Unexpected response format');
-      }
-
-      // Transform backend DTO to frontend format
-      const questions: SurveyQuestion[] = questionDtos.map((q) => {
-        // Map backend type strings to frontend QuestionType enum
-        const typeMap: Record<string, QuestionType> = {
-          'SingleChoice': QuestionType.SINGLE_CHOICE,
-          'MultipleChoice': QuestionType.MULTIPLE_CHOICE,
-          'Scale': QuestionType.SCALE,
-          'ShortAnswer': QuestionType.SHORT_ANSWER,
-          'FreeText': QuestionType.FREE_TEXT,
-        };
-
-        return {
-          id: q.id.toString(), // Use numeric ID from backend
-          surveyId: q.surveyId.toString(),
-          order: q.orderNo,
-          text: q.prompt,
-          type: typeMap[q.type] || QuestionType.TEXT,
-          isRequired: q.isRequired,
-          options: [], // Will be loaded separately
-          validation: q.type === 'Scale' && q.scaleMin !== null && q.scaleMax !== null
-            ? { minValue: q.scaleMin, maxValue: q.scaleMax }
-            : undefined,
-        };
-      });
-
-      return questions;
-    },
+    queryKey: queryKeys.surveyTaking.questions(surveyId.toString()),
+    queryFn: () => fetchSurveyQuestions(surveyId),
     staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
 
 /**
- * Get question options
+ * Get options for a single question
  */
 export function useQuestionOptions(questionId: string, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: queryKeys.surveys.options(questionId),
-    queryFn: async () => {
-      const response = await get<ApiResponse<PaginatedData<SurveyQuestionOptionDto>> | SurveyQuestionOptionDto[]>(
-        `/surveys/question/option?questionId=${questionId}&pageIndex=1&pageSize=100`
-      );
-      
-      // Check if response is wrapped or direct array
-      let optionDtos: SurveyQuestionOptionDto[];
-      
-      if (Array.isArray(response)) {
-        // Direct array response
-        optionDtos = response;
-      } else if ('success' in response) {
-        // Wrapped response
-        if (!response.success || !response.data) {
-          throw new Error(response.message || 'Failed to fetch options');
-        }
-        optionDtos = response.data.items;
-      } else {
-        throw new Error('Unexpected response format');
-      }
-
-      // Transform backend DTO to frontend format
-      const options: QuestionOption[] = optionDtos.map((opt) => ({
-        id: opt.id.toString(), // Use numeric ID from backend
-        value: opt.id.toString(), // Store numeric ID as value for submission
-        label: opt.displayText,
-        order: opt.orderNo,
-        allowFreeText: opt.allowFreeText,
-      }));
-
-      return options;
-    },
+    queryKey: queryKeys.surveyTaking.options(questionId),
+    queryFn: () => fetchQuestionOptions(questionId),
     staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
 
 /**
- * Prefetch question options in background for smooth navigation
+ * Prefetch options for a question in the background (smooth navigation)
  */
 export async function prefetchQuestionOptions(queryClient: QueryClient, questionId: string) {
   await queryClient.prefetchQuery({
-    queryKey: queryKeys.surveys.options(questionId),
-    queryFn: async () => {
-      const response = await get<ApiResponse<PaginatedData<SurveyQuestionOptionDto>> | SurveyQuestionOptionDto[]>(
-        `/surveys/question/option?questionId=${questionId}&pageIndex=1&pageSize=100`
-      );
-      
-      // Check if response is wrapped or direct array
-      let optionDtos: SurveyQuestionOptionDto[];
-      
-      if (Array.isArray(response)) {
-        optionDtos = response;
-      } else if ('success' in response) {
-        if (!response.success || !response.data) {
-          throw new Error(response.message || 'Failed to fetch options');
-        }
-        optionDtos = response.data.items;
-      } else {
-        throw new Error('Unexpected response format');
-      }
-
-      const options: QuestionOption[] = optionDtos.map((opt) => ({
-        id: opt.id.toString(), // Use numeric ID from backend
-        value: opt.id.toString(), // Store numeric ID as value for submission
-        label: opt.displayText,
-        order: opt.orderNo,
-      }));
-
-      return options;
-    },
+    queryKey: queryKeys.surveyTaking.options(questionId),
+    queryFn: () => fetchQuestionOptions(questionId),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -279,17 +90,33 @@ export function useSurveyQuestionsWithOptions(surveyId: number, options?: { enab
 }
 
 /**
- * Get survey status for current user
- * Checks if user needs to complete initial survey
+ * Survey completion status for the current user
  */
 export function useSurveyStatus(enabled: boolean = true) {
   return useQuery({
-    queryKey: queryKeys.survey.status(),
-    queryFn: async () => {
-      const response = await get<SurveyStatusResponse>('/users/survey-status');
-      return response;
-    },
-    staleTime: 30 * 1000, // Cache for 30 seconds
+    queryKey: queryKeys.surveyTaking.status(),
+    queryFn: fetchSurveyStatus,
+    staleTime: 30 * 1000,
     enabled,
+  });
+}
+
+/**
+ * Check if the current user has a pending trigger survey for a given trigger type.
+ *
+ * `staleTime: 0` — always re-fetch on mount so the trigger check is always fresh.
+ * Pass `enabled: false` to skip the call (e.g. when no user is logged in).
+ */
+export function usePendingTriggerSurvey(
+  triggerType: string,
+  options?: { enabled?: boolean }
+) {
+  return useQuery<PendingTriggerSurveyResult>({
+    queryKey: queryKeys.surveyTaking.pendingTrigger(triggerType),
+    queryFn: () => fetchPendingTriggerSurvey(triggerType),
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    ...options,
   });
 }

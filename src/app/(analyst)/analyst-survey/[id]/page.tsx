@@ -1,7 +1,8 @@
 import { use } from "react";
-import { AnalystSurveyPage } from "@/features/analyst/analyst-survey/AnalystSurveyPage";
+import { SurveyDetail } from "@/features/analyst/analyst-survey";
 
-export default function SurveyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function SurveyDetailRoute({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  return <AnalystSurveyPage surveyId={id} />;
+  const surveyId = parseInt(id, 10);
+  return <SurveyDetail surveyId={surveyId} />;
 }

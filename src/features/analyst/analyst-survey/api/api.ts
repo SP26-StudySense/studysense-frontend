@@ -1,78 +1,44 @@
 /**
- * Analyst Survey API Service
- * Handles CRUD operations for survey management
+ * Analyst Survey API Functions
+ * Pure API calls without React hooks - can be used anywhere (server-side, workers, tests)
  */
 
 import { get, post, del, put, patch } from '@/shared/api/client';
-import type { SurveyQuestion, SurveyQuestionOption } from './types';
+import type {
+  // Request types
+  GetAllSurveysParams,
+  CreateSurveyRequest,
+  UpdateSurveyRequest,
+  CreateQuestionRequest,
+  UpdateQuestionRequest,
+  CreateOptionRequest,
+  UpdateOptionRequest,
+  CreateFieldSemanticRequest,
+  UpdateFieldSemanticRequest,
+  // Response types
+  PaginatedResponse,
+  SurveyDto,
+  SurveyQuestionDto,
+  SurveyQuestionOptionDto,
+  SurveyFieldSemanticDto,
+} from './types';
 
-// Types matching backend DTOs
-export interface SurveyDto {
-  id: number;
-  title: string | null;
-  code: string;
-  status: 'Draft' | 'Published' | 'Archived';
-}
+// ==================== Query Keys ====================
+// Centralized query keys for React Query cache management
 
-export interface SurveyQuestionDto {
-  id: number;
-  surveyId: number;
-  questionKey: string;
-  prompt: string;
-  type: 'SingleChoice' | 'MultipleChoice' | 'Scale' | 'ShortAnswer' | 'FreeText';
-  orderNo: number;
-  isRequired: boolean;
-  scaleMin: number | null;
-  scaleMax: number | null;
-}
+export const surveyQueryKeys = {
+  all: ['analyst-surveys'] as const,
+  lists: () => [...surveyQueryKeys.all, 'list'] as const,
+  list: (pageIndex: number, pageSize: number) => 
+    [...surveyQueryKeys.lists(), { pageIndex, pageSize }] as const,
+  detail: (id: number) => [...surveyQueryKeys.all, 'detail', id] as const,
+  questions: (surveyId: number) => [...surveyQueryKeys.all, 'questions', surveyId] as const,
+  question: (id: number) => [...surveyQueryKeys.all, 'question', id] as const,
+  options: (questionId: number) => [...surveyQueryKeys.all, 'options', questionId] as const,
+  fieldSemantics: (questionId: number) => [...surveyQueryKeys.all, 'fieldSemantics', questionId] as const,
+};
 
-export interface SurveyQuestionOptionDto {
-  id: number;
-  questionId: number;
-  valueKey: string;
-  displayText: string;
-  weight: number | null;
-  orderNo: number;
-  allowFreeText: boolean;
-}
-
-export interface SurveyFieldSemanticDto {
-  id: number;
-  surveyQuestionId: number;
-  dimensionCode: string;
-  evaluates: string;
-  aiHint: string | null;
-  weight: number | null;
-  createdAt: string;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  pageIndex: number;
-  pageSize: number;
-  totalPages: number;
-  totalCount: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
-}
-
-export interface GetAllSurveysParams {
-  pageIndex: number;
-  pageSize: number;
-}
-
-export interface CreateSurveyRequest {
-  title: string | null;
-  code: string;
-  status: 'Draft' | 'Published' | 'Archived';
-}
-
-export interface UpdateSurveyRequest {
-  id: number;
-  title: string | null;
-  code: string;
-  status: 'Draft' | 'Published' | 'Archived';
-}
+// ==================== Survey APIs ====================
 
 /**
  * Get all surveys (paginated)
@@ -125,6 +91,8 @@ export async function deleteSurvey(id: number): Promise<void> {
   await del(`/surveys/${id}`);
 }
 
+// ==================== Question APIs ====================
+
 /**
  * Get questions by survey ID
  */
@@ -160,6 +128,41 @@ export async function getQuestionsBySurvey(
 }
 
 /**
+ * Get question by ID
+ */
+export async function getQuestionById(id: number): Promise<SurveyQuestionDto> {
+  const response = await get<SurveyQuestionDto>(`/surveys/question/${id}`);
+  
+  if (!response) {
+    throw new Error('Question not found');
+  }
+  return response;
+}
+
+/**
+ * Create survey question
+ */
+export async function createQuestion(data: CreateQuestionRequest): Promise<SurveyQuestionDto> {
+  return await post<SurveyQuestionDto>('/surveys/question', data);
+}
+
+/**
+ * Update survey question
+ */
+export async function updateQuestion(data: UpdateQuestionRequest): Promise<SurveyQuestionDto> {
+  return await patch<SurveyQuestionDto>('/surveys/question', data);
+}
+
+/**
+ * Delete survey question
+ */
+export async function deleteQuestion(id: number): Promise<void> {
+  await del(`/surveys/question/${id}`);
+}
+
+// ==================== Option APIs ====================
+
+/**
  * Get options by question ID
  */
 export async function getOptionsByQuestion(
@@ -193,73 +196,6 @@ export async function getOptionsByQuestion(
   };
 }
 
-// ============ Survey Question CRUD ============
-
-export interface CreateQuestionRequest {
-  surveyId: number;
-  questionKey: string;
-  prompt: string;
-  type: 'SingleChoice' | 'MultipleChoice' | 'Scale' | 'ShortAnswer' | 'FreeText';
-  orderNo: number;
-  isRequired: boolean;
-  scaleMin: number | null;
-  scaleMax: number | null;
-}
-
-export interface UpdateQuestionRequest {
-  id: number;
-  surveyId: number;
-  questionKey: string;
-  prompt: string;
-  type: 'SingleChoice' | 'MultipleChoice' | 'Scale' | 'ShortAnswer' | 'FreeText';
-  orderNo: number;
-  isRequired: boolean;
-  scaleMin: number | null;
-  scaleMax: number | null;
-}
-
-/**
- * Create survey question
- */
-export async function createQuestion(data: CreateQuestionRequest): Promise<SurveyQuestionDto> {
-  return await post<SurveyQuestionDto>('/surveys/question', data);
-}
-
-/**
- * Update survey question
- */
-export async function updateQuestion(data: UpdateQuestionRequest): Promise<SurveyQuestionDto> {
-  return await patch<SurveyQuestionDto>('/surveys/question', data);
-}
-
-/**
- * Delete survey question
- */
-export async function deleteQuestion(id: number): Promise<void> {
-  await del(`/surveys/question/${id}`);
-}
-
-// ============ Survey Question Option CRUD ============
-
-export interface CreateOptionRequest {
-  questionId: number;
-  valueKey: string;
-  displayText: string;
-  weight: number | null;
-  orderNo: number;
-  allowFreeText: boolean;
-}
-
-export interface UpdateOptionRequest {
-  id: number;
-  questionId: number;
-  valueKey: string;
-  displayText: string;
-  weight: number | null;
-  orderNo: number;
-  allowFreeText: boolean;
-}
-
 /**
  * Create survey question option
  */
@@ -281,26 +217,7 @@ export async function deleteOption(id: number): Promise<void> {
   await del(`/surveys/question/option/${id}`);
 }
 
-// ============ Survey Field Semantic CRUD ============
-
-export interface CreateFieldSemanticRequest {
-  surveyQuestionId: number;
-  dimensionCode: string;
-  evaluates: string;
-  aiHint: string | null;
-  weight: number | null;
-  createdAt?: string;
-}
-
-export interface UpdateFieldSemanticRequest {
-  id: number;
-  surveyQuestionId: number;
-  dimensionCode: string;
-  evaluates: string;
-  aiHint: string | null;
-  weight: number | null;
-  createdAt?: string;
-}
+// ==================== Field Semantic APIs ====================
 
 /**
  * Get field semantics by question ID
