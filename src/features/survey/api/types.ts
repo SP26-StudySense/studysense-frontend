@@ -111,4 +111,8 @@ export interface PendingTriggerSurveyResult {
   completedAttempts: number;
   maxAttempts: number | null;
   cooldownDays: number | null;
+  /** "MaxAttemptsExceeded" | "CooldownActive" | null */
+  blockedReason: string | null;
+  /** ISO date string — only present when blockedReason = "CooldownActive" */
+  cooldownEndsAt: string | null;
 }
