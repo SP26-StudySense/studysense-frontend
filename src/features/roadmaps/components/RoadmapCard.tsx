@@ -8,6 +8,10 @@ import { cn } from '@/shared/lib/utils';
 import { useStartLearning } from '../hooks/useStartLearning';
 import { StartLearningOverlay } from './StartLearningOverlay';
 import { useSessionStore } from '@/store/session.store';
+import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
+import { SurveyTriggerType } from '@/features/survey/api/types';
+import { SurveyTriggerReason } from '@/features/survey/types';
+import { showWarning, showInfo } from '@/shared/lib/toast';
 
 interface RoadmapCardProps {
     roadmap: RoadmapTemplate | UserLearningRoadmap;
@@ -25,6 +29,7 @@ const difficultyColors = {
 export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }: RoadmapCardProps) {
     const router = useRouter();
     const [showOverlay, setShowOverlay] = useState(false);
+    const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
 
     // Check if this roadmap already has a study plan
     // Check if this roadmap already has a study plan
@@ -49,6 +54,8 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
     };
 
     const handleClick = async () => {
+        if (isCheckingSurvey || isLoading) return;
+
         if (variant === 'learning' && isLearningRoadmap(roadmap)) {
             // Continue learning -> go to dashboard
             setActiveStudyPlanId(roadmap.studyPlanId);
@@ -64,7 +71,43 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
                     return;
                 }
             }
-            // Start new template roadmap -> create study plan directly
+
+            // Check for pending ON_START_ROADMAP survey before creating study plan
+            setIsCheckingSurvey(true);
+            try {
+                const pending = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
+                if (pending.hasPendingSurvey && pending.surveyCode) {
+                    // Redirect user to survey first; after submission, come back with startRoadmapId
+                    const params = new URLSearchParams({
+                        triggerReason: SurveyTriggerReason.RESURVEY,
+                        returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                    });
+                    router.push(`/surveys/${pending.surveyCode}?${params.toString()}`);
+                    return;
+                }
+
+                // Survey exists but user is blocked — show informative message
+                if (pending.blockedReason === 'MaxAttemptsExceeded') {
+                    showInfo(
+                        `You have already completed this survey ${pending.completedAttempts} time${pending.completedAttempts !== 1 ? 's' : ''} (max ${pending.maxAttempts}). Proceeding to start learning.`,
+                        { duration: 5000 }
+                    );
+                } else if (pending.blockedReason === 'CooldownActive' && pending.cooldownEndsAt) {
+                    const endsAt = new Date(pending.cooldownEndsAt);
+                    const diffMs = endsAt.getTime() - Date.now();
+                    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                    showWarning(
+                        `You need to wait ${diffDays} more day${diffDays !== 1 ? 's' : ''} before retaking this survey (available ${endsAt.toLocaleDateString()}). Proceeding to start learning.`,
+                        { duration: 6000 }
+                    );
+                }
+            } catch {
+                // fail-safe: proceed without survey check
+            } finally {
+                setIsCheckingSurvey(false);
+            }
+
+            // No pending survey → start learning directly
             setShowOverlay(true);
             await startLearning(Number(roadmap.id));
         }
@@ -198,8 +241,17 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
             {/* Footer Action */}
             <div className="mt-auto border-t border-neutral-100 p-4 bg-neutral-50/50 group-hover:bg-neutral-50 transition-colors">
                 <button className="w-full flex items-center justify-center gap-2 text-sm font-medium text-neutral-700 group-hover:text-[#00bae2] transition-colors">
-                    {variant === 'template' ? 'Start Learning' : 'Continue'}
-                    <LucideIcons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    {isCheckingSurvey ? (
+                        <>
+                            <LucideIcons.Loader2 className="h-4 w-4 animate-spin" />
+                            Checking...
+                        </>
+                    ) : (
+                        <>
+                            {variant === 'template' ? 'Start Learning' : 'Continue'}
+                            <LucideIcons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                        </>
+                    )}
                 </button>
             </div>
 
