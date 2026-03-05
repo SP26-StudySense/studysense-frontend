@@ -80,6 +80,13 @@ export const routes = {
     settings: '/admin/settings',
   },
 
+  // Analyst routes
+  analyst: {
+    home: '/analyst-survey',
+    survey: '/analyst-survey',
+    triggerMapping: '/analyst-triggermapping',
+  },
+
   // Content Manager routes
   contentManager: {
     dashboard: '/content-dashboard',
@@ -120,6 +127,8 @@ export const authRoutes = [
 export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings'];
 
 export const adminRoutes = ['/admin'];
+
+export const analystRoutes = ['/analyst-survey', '/analyst-triggermapping'];
 
 export const contentManagerRoutes = ['/content-dashboard', '/content-roadmaps', '/content-profile'];
 
