@@ -17,11 +17,13 @@ import {
   useEditTriggerMapping,
   useToggleTriggerMappingActive,
   useDeleteTriggerMapping,
+  useAllSurveyTriggerTypes,
 } from "../api";
 import { getAllSurveys } from "@/features/analyst/analyst-survey/api";
 import { useQuery } from "@tanstack/react-query";
 import type {
   SurveyTriggerMappingDto,
+  SurveyTriggerTypeDto,
   CreateTriggerMappingRequest,
   EditTriggerMappingRequest,
 } from "../api/types";
@@ -40,6 +42,7 @@ export interface UseTriggerMappingManagerReturn {
   // Data
   mappings: SurveyTriggerMappingDto[];
   surveys: Array<{ id: number; title: string | null; code: string }>;
+  triggerTypes: SurveyTriggerTypeDto[];
   pagination: {
     pageIndex: number;
     totalPages: number;
@@ -87,6 +90,9 @@ export function useTriggerMappingManager(): UseTriggerMappingManagerReturn {
     queryFn: () => getAllSurveys({ pageIndex: 1, pageSize: 100 }),
     staleTime: 10 * 60 * 1000,
   });
+
+  // Load all active SurveyTriggerTypes for the form dropdown
+  const triggerTypesQuery = useAllSurveyTriggerTypes();
 
   // ── Mutations ─────────────────────────────────────────────
   const createMutation = useCreateTriggerMapping();
@@ -190,6 +196,7 @@ export function useTriggerMappingManager(): UseTriggerMappingManagerReturn {
   return {
     mappings,
     surveys: surveyItems.map((s) => ({ id: s.id, title: s.title, code: s.code })),
+    triggerTypes: triggerTypesQuery.data ?? [],
     pagination: {
       pageIndex,
       totalPages: mappingsQuery.data?.totalPages ?? 0,

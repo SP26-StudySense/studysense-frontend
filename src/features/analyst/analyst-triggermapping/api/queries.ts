@@ -4,7 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { triggerMappingQueryKeys } from './api';
+import { triggerMappingQueryKeys, surveyTriggerTypeQueryKeys } from './api';
 import * as api from './api';
 
 /**
@@ -31,5 +31,18 @@ export function useTriggerMapping(id: number, options?: { enabled?: boolean }) {
     queryFn: () => api.getTriggerMappingById(id),
     staleTime: 5 * 60 * 1000,
     enabled: options?.enabled !== undefined ? options.enabled : !!id,
+  });
+}
+
+/**
+ * Fetch all active SurveyTriggerTypes (reference data — rarely changes)
+ */
+export function useAllSurveyTriggerTypes() {
+  return useQuery({
+    queryKey: surveyTriggerTypeQueryKeys.list(),
+    queryFn: () => api.getAllSurveyTriggerTypes(),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }

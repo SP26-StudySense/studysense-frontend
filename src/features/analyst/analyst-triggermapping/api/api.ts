@@ -10,6 +10,7 @@ import type {
   EditTriggerMappingRequest,
   PaginatedResponse,
   SurveyTriggerMappingDto,
+  SurveyTriggerTypeDto,
 } from './types';
 
 // ==================== Query Keys ====================
@@ -20,6 +21,11 @@ export const triggerMappingQueryKeys = {
   list: (pageIndex: number, pageSize: number) =>
     [...triggerMappingQueryKeys.lists(), { pageIndex, pageSize }] as const,
   detail: (id: number) => [...triggerMappingQueryKeys.all, 'detail', id] as const,
+};
+
+export const surveyTriggerTypeQueryKeys = {
+  all: ['survey-trigger-types'] as const,
+  list: () => [...surveyTriggerTypeQueryKeys.all, 'list'] as const,
 };
 
 // ==================== API Functions ====================
@@ -84,4 +90,15 @@ export async function editTriggerMapping(
  */
 export async function deleteTriggerMapping(id: number): Promise<void> {
   await del(`/surveys/surveytriggermapping/${id}`);
+}
+
+/**
+ * GET /api/surveys/surveytriggertype/all
+ * Returns all active SurveyTriggerTypes (reference data, no pagination).
+ */
+export async function getAllSurveyTriggerTypes(): Promise<SurveyTriggerTypeDto[]> {
+  const result = await get<{ surveyTriggerTypes: SurveyTriggerTypeDto[] }>(
+    '/surveys/surveytriggertype/all'
+  );
+  return result.surveyTriggerTypes;
 }

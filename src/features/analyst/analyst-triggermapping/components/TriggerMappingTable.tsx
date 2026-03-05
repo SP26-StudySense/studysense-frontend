@@ -1,11 +1,11 @@
 "use client";
 
 import { Edit, Trash2, Loader2 } from "lucide-react";
-import type { SurveyTriggerMappingDto } from "../api/types";
-import { TRIGGER_TYPE_LABELS } from "../api/types";
+import type { SurveyTriggerMappingDto, SurveyTriggerTypeDto } from "../api/types";
 
 interface TriggerMappingTableProps {
   mappings: SurveyTriggerMappingDto[];
+  triggerTypes: SurveyTriggerTypeDto[];
   isLoading: boolean;
   isTogglingId?: number | null;
   // Pagination
@@ -21,6 +21,7 @@ interface TriggerMappingTableProps {
 
 export function TriggerMappingTable({
   mappings,
+  triggerTypes,
   isLoading,
   isTogglingId,
   pageIndex,
@@ -79,7 +80,7 @@ export function TriggerMappingTable({
 
                 {/* Trigger Type */}
                 <td className="px-4 py-3">
-                  <TriggerTypeBadge type={m.triggerType} />
+                  <TriggerTypeBadge type={m.triggerType} triggerTypes={triggerTypes} />
                 </td>
 
                 {/* Max Attempts */}
@@ -170,7 +171,7 @@ export function TriggerMappingTable({
 
 // ==================== Sub-components ====================
 
-function TriggerTypeBadge({ type }: { type: string }) {
+function TriggerTypeBadge({ type, triggerTypes }: { type: string; triggerTypes: SurveyTriggerTypeDto[] }) {
   const colorMap: Record<string, string> = {
     ON_REGISTER: "bg-purple-100 text-purple-700",
     ON_START_ROADMAP: "bg-blue-100 text-blue-700",
@@ -178,7 +179,7 @@ function TriggerTypeBadge({ type }: { type: string }) {
   };
 
   const color = colorMap[type] ?? "bg-neutral-100 text-neutral-700";
-  const label = (TRIGGER_TYPE_LABELS as Record<string, string>)[type] ?? type;
+  const label = triggerTypes.find((t) => t.code === type)?.displayName ?? type;
 
   return (
     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${color}`}>
