@@ -135,6 +135,13 @@ export function useLogin() {
         description: `Welcome ${response.user.firstName || response.user.email}`,
       });
 
+      // Redirect Analyst users directly to analyst dashboard
+      const isAnalyst = response.user.roles?.includes(UserRole.ANALYST);
+      if (isAnalyst) {
+        router.push(routes.analyst.home);
+        return;
+      }
+
       // Check ON_REGISTER trigger (only for regular users)
       const isRegularUser = response.user.roles?.includes(UserRole.USER);
       if (isRegularUser) {
@@ -372,6 +379,16 @@ export function useGoogleLogin() {
         toast.success('Login successful!', {
           description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
         });
+
+        // Redirect Analyst users directly to analyst dashboard
+        const isAnalyst = normalizedUser.roles?.includes(UserRole.ANALYST);
+        if (isAnalyst) {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          router.push(routes.analyst.home);
+          return;
+        }
 
         // Check ON_REGISTER trigger (only for regular users)
         const isRegularUser = normalizedUser.roles?.includes(UserRole.USER);

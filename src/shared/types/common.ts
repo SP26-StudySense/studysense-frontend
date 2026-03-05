@@ -13,6 +13,7 @@ export interface BaseEntity {
 export enum UserRole {
   USER = 'User',
   ADMIN = 'Admin',
+  ANALYST = 'Analyst',
   SYSTEM = 'System',
 }
 
