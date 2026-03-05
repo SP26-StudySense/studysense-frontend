@@ -2,30 +2,17 @@
  * Analyst Survey Trigger Mapping API Types
  */
 
-// ==================== Constants ====================
+// ==================== Backend DTOs ====================
 
 /**
- * Trigger types matching SSS.Domain.Constants.SurveyTriggerTypes
+ * Matches SSS.Application.Features.Surveys.Common.SurveyTriggerTypeDto
  */
-export const TRIGGER_TYPES = {
-  ON_REGISTER: 'ON_REGISTER',
-  ON_START_ROADMAP: 'ON_START_ROADMAP',
-  ON_COMPLETE_MODULE: 'ON_COMPLETE_MODULE',
-} as const;
-
-export type TriggerType = (typeof TRIGGER_TYPES)[keyof typeof TRIGGER_TYPES];
-
-export const TRIGGER_TYPE_LABELS: Record<TriggerType, string> = {
-  ON_REGISTER: 'On Register',
-  ON_START_ROADMAP: 'On Start Roadmap',
-  ON_COMPLETE_MODULE: 'On Complete Module',
-};
-
-export const TRIGGER_TYPE_OPTIONS = Object.entries(TRIGGER_TYPE_LABELS).map(
-  ([value, label]) => ({ value: value as TriggerType, label })
-);
-
-// ==================== Backend DTOs ====================
+export interface SurveyTriggerTypeDto {
+  code: string;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+}
 
 /**
  * Matches SSS.Application.Features.Surveys.Common.SurveyTriggerMappingDto
@@ -33,7 +20,7 @@ export const TRIGGER_TYPE_OPTIONS = Object.entries(TRIGGER_TYPE_LABELS).map(
 export interface SurveyTriggerMappingDto {
   id: number;
   surveyId: number;
-  triggerType: TriggerType;
+  triggerType: string;
   maxAttempts: number | null;
   cooldownDays: number | null;
   isActive: boolean;
@@ -69,7 +56,7 @@ export interface GetAllTriggerMappingsParams {
 
 export interface CreateTriggerMappingRequest {
   surveyId: number;
-  triggerType: TriggerType;
+  triggerType: string;
   maxAttempts: number | null;
   cooldownDays: number | null;
   isActive: boolean;
@@ -78,7 +65,7 @@ export interface CreateTriggerMappingRequest {
 export interface EditTriggerMappingRequest {
   id: number;
   surveyId: number;
-  triggerType: TriggerType;
+  triggerType: string;
   maxAttempts: number | null;
   cooldownDays: number | null;
   isActive: boolean;

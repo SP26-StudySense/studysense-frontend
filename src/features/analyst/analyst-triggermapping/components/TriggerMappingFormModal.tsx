@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, AlertCircle } from "lucide-react";
-import { TRIGGER_TYPE_OPTIONS } from "../api/types";
-import type { SurveyTriggerMappingDto, TriggerType, CreateTriggerMappingRequest, EditTriggerMappingRequest } from "../api/types";
+import type { SurveyTriggerMappingDto, SurveyTriggerTypeDto, CreateTriggerMappingRequest, EditTriggerMappingRequest } from "../api/types";
 
 // Survey option for dropdown
 export interface SurveyOption {
@@ -18,6 +17,7 @@ interface TriggerMappingFormModalProps {
   mode: "create" | "edit";
   initialData?: SurveyTriggerMappingDto;
   surveys: SurveyOption[];
+  triggerTypes: SurveyTriggerTypeDto[];
   isSubmitting: boolean;
   serverError?: string | null;
   onSubmit: (data: CreateTriggerMappingRequest | EditTriggerMappingRequest) => void;
@@ -25,7 +25,7 @@ interface TriggerMappingFormModalProps {
 
 interface FormState {
   surveyId: number | "";
-  triggerType: TriggerType | "";
+  triggerType: string;
   maxAttempts: string;
   cooldownDays: string;
   isActive: boolean;
@@ -45,6 +45,7 @@ export function TriggerMappingFormModal({
   mode,
   initialData,
   surveys,
+  triggerTypes,
   isSubmitting,
   serverError,
   onSubmit,
@@ -75,7 +76,7 @@ export function TriggerMappingFormModal({
     const payload = {
       ...(mode === "edit" && initialData ? { id: initialData.id } : {}),
       surveyId: Number(form.surveyId),
-      triggerType: form.triggerType as TriggerType,
+      triggerType: form.triggerType,
       maxAttempts: form.maxAttempts !== "" ? Number(form.maxAttempts) : null,
       cooldownDays: form.cooldownDays !== "" ? Number(form.cooldownDays) : null,
       isActive: form.isActive,
@@ -146,14 +147,14 @@ export function TriggerMappingFormModal({
             </label>
             <select
               value={form.triggerType}
-              onChange={(e) => setForm({ ...form, triggerType: e.target.value as TriggerType | "" })}
+              onChange={(e) => setForm({ ...form, triggerType: e.target.value })}
               className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
               required
             >
               <option value="">Select trigger type...</option>
-              {TRIGGER_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {triggerTypes.map((t) => (
+                <option key={t.code} value={t.code}>
+                  {t.displayName}
                 </option>
               ))}
             </select>

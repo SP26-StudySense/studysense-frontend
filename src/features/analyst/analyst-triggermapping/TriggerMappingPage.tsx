@@ -9,6 +9,7 @@ export function TriggerMappingPage() {
   const {
     mappings,
     surveys,
+    triggerTypes,
     pagination,
     isLoading,
     isCreating,
@@ -61,6 +62,7 @@ export function TriggerMappingPage() {
       {/* ── Table ──────────────────────────────────────────── */}
       <TriggerMappingTable
         mappings={mappings}
+        triggerTypes={triggerTypes}
         isLoading={isLoading}
         isTogglingId={isTogglingId}
         pageIndex={pagination.pageIndex}
@@ -85,6 +87,7 @@ export function TriggerMappingPage() {
         mode={modalState.type === "edit" ? "edit" : "create"}
         initialData={modalState.type === "edit" ? modalState.mapping : undefined}
         surveys={surveys}
+        triggerTypes={triggerTypes}
         isSubmitting={isCreating || isEditing}
         serverError={serverError}
         onSubmit={handleFormSubmit}
