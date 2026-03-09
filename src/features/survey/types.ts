@@ -4,14 +4,6 @@
 
 import { BaseEntity } from '@/shared/types';
 
-// Survey Status Response (for checking if user needs to complete initial survey)
-export interface SurveyStatusResponse {
-  requiresInitialSurvey: boolean;
-  surveyId?: number;
-  surveyCode?: string;
-  redirectUrl?: string;
-}
-
 // Survey entity
 export interface Survey extends BaseEntity {
   userId: string;

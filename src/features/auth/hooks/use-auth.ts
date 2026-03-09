@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { routes } from '@/shared/config/routes';
 import { queryKeys } from '@/shared/api/query-keys';
 import { isAuthenticated } from '@/shared/api/client';
+import { clearAllSurveyDrafts } from '@/features/survey/hooks/useSurveyAutoSave';
 import { useCurrentUser } from '../api/queries';
 import { useLogin, useLogout, useRegister, useGoogleLogin } from '../api/mutations';
 import type { LoginRequest, RegisterRequest, User } from '../types';
@@ -51,6 +52,7 @@ export function useAuth(): UseAuthReturn {
     );
 
     const logout = useCallback(async () => {
+        clearAllSurveyDrafts();
         await logoutMutation.mutateAsync();
     }, [logoutMutation]);
 

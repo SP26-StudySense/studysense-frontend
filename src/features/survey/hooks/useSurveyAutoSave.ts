@@ -81,6 +81,19 @@ export function clearSurveyDraft(surveyId: number): void {
 }
 
 /**
+ * Clear all survey drafts from localStorage
+ */
+export function clearAllSurveyDrafts(): void {
+  try {
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith('survey_draft_'));
+    keys.forEach((k) => localStorage.removeItem(k));
+    console.log('[Survey AutoSave] All drafts cleared:', keys.length);
+  } catch (error) {
+    console.error('[Survey AutoSave] Failed to clear all drafts:', error);
+  }
+}
+
+/**
  * Hook to auto-save survey responses to localStorage
  */
 export function useSurveyAutoSave(
