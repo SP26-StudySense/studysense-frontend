@@ -10,7 +10,6 @@ import {
   fetchSurveyByCode,
   fetchSurveyQuestions,
   fetchQuestionOptions,
-  fetchSurveyStatus,
   fetchPendingTriggerSurvey,
 } from './api';
 import type { PendingTriggerSurveyResult } from './types';
@@ -87,18 +86,6 @@ export function useSurveyQuestionsWithOptions(surveyId: number, options?: { enab
     isLoading,
     error,
   };
-}
-
-/**
- * Survey completion status for the current user
- */
-export function useSurveyStatus(enabled: boolean = true) {
-  return useQuery({
-    queryKey: queryKeys.surveyTaking.status(),
-    queryFn: fetchSurveyStatus,
-    staleTime: 30 * 1000,
-    enabled,
-  });
 }
 
 /**

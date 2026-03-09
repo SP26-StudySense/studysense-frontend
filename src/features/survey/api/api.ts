@@ -5,7 +5,7 @@
 
 import { get, post } from '@/shared/api/client';
 import { QuestionType } from '../types';
-import type { SurveyQuestion, QuestionOption, SurveyResponse, SurveyStatusResponse } from '../types';
+import type { SurveyQuestion, QuestionOption, SurveyResponse } from '../types';
 import type {
   ApiResponse,
   PaginatedData,
@@ -108,10 +108,6 @@ export async function fetchQuestionOptions(questionId: string): Promise<Question
     order: opt.orderNo,
     allowFreeText: opt.allowFreeText,
   }));
-}
-
-export async function fetchSurveyStatus(): Promise<SurveyStatusResponse> {
-  return get<SurveyStatusResponse>('/users/survey-status');
 }
 
 /**
