@@ -16,6 +16,7 @@ interface AuthGuardProps {
 
 interface RoleGuardProps extends AuthGuardProps {
   allowedRoles: UserRole[];
+  redirectTo?: string;
 }
 
 /**
@@ -102,9 +103,11 @@ export function RoleGuard({
   children,
   allowedRoles,
   fallback,
+  redirectTo,
 }: RoleGuardProps) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
+  const destination = redirectTo ?? routes.dashboard.home;
 
   useEffect(() => {
     // Check if user has any of the allowed roles
@@ -112,9 +115,9 @@ export function RoleGuard({
       allowedRoles.map(r => r.toString()).includes(role)
     );
     if (!isLoading && user && !hasAllowedRole) {
-      router.push(routes.dashboard.home);
+      router.push(destination);
     }
-  }, [user, isLoading, allowedRoles, router]);
+  }, [user, isLoading, allowedRoles, router, destination]);
 
   // Check if user has any of the allowed roles
   const hasAllowedRole = user?.roles?.some(role =>
@@ -134,6 +137,22 @@ export function RoleGuard({
 export function AdminGuard({ children, fallback }: AuthGuardProps) {
   return (
     <RoleGuard allowedRoles={[UserRole.ADMIN]} fallback={fallback}>
+      {children}
+    </RoleGuard>
+  );
+}
+
+/**
+ * Analyst Guard - Protects analyst-only routes
+ * Redirects to landing page if user doesn't have Analyst role
+ */
+export function AnalystGuard({ children, fallback }: AuthGuardProps) {
+  return (
+    <RoleGuard
+      allowedRoles={[UserRole.ANALYST]}
+      redirectTo={routes.public.home}
+      fallback={fallback}
+    >
       {children}
     </RoleGuard>
   );

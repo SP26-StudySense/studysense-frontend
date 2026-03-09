@@ -4,9 +4,30 @@ import type { NextRequest } from 'next/server';
 import {
     isAuthRoute,
     isProtectedRoute,
+    isAnalystRoute,
     routes,
 } from '@/shared/config/routes';
 import { env } from '@/shared/config/env';
+
+// The claim key ASP.NET Core Identity uses for roles in JWT
+const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
+/**
+ * Decode roles from a JWT token without external libraries.
+ * Works in Next.js Edge runtime.
+ */
+function getRolesFromToken(token: string): string[] {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return [];
+        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        const roleValue = decoded[ROLE_CLAIM];
+        if (!roleValue) return [];
+        return Array.isArray(roleValue) ? roleValue : [roleValue];
+    } catch {
+        return [];
+    }
+}
 
 // API Proxy prefix
 const API_PROXY_PREFIX = '/api/proxy';
@@ -182,6 +203,17 @@ export function middleware(request: NextRequest) {
         const loginUrl = new URL(routes.auth.login, request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(loginUrl);
+    }
+
+    // Protect analyst routes: must be authenticated and have Analyst role
+    if (isAnalystRoute(pathname)) {
+        if (!isAuthenticated) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+        const roles = getRolesFromToken(accessToken!);
+        if (!roles.includes('Analyst')) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
     }
 
     return NextResponse.next();

@@ -149,6 +149,10 @@ export function isAdminRoute(pathname: string): boolean {
   return adminRoutes.some((route) => pathname.startsWith(route));
 }
 
+export function isAnalystRoute(pathname: string): boolean {
+  return analystRoutes.some((route) => pathname.startsWith(route));
+}
+
 export function isContentManagerRoute(pathname: string): boolean {
   return contentManagerRoutes.some((route) => pathname.startsWith(route));
 }
