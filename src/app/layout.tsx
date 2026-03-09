@@ -44,8 +44,8 @@ export const metadata: Metadata = {
     creator: '@studysense',
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
+    icon: ['/favicon.ico', '/icon-32.png'],
+    shortcut: '/icon-32.png',
     apple: '/apple-touch-icon.png',
   },
   manifest: '/site.webmanifest',

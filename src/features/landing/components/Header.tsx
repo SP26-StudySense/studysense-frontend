@@ -15,7 +15,7 @@ export const Header = () => {
         <header className="glass-panel fixed left-0 right-0 top-0 z-50 border-b border-neutral-200/60">
             <div className="flex h-16 w-full items-center justify-between px-8 lg:px-16 xl:px-24">
                 <Link href="/" className="group flex items-center gap-2 cursor-pointer">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-[#00bae2] transition-transform duration-300 group-hover:scale-105">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-white transition-transform duration-300 group-hover:scale-105">
                         <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
                     </div>
                     <span className="text-lg font-semibold tracking-tight text-neutral-900">
