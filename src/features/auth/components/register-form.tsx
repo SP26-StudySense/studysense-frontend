@@ -5,11 +5,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Chrome } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 import { registerSchema, type RegisterInput } from '../schema/auth.schema';
-import { useRegister } from '../api/mutations';
+import { useRegister, useGoogleLogin } from '../api/mutations';
 
 export const RegisterForm = () => {
   const [apiError, setApiError] = useState<string | null>(null);
@@ -34,6 +34,7 @@ export const RegisterForm = () => {
   });
 
   const registerMutation = useRegister();
+  const { loginWithGoogle } = useGoogleLogin();
 
   const onSubmit = async (data: RegisterInput) => {
     setApiError(null);
@@ -55,6 +56,10 @@ export const RegisterForm = () => {
       const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
       setApiError(errorMessage);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    loginWithGoogle('/dashboard');
   };
 
   // Show success state
@@ -188,6 +193,25 @@ export const RegisterForm = () => {
           )}
         </Button>
       </form>
+
+      <div className="relative my-8">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-neutral-200"></div>
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-[#fafafa] px-2 text-neutral-400">Or continue with</span>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/50 py-4 text-neutral-800 hover:bg-white hover:text-neutral-900 hover:shadow-md transition-all duration-300"
+        onClick={handleGoogleLogin}
+      >
+        <Chrome className="h-4 w-4 text-neutral-700" />
+        Continue with Google
+      </Button>
 
       <p className="mt-8 text-center text-sm text-neutral-500">
         Already have an account?{' '}
