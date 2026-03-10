@@ -16,8 +16,8 @@ import type {
   DeleteContentRequest,
   // Response types
   GetRoadmapsResponse,
-  GetRoadmapDetailResponse,
-  GetNodeContentsResponse,
+  RoadmapDetail,
+  NodeContent,
   CreateRoadmapGraphResponse,
   SyncRoadmapGraphResponse,
   DeleteRoadmapResponse,
@@ -68,8 +68,8 @@ export async function getRoadmaps(
 
 export async function getRoadmapDetail(
   roadmapId: number
-): Promise<GetRoadmapDetailResponse> {
-  return get<GetRoadmapDetailResponse>(`/roadmaps/${roadmapId}`);
+): Promise<RoadmapDetail> {
+  return get<RoadmapDetail>(`/roadmaps/${roadmapId}`);
 }
 
 export async function getManagerRoadmaps(
@@ -106,8 +106,8 @@ export async function deleteEdge(
 // Content APIs
 export async function getNodeContents(
   request: GetNodeContentsRequest
-): Promise<GetNodeContentsResponse> {
-  return get<GetNodeContentsResponse>(
+): Promise<NodeContent[]> {
+  return get<NodeContent[]>(
     `/roadmaps/${request.roadmapId}/nodes/${request.nodeId}/contents`
   );
 }

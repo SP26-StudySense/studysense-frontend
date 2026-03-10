@@ -2,8 +2,7 @@
  * Content Manager API Types
  * Centralized types for roadmap management
  */
-
-// ==================== Enums ====================
+import type { PaginatedResponse } from "../../../shared/types/api";
 
 export enum NodeDifficulty {
   Beginner = 'Beginner',
@@ -32,6 +31,7 @@ export enum RoadmapStatus {
   Active = 'Active',
   Archived = 'Archived',
 }
+  
 
 // ==================== Core Entities ====================
 
@@ -50,8 +50,8 @@ export interface RoadmapMetadata {
   description: string;
   version: number;
   status: RoadmapStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  createdById: string;
   subject?: LearningSubject;
 }
 
@@ -236,12 +236,7 @@ export interface GenericSuccessResponse {
  * Get roadmaps list response (paginated)
  */
 export interface GetRoadmapsResponse {
-  success: boolean;
-  data: RoadmapMetadata[];
-  pageIndex: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
+  roadmaps: PaginatedResponse<RoadmapMetadata>;
 }
 
 /**
@@ -250,6 +245,7 @@ export interface GetRoadmapsResponse {
  */
 export interface GetRoadmapDetailResponse {
   success: boolean;
+  message?: string;
   data: RoadmapDetail;
 }
 

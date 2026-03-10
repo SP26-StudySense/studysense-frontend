@@ -9,8 +9,8 @@ import { cmQueryKeys } from './api';
 import type {
   GetRoadmapsParams,
   GetRoadmapsResponse,
-  GetRoadmapDetailResponse,
-  GetNodeContentsResponse,
+  RoadmapDetail,
+  NodeContent,
 } from './types';
 
 // ==================== Query Hooks ====================
@@ -55,7 +55,7 @@ export function useRoadmaps(
  */
 export function useRoadmapDetail(
   roadmapId: number,
-  options?: Omit<UseQueryOptions<GetRoadmapDetailResponse>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<RoadmapDetail>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
     queryKey: cmQueryKeys.roadmapDetail(roadmapId),
@@ -105,7 +105,7 @@ export function useManagerRoadmaps(
 export function useNodeContents(
   roadmapId: number,
   nodeId: number,
-  options?: Omit<UseQueryOptions<GetNodeContentsResponse>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<NodeContent[]>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
     queryKey: cmQueryKeys.nodeContents(roadmapId, nodeId),

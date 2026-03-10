@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Plus, Eye, Edit, Trash2, X, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Eye, Edit, Trash2, X, Sparkles, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { ConfirmationModal } from "@/shared/ui";
-import { ContentManagerRoadmap, RoadmapFilters } from "../types";
-import { PaginatedResponse } from "@/features/roadmaps/api/types";
+import { useManagerRoadmaps } from "../api/queries";
+import { useDeleteRoadmap, useCreateRoadmapGraph } from "../api/mutations";
+import type { GetRoadmapsParams, RoadmapStatus } from "../api/types";
 
 type ModalState = 
   | { type: 'none' }
   | { type: 'create' }
-  | { type: 'edit'; roadmap: ContentManagerRoadmap }
-  | { type: 'delete'; id: number; title: string }
+  | { type: 'delete'; roadmapId: number; title: string }
   | { type: 'aiGenerate' };
 
 // Roadmap Form Modal Component
@@ -19,25 +19,23 @@ function RoadmapFormModal({
   isOpen,
   onClose,
   onSubmit,
-  initialData,
-  mode,
+  isSubmitting,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Partial<ContentManagerRoadmap>) => void;
-  initialData?: ContentManagerRoadmap;
-  mode: 'create' | 'edit';
+  onSubmit: (data: { title: string; description: string; subjectId: number }) => void;
+  isSubmitting?: boolean;
 }) {
   const [formData, setFormData] = useState({
-    title: initialData?.title || '',
-    description: initialData?.description || '',
+    title: '',
+    description: '',
+    subjectId: 1, // TODO: Get from user's assigned subject
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
     onSubmit(formData);
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -48,11 +46,12 @@ function RoadmapFormModal({
         <div className="p-6 border-b border-neutral-100">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-neutral-900 m-0">
-              {mode === 'create' ? 'Create New Roadmap' : 'Edit Roadmap'}
+              Create New Roadmap
             </h2>
             <button
               onClick={onClose}
               className="p-2 rounded-xl hover:bg-neutral-100 transition-colors"
+              disabled={isSubmitting}
             >
               <X className="h-5 w-5 text-neutral-400" />
             </button>
@@ -71,6 +70,7 @@ function RoadmapFormModal({
               className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
               placeholder="Enter roadmap title"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -79,11 +79,12 @@ function RoadmapFormModal({
               Description <span className="text-red-500">*</span>
             </label>
             <textarea
-              value={formData.description || ''}
+              value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 min-h-[100px]"
               placeholder="Enter roadmap description"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -91,15 +92,24 @@ function RoadmapFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-all"
+              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-all disabled:opacity-50"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-3 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md"
+              className="flex-1 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-3 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md disabled:opacity-50"
+              disabled={isSubmitting}
             >
-              {mode === 'create' ? 'Create Roadmap' : 'Save Changes'}
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </span>
+              ) : (
+                'Create Roadmap'
+              )}
             </button>
           </div>
         </form>
@@ -113,22 +123,23 @@ function AIGenerateModal({
   isOpen,
   onClose,
   onSubmit,
+  isSubmitting,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { title: string; description: string }) => void;
+  onSubmit: (data: { title: string; description: string; subjectId: number }) => void;
+  isSubmitting?: boolean;
 }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    subjectId: 1, // TODO: Get from user's assigned subject
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
     onSubmit(formData);
-    onClose();
-    setFormData({ title: '', description: '' });
   };
 
   if (!isOpen) return null;
@@ -149,6 +160,7 @@ function AIGenerateModal({
             <button
               onClick={onClose}
               className="p-2 rounded-xl hover:bg-neutral-100 transition-colors"
+              disabled={isSubmitting}
             >
               <X className="h-5 w-5 text-neutral-400" />
             </button>
@@ -173,6 +185,7 @@ function AIGenerateModal({
               className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
               placeholder="e.g., Complete React Development Path"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -185,6 +198,7 @@ function AIGenerateModal({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 min-h-[100px]"
               placeholder="Describe what learners should achieve with this roadmap..."
+              disabled={isSubmitting}
             />
           </div>
 
@@ -192,18 +206,27 @@ function AIGenerateModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-all"
+              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-all disabled:opacity-50"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
+              className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:opacity-50"
+              disabled={isSubmitting}
             >
-              <span className="flex items-center justify-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Generate with AI
-              </span>
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Generate with AI
+                </span>
+              )}
             </button>
           </div>
         </form>
@@ -212,54 +235,109 @@ function AIGenerateModal({
   );
 }
 
-interface RoadmapListPageProps {
-  initialData: PaginatedResponse<ContentManagerRoadmap>;
-}
-
-export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
-  const [paginatedData, setPaginatedData] = useState<PaginatedResponse<ContentManagerRoadmap>>(initialData);
-  const [filters, setFilters] = useState<RoadmapFilters>({
-    search: '',
+export function RoadmapListPage() {
+  const [filters, setFilters] = useState<GetRoadmapsParams>({
+    pageIndex: 1,
+    pageSize: 6,
+    q: '',
     version: undefined,
     isLatest: undefined,
-    pageIndex: 0,
-    pageSize: 6,
   });
   const [modalState, setModalState] = useState<ModalState>({ type: 'none' });
 
-  const handleFilterChange = (newFilters: Partial<RoadmapFilters>) => {
+  // React Query hooks
+  const { data : result, isLoading, isError} = useManagerRoadmaps(filters);
+  const createRoadmapMutation = useCreateRoadmapGraph();
+  const deleteRoadmapMutation = useDeleteRoadmap();
+  const roadmapsData = result?.roadmaps;
+  const handleFilterChange = (newFilters: Partial<GetRoadmapsParams>) => {
     setFilters((prev) => ({ ...prev, ...newFilters, pageIndex: 0 }));
-    // TODO: Call API with new filters
   };
 
   const handlePageChange = (newPage: number) => {
     setFilters((prev) => ({ ...prev, pageIndex: newPage }));
-    // TODO: Call API with new page
   };
 
-  const handleCreateRoadmap = (data: Partial<ContentManagerRoadmap>) => {
-    console.log("Create roadmap:", data);
-    // TODO: Call API to create
-    setModalState({ type: 'none' });
+  const handleCreateRoadmap = (data: { title: string; description: string; subjectId: number }) => {
+    createRoadmapMutation.mutate(
+      {
+        roadmap: {
+          subjectId: data.subjectId,
+          title: data.title,
+          description: data.description,
+        },
+        nodes: [], // Empty roadmap initially
+        edges: [],
+      },
+      {
+        onSuccess: () => {
+          setModalState({ type: 'none' });
+        },
+      }
+    );
   };
 
-  const handleUpdateRoadmap = (data: Partial<ContentManagerRoadmap>) => {
-    console.log("Update roadmap:", data);
-    // TODO: Call API to update
-    setModalState({ type: 'none' });
+  const handleAIGenerate = (data: { title: string; description: string; subjectId: number }) => {
+    // TODO: Call AI generation API endpoint
+    console.log("AI Generate:", data);
+    createRoadmapMutation.mutate(
+      {
+        roadmap: {
+          subjectId: data.subjectId,
+          title: data.title,
+          description: data.description,
+        },
+        nodes: [], // Will be populated by AI
+        edges: [],
+      },
+      {
+        onSuccess: () => {
+          setModalState({ type: 'none' });
+        },
+      }
+    );
   };
 
   const handleDeleteRoadmap = () => {
-    console.log("Delete roadmap:", modalState);
-    // TODO: Call API to delete
-    setModalState({ type: 'none' });
+    if (modalState.type !== 'delete') return;
+    
+    deleteRoadmapMutation.mutate(
+      { roadmapId: modalState.roadmapId },
+      {
+        onSuccess: () => {
+          setModalState({ type: 'none' });
+        },
+      }
+    );
   };
 
-  const handleAIGenerate = (data: { title: string; description: string }) => {
-    console.log("AI Generate roadmap:", data);
-    // TODO: Call API for AI generation
-    setModalState({ type: 'none' });
-  };
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
+          <p className="text-sm text-neutral-500">Loading roadmaps...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-neutral-900">Failed to load roadmaps</h2>
+          <p className="mt-1 text-sm text-neutral-500">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalCount = roadmapsData?.totalCount || 0;
+  const totalPages = roadmapsData?.totalPages || 0;
+  const currentPage = roadmapsData?.pageIndex || 1;
 
   return (
     <div className="space-y-6">
@@ -268,7 +346,7 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
         <div>
           <h2 className="text-2xl font-bold text-neutral-900">My Roadmaps</h2>
           <p className="mt-1 text-sm text-neutral-600">
-            {paginatedData.totalCount} roadmap{paginatedData.totalCount !== 1 ? 's' : ''} • Page {paginatedData.pageIndex + 1} of {paginatedData.totalPages}
+            {totalCount} roadmap{totalCount !== 1 ? 's' : ''} • Page {currentPage} of {totalPages}
           </p>
         </div>
 
@@ -297,8 +375,8 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
           <input
             type="text"
             placeholder="Search roadmaps..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange({ search: e.target.value })}
+            value={filters.q || ''}
+            onChange={(e) => handleFilterChange({ q: e.target.value })}
             className="h-10 w-full rounded-xl border border-neutral-200 bg-white pl-9 pr-4 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
           />
         </div>
@@ -328,13 +406,13 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
       </div>
 
       {/* Roadmaps Grid */}
-      {paginatedData.items.length === 0 ? (
+      {roadmapsData?.items.length === 0 ? (
         <div className="rounded-2xl border border-neutral-200 bg-white p-12 text-center">
           <p className="text-neutral-600">No roadmaps found. Create your first roadmap!</p>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {paginatedData.items.map((roadmap) => (
+          {roadmapsData?.items.map((roadmap) => (
             <div
               key={roadmap.id}
               className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg"
@@ -352,11 +430,9 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
                 >
                   {roadmap.status}
                 </span>
-                {!roadmap.isLatest && (
-                  <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
-                    v{roadmap.version}
-                  </span>
-                )}
+                <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
+                  v{roadmap.version}
+                </span>
               </div>
 
               {/* Content */}
@@ -371,13 +447,8 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
 
               {/* Stats */}
               <div className="mb-4 flex items-center gap-4 text-xs text-neutral-500">
-                <div>{roadmap.nodeCount} nodes</div>
                 <div>v{roadmap.version}</div>
-                {roadmap.isLatest && (
-                  <div className="rounded-full bg-[#00bae2]/10 px-2 py-0.5 text-[#00bae2] font-medium">
-                    Latest
-                  </div>
-                )}
+                <div>Created at {new Date(roadmap.createdAt).toLocaleDateString()}</div>
               </div>
 
               {/* Actions */}
@@ -389,16 +460,17 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
                   <Eye className="inline h-3.5 w-3.5 mr-1" />
                   View
                 </Link>
-                <button
-                  onClick={() => setModalState({ type: 'edit', roadmap })}
-                  className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-all hover:bg-neutral-50"
+                <Link
+                  href={`/content-roadmaps/${roadmap.id}/edit`}
+                  className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-center text-xs font-medium text-neutral-700 transition-all hover:bg-neutral-50"
                 >
                   <Edit className="inline h-3.5 w-3.5 mr-1" />
                   Edit
-                </button>
+                </Link>
                 <button
-                  onClick={() => setModalState({ type: 'delete', id: roadmap.id, title: roadmap.title })}
+                  onClick={() => setModalState({ type: 'delete', roadmapId: roadmap.id, title: roadmap.title })}
                   className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 transition-all hover:bg-red-50"
+                  disabled={deleteRoadmapMutation.isPending}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -409,11 +481,11 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
       )}
 
       {/* Pagination */}
-      {paginatedData.totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4">
           <button
-            onClick={() => handlePageChange(filters.pageIndex - 1)}
-            disabled={!paginatedData.hasPreviousPage}
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 0}
             className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -421,12 +493,12 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
           </button>
 
           <div className="flex items-center gap-2">
-            {Array.from({ length: paginatedData.totalPages }, (_, i) => (
+            {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i}
                 onClick={() => handlePageChange(i)}
                 className={`h-10 w-10 rounded-lg text-sm font-medium transition-all ${
-                  filters.pageIndex === i
+                  currentPage === i
                     ? 'bg-gradient-to-r from-[#fec5fb] to-[#00bae2] text-neutral-900'
                     : 'text-neutral-600 hover:bg-neutral-50'
                 }`}
@@ -437,8 +509,8 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
           </div>
 
           <button
-            onClick={() => handlePageChange(filters.pageIndex + 1)}
-            disabled={!paginatedData.hasNextPage}
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages - 1}
             className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
@@ -452,21 +524,14 @@ export function RoadmapListPage({ initialData }: RoadmapListPageProps) {
         isOpen={modalState.type === 'create'}
         onClose={() => setModalState({ type: 'none' })}
         onSubmit={handleCreateRoadmap}
-        mode="create"
-      />
-
-      <RoadmapFormModal
-        isOpen={modalState.type === 'edit'}
-        onClose={() => setModalState({ type: 'none' })}
-        onSubmit={handleUpdateRoadmap}
-        initialData={modalState.type === 'edit' ? modalState.roadmap : undefined}
-        mode="edit"
+        isSubmitting={createRoadmapMutation.isPending}
       />
 
       <AIGenerateModal
         isOpen={modalState.type === 'aiGenerate'}
         onClose={() => setModalState({ type: 'none' })}
         onSubmit={handleAIGenerate}
+        isSubmitting={createRoadmapMutation.isPending}
       />
 
       <ConfirmationModal

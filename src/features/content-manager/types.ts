@@ -64,5 +64,5 @@ export type {
   RoadmapEdgeDTO, 
   NodeContentItemDTO,
   NodeDifficulty,
-  EdgeType
+  EdgeType,
 };

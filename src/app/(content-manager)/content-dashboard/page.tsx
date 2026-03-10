@@ -1,5 +1,5 @@
 import { ContentManagerDashboard } from "@/features/content-manager/dashboard";
-import { MOCK_CONTENT_MANAGER, MOCK_STATS, MOCK_RECENT_ACTIVITIES } from "@/features/content-manager";
+import { MOCK_CONTENT_MANAGER, MOCK_STATS, MOCK_RECENT_ACTIVITIES } from "@/features/content-manager/mock-data";
 
 export default function ContentDashboardPage() {
   return (
