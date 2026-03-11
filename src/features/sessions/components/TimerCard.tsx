@@ -19,8 +19,10 @@ export function TimerCard({ className }: TimerCardProps) {
     const sessionId = useSessionStore((state) => state.sessionId);
     const sessionStatus = useSessionStore((state) => state.sessionStatus);
     const incrementElapsed = useSessionStore((state) => state.incrementElapsed);
+    const incrementPauseSeconds = useSessionStore((state) => state.incrementPauseSeconds);
     const selectedNode = useSessionStore((state) => state.selectedNode);
     const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
+    const selectedTasks = useSessionStore((state) => state.selectedTasks);
 
     // Store actions
     const storeStartSession = useSessionStore((state) => state.startSession);
@@ -48,6 +50,8 @@ export function TimerCard({ className }: TimerCardProps) {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const hasStarted = sessionStatus !== SessionStatus.NOT_STARTED;
+
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
 
@@ -64,7 +68,7 @@ export function TimerCard({ className }: TimerCardProps) {
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [timerRunning, incrementElapsed]);
+    }, [timerRunning, incrementElapsed, incrementPauseSeconds]);
 
     /** Safely convert a string ID to number, returning undefined if not a valid integer */
     const safeNumberId = (value: string | undefined | null): number | undefined => {
@@ -76,10 +80,13 @@ export function TimerCard({ className }: TimerCardProps) {
     const doStartSession = useCallback(() => {
         setStartError(null);
 
+        const firstTaskId = selectedTasks.length > 0 ? safeNumberId(selectedTasks[0].id) : undefined;
+
         const payload = {
             studyPlanId: safeNumberId(activeStudyPlanId),
             nodeId: selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id),
             moduleId: safeNumberId(selectedNode?.id),
+            taskId: firstTaskId,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         };
 
@@ -117,7 +124,7 @@ export function TimerCard({ className }: TimerCardProps) {
                 },
             }
         );
-    }, [startMutation, activeStudyPlanId, selectedNode, storeStartSession]);
+    }, [startMutation, activeStudyPlanId, selectedNode, selectedTasks, storeStartSession]);
 
     const handleStart = useCallback(async () => {
         setStartError(null);
@@ -152,7 +159,6 @@ export function TimerCard({ className }: TimerCardProps) {
         storeEndSession();
     }, [storeEndSession]);
 
-    const hasStarted = sessionStatus !== SessionStatus.NOT_STARTED;
     const isAnyPending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending || endMutation.isPending;
 
     return (
