@@ -41,13 +41,29 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
 
                 {/* Text */}
                 <h1 className="text-3xl font-bold text-neutral-900 mb-2">Great work!</h1>
-                <p className="text-neutral-500 mb-8 max-w-sm">
-                    {summaryData ? (
-                        <>You earned <strong className="text-emerald-600">{summaryData.xpEarned} XP</strong> and completed <strong className="text-neutral-800">{summaryData.tasksCompleted}</strong> tasks. Your session has been saved. Keep up the momentum!</>
-                    ) : (
-                        <>Your session has been saved. Keep up the momentum!</>
-                    )}
+                <p className="text-neutral-500 mb-4">
+                    Your session has been saved. Keep up the momentum!
                 </p>
+
+                {/* Real stats from API */}
+                {summaryData && (
+                    <div className="flex items-center gap-6 mb-8 p-4 rounded-2xl bg-white/80 border border-neutral-100 shadow-sm">
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-neutral-900">{summaryData.timeStudiedMinutes}</p>
+                            <p className="text-xs text-neutral-500">minutes</p>
+                        </div>
+                        <div className="h-8 w-px bg-neutral-200" />
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-neutral-900">{summaryData.tasksCompleted}/{summaryData.totalTasks}</p>
+                            <p className="text-xs text-neutral-500">tasks</p>
+                        </div>
+                        <div className="h-8 w-px bg-neutral-200" />
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-amber-600">+{summaryData.xpEarned}</p>
+                            <p className="text-xs text-neutral-500">XP earned</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3">

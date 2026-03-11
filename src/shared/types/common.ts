@@ -55,6 +55,14 @@ export enum StudyEventType {
   FEEDBACK_SUBMITTED = 'FeedbackSubmitted',
 }
 
+// Session ended reason
+export enum SessionEndedReason {
+  COMPLETED = 'Completed',
+  TIMED_OUT = 'TimedOut',
+  CANCELLED = 'Cancelled',
+  SYSTEM_TERMINATED = 'SystemTerminated',
+}
+
 // Difficulty levels
 export enum DifficultyLevel {
   BEGINNER = 'Beginner',

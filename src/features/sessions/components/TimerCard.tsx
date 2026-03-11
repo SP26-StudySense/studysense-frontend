@@ -1,33 +1,50 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Square, Loader2 } from 'lucide-react';
+import { useEffect, useCallback, useState } from 'react';
+import { Play, Pause, RotateCcw, Square, AlertTriangle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore } from '@/store/session.store';
-import { useStartSession, usePauseSession, useResumeSession } from '../hooks';
+import { useStartSession, usePauseSession, useResumeSession, useEndSession } from '../api/mutations';
+import { SessionStatus } from '@/shared/types';
+import { toast } from '@/shared/lib';
+import { ApiException } from '@/shared/api/errors';
 
 interface TimerCardProps {
-    onSessionStart?: () => void;
-    onSessionEnd?: () => void;
     className?: string;
 }
 
-export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCardProps) {
+export function TimerCard({ className }: TimerCardProps) {
     const timerRunning = useSessionStore((state) => state.timerRunning);
     const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
-    const startTimer = useSessionStore((state) => state.startTimer);
-    const pauseTimer = useSessionStore((state) => state.pauseTimer);
-    const resetTimer = useSessionStore((state) => state.resetTimer);
+    const sessionId = useSessionStore((state) => state.sessionId);
+    const sessionStatus = useSessionStore((state) => state.sessionStatus);
     const incrementElapsed = useSessionStore((state) => state.incrementElapsed);
-    const incrementPauseSeconds = useSessionStore((state) => state.incrementPauseSeconds);
+    const selectedNode = useSessionStore((state) => state.selectedNode);
+    const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
 
-    const { mutateAsync: startSessionApi, isPending: isStarting } = useStartSession();
-    const { mutateAsync: pauseSessionApi, isPending: isPausing } = usePauseSession();
-    const { mutateAsync: resumeSessionApi, isPending: isResuming } = useResumeSession();
+    // Store actions
+    const storeStartSession = useSessionStore((state) => state.startSession);
+    const storePauseSession = useSessionStore((state) => state.pauseSession);
+    const storeResumeSession = useSessionStore((state) => state.resumeSession);
+    const storeEndSession = useSessionStore((state) => state.endSession);
+    const storeResetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
+
+    // API mutations
+    const startMutation = useStartSession();
+    const pauseMutation = usePauseSession();
+    const resumeMutation = useResumeSession();
+    const endMutation = useEndSession();
+
+    // Error state for start session
+    const [startError, setStartError] = useState<string | null>(null);
 
     const formatTime = (totalSeconds: number) => {
-        const mins = Math.floor(totalSeconds / 60);
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
         const secs = totalSeconds % 60;
+        if (hrs > 0) {
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
@@ -49,51 +66,94 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
         };
     }, [timerRunning, incrementElapsed]);
 
+    /** Safely convert a string ID to number, returning undefined if not a valid integer */
+    const safeNumberId = (value: string | undefined | null): number | undefined => {
+        if (!value) return undefined;
+        const num = Number(value);
+        return Number.isFinite(num) && num > 0 ? num : undefined;
+    };
+
+    const doStartSession = useCallback(() => {
+        setStartError(null);
+
+        const payload = {
+            studyPlanId: safeNumberId(activeStudyPlanId),
+            nodeId: selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id),
+            moduleId: safeNumberId(selectedNode?.id),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        };
+
+        console.log('🚀 [StartSession] Raw values:', {
+            activeStudyPlanId,
+            'selectedNode?.id': selectedNode?.id,
+            'selectedNode?.roadmapNodeId': selectedNode?.roadmapNodeId,
+            selectedNode,
+        });
+        console.log('🚀 [StartSession] Payload:', JSON.stringify(payload, null, 2));
+
+        startMutation.mutate(
+            payload,
+            {
+                onSuccess: (data) => {
+                    storeStartSession(data.sessionId, data.tasks);
+                    toast.success('Session started!');
+                },
+                onError: (error) => {
+                    const message = error instanceof ApiException
+                        ? error.message
+                        : error.message || 'Failed to start session';
+
+                    // Check if error is about an existing active session
+                    const isActiveSessionError = message.toLowerCase().includes('active')
+                        || message.toLowerCase().includes('already')
+                        || (error instanceof ApiException && error.status === 409);
+
+                    if (isActiveSessionError) {
+                        setStartError('You already have an active session. Please end it before starting a new one.');
+                    } else {
+                        setStartError(message);
+                    }
+                    toast.apiError(error, 'Failed to start session');
+                },
+            }
+        );
+    }, [startMutation, activeStudyPlanId, selectedNode, storeStartSession]);
+
     const handleStart = useCallback(async () => {
-        try {
-            await startSessionApi({});
-            startTimer();
-            onSessionStart?.();
-        } catch (error) {
-            console.error('Failed to start session', error);
-        }
-    }, [startSessionApi, startTimer, onSessionStart]);
+        setStartError(null);
+        // Start session directly — if backend returns error about active session, we handle it in onError
+        doStartSession();
+    }, [doStartSession]);
 
-    const handlePause = useCallback(async () => {
-        const { activeSession } = useSessionStore.getState();
-        if (!activeSession) return;
+    const handlePause = useCallback(() => {
+        if (!sessionId) return;
+        pauseMutation.mutate(sessionId, {
+            onSuccess: (data) => {
+                storePauseSession();
+                useSessionStore.getState().setPauseData(data.pauseCount, data.pauseSeconds);
+            },
+        });
+    }, [sessionId, pauseMutation, storePauseSession]);
 
-        try {
-            await pauseSessionApi(activeSession.id);
-            pauseTimer();
-        } catch (error) {
-            console.error('Failed to pause session', error);
-        }
-    }, [pauseSessionApi, pauseTimer]);
-
-    const handleResume = useCallback(async () => {
-        const { activeSession } = useSessionStore.getState();
-        if (!activeSession) return;
-
-        try {
-            await resumeSessionApi(activeSession.id);
-            startTimer();
-        } catch (error) {
-            console.error('Failed to resume session', error);
-        }
-    }, [resumeSessionApi, startTimer]);
+    const handleResume = useCallback(() => {
+        if (!sessionId) return;
+        resumeMutation.mutate(sessionId, {
+            onSuccess: () => {
+                storeResumeSession();
+            },
+        });
+    }, [sessionId, resumeMutation, storeResumeSession]);
 
     const handleReset = useCallback(() => {
-        resetTimer();
-    }, [resetTimer]);
+        storeResetSessionFlow();
+    }, [storeResetSessionFlow]);
 
     const handleEndSession = useCallback(() => {
-        // We handle the actual API call in SessionSummaryModal
-        // Here we just stop the timer and show the modal
-        onSessionEnd?.();
-    }, [onSessionEnd]);
+        storeEndSession();
+    }, [storeEndSession]);
 
-    const hasStarted = elapsedSeconds > 0 || timerRunning;
+    const hasStarted = sessionStatus !== SessionStatus.NOT_STARTED;
+    const isAnyPending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending || endMutation.isPending;
 
     return (
         <div className={cn(
@@ -112,45 +172,49 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
             {/* Status */}
             <p className={cn(
                 "mt-3 text-sm font-medium",
-                timerRunning ? "text-emerald-600" : hasStarted ? "text-amber-600" : "text-neutral-500"
+                timerRunning ? "text-emerald-600" : hasStarted ? "text-amber-600" : startError ? "text-red-500" : "text-neutral-500"
             )}>
                 {timerRunning ? '● Session in progress' : hasStarted ? '● Paused' : 'Ready to start'}
             </p>
+
+            {/* Error message */}
+            {startError && !hasStarted && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 max-w-md">
+                    <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                    <p className="text-sm text-red-600">{startError}</p>
+                </div>
+            )}
 
             {/* Controls */}
             <div className="relative mt-8 flex items-center gap-3">
                 {!hasStarted ? (
                     <button
                         onClick={handleStart}
-                        disabled={isStarting}
-                        className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:hover:scale-100"
+                        disabled={isAnyPending}
+                        className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isStarting ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                            <Play className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" />
-                        )}
-                        Start Session
+                        <Play className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" />
+                        {startMutation.isPending ? 'Starting...' : 'Start Session'}
                     </button>
                 ) : (
                     <>
                         {timerRunning ? (
                             <button
                                 onClick={handlePause}
-                                disabled={isPausing}
-                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:hover:scale-100"
+                                disabled={isAnyPending}
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50"
                             >
-                                {isPausing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Pause className="h-5 w-5" fill="currentColor" />}
-                                Pause
+                                <Pause className="h-5 w-5" fill="currentColor" />
+                                {pauseMutation.isPending ? 'Pausing...' : 'Pause'}
                             </button>
                         ) : (
                             <button
                                 onClick={handleResume}
-                                disabled={isResuming}
-                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:hover:scale-100"
+                                disabled={isAnyPending}
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-50"
                             >
-                                {isResuming ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" fill="currentColor" />}
-                                Resume
+                                <Play className="h-5 w-5" fill="currentColor" />
+                                {resumeMutation.isPending ? 'Resuming...' : 'Resume'}
                             </button>
                         )}
                         <button
@@ -173,4 +237,3 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
         </div>
     );
 }
-

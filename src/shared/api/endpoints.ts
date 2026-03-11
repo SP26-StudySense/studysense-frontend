@@ -62,15 +62,15 @@ export const endpoints = {
   // Study Sessions
   studySessions: {
     base: '/study-sessions',
+    byId: (id: string) => `/study-sessions/${id}`,
     start: '/study-sessions/start',
     active: '/study-sessions/active',
-    recent: '/study-sessions/recent',
-    history: '/study-sessions/history',
-    statistics: '/study-sessions/statistics',
-    byId: (id: string) => `/study-sessions/${id}`,
     pause: (id: string) => `/study-sessions/${id}/pause`,
     resume: (id: string) => `/study-sessions/${id}/resume`,
     end: (id: string) => `/study-sessions/${id}/end`,
+    history: '/study-sessions/history',
+    recent: '/study-sessions/recent',
+    statistics: '/study-sessions/statistics',
     events: (id: string) => `/study-sessions/${id}/events`,
   },
 

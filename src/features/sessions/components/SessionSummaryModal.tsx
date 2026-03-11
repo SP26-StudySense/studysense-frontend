@@ -1,24 +1,27 @@
 import { useState } from 'react';
 import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { useSessionStore } from '@/store/session.store';
-import { useEndSession } from '../hooks';
+import { useSessionStore, SessionSummaryData } from '@/store/session.store';
+import { useEndSession } from '../api/mutations';
 import { SessionEndedReason } from '@/shared/types';
+import { toast } from '@/shared/lib';
 
 interface SessionSummaryModalProps {
     isOpen: boolean;
-    onSaveAndContinue: () => void;
     className?: string;
 }
 
-export function SessionSummaryModal({ isOpen, onSaveAndContinue, className }: SessionSummaryModalProps) {
+export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalProps) {
     const summaryData = useSessionStore((state) => state.summaryData);
     const setSummaryData = useSessionStore((state) => state.setSummaryData);
-    const activeSession = useSessionStore((state) => state.activeSession);
+    const sessionId = useSessionStore((state) => state.sessionId);
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
-    const pauseSeconds = useSessionStore((state) => state.pauseSeconds);
+    const completeSession = useSessionStore((state) => state.completeSession);
     const [hoveredStar, setHoveredStar] = useState(0);
+    const [notes, setNotes] = useState('');
+
+    const endMutation = useEndSession();
 
     const { mutateAsync: endSessionApi, isPending } = useEndSession();
     const endSessionStore = useSessionStore((state) => state.endSession);
@@ -29,38 +32,34 @@ export function SessionSummaryModal({ isOpen, onSaveAndContinue, className }: Se
         setSummaryData({ ...summaryData, rating });
     };
 
-    const handleSave = async () => {
-        if (!activeSession) return;
+    const handleSaveAndContinue = () => {
+        if (!sessionId) return;
 
-        const completedTasksIds = selectedTasks
-            .filter(t => t.isCompleted)
-            .map(t => t.id);
+        const completedTaskIds = selectedTasks
+            .filter((t) => t.isCompleted)
+            .map((t) => Number(t.id));
 
-        try {
-            const response = await endSessionApi({
-                id: activeSession.id,
-                data: {
-                    selfRating: summaryData.rating,
-                    activeSeconds: elapsedSeconds - pauseSeconds,
-                    idleSeconds: pauseSeconds,
+        endMutation.mutate(
+            {
+                id: sessionId,
+                request: {
+                    endedReason: SessionEndedReason.COMPLETED,
+                    selfRating: summaryData.rating || undefined,
+                    notes: notes || undefined,
                     actualDurationSeconds: elapsedSeconds,
-                    tasksCompleted: completedTasksIds,
-                    endedReason: SessionEndedReason.COMPLETED
-                }
-            });
-
-            // Update store with real summary data from API
-            endSessionStore({
-                ...summaryData,
-                xpEarned: response.xpEarned,
-                tasksCompleted: response.tasksCompleted,
-                totalTasks: response.totalTasks,
-            });
-
-            onSaveAndContinue();
-        } catch (error) {
-            console.error('Failed to save session summary', error);
-        }
+                    activeSeconds: elapsedSeconds,
+                    tasksCompleted: completedTaskIds.length > 0 ? completedTaskIds : undefined,
+                },
+            },
+            {
+                onSuccess: (data) => {
+                    completeSession(data);
+                },
+                onError: (error) => {
+                    toast.apiError(error, 'Failed to end session');
+                },
+            }
+        );
     };
 
     return (
@@ -70,7 +69,7 @@ export function SessionSummaryModal({ isOpen, onSaveAndContinue, className }: Se
 
             {/* Modal */}
             <div className={cn(
-                "relative w-full max-w-xl mx-4 bg-gradient-to-b from-emerald-50/95 to-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-900/20 overflow-hidden",
+                "relative w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto overflow-x-hidden bg-gradient-to-b from-emerald-50/95 to-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-900/20",
                 className
             )}>
                 {/* Header */}
@@ -149,6 +148,17 @@ export function SessionSummaryModal({ isOpen, onSaveAndContinue, className }: Se
                     </div>
                 </div>
 
+                {/* Notes Section */}
+                <div className="mx-8 mb-6">
+                    <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add notes about this session (optional)..."
+                        className="w-full p-4 rounded-2xl bg-white/80 border border-neutral-100 shadow-sm text-sm text-neutral-700 placeholder:text-neutral-400 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+                        rows={3}
+                    />
+                </div>
+
                 {/* Suggested Next Step */}
                 <div className="mx-8 mb-6 p-5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
                     <div className="flex items-center gap-2 mb-2">
@@ -168,12 +178,11 @@ export function SessionSummaryModal({ isOpen, onSaveAndContinue, className }: Se
                 {/* Save Button */}
                 <div className="px-8 pb-8">
                     <button
-                        onClick={handleSave}
-                        disabled={isPending}
-                        className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:hover:scale-100"
+                        onClick={handleSaveAndContinue}
+                        disabled={endMutation.isPending}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isPending && <Loader2 className="h-5 w-5 animate-spin" />}
-                        Save & Continue
+                        {endMutation.isPending ? 'Saving...' : 'Save & Continue'}
                     </button>
                 </div>
             </div>
