@@ -13,6 +13,7 @@ interface SessionSuccessScreenProps {
 export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreenProps) {
     const router = useRouter();
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
+    const summaryData = useSessionStore((state) => state.summaryData);
 
     if (!isOpen) return null;
 
@@ -40,8 +41,12 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
 
                 {/* Text */}
                 <h1 className="text-3xl font-bold text-neutral-900 mb-2">Great work!</h1>
-                <p className="text-neutral-500 mb-8">
-                    Your session has been saved. Keep up the momentum!
+                <p className="text-neutral-500 mb-8 max-w-sm">
+                    {summaryData ? (
+                        <>You earned <strong className="text-emerald-600">{summaryData.xpEarned} XP</strong> and completed <strong className="text-neutral-800">{summaryData.tasksCompleted}</strong> tasks. Your session has been saved. Keep up the momentum!</>
+                    ) : (
+                        <>Your session has been saved. Keep up the momentum!</>
+                    )}
                 </p>
 
                 {/* Action Buttons */}

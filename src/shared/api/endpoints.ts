@@ -60,23 +60,18 @@ export const endpoints = {
   },
 
   // Study Sessions
-  sessions: {
-    base: '/sessions',
-    byId: (id: string) => `/sessions/${id}`,
-    start: '/sessions/start',
-    current: '/sessions/current',
-    pause: (id: string) => `/sessions/${id}/pause`,
-    resume: (id: string) => `/sessions/${id}/resume`,
-    end: (id: string) => `/sessions/${id}/end`,
-    summary: (id: string) => `/sessions/${id}/summary`,
-    history: '/sessions/history',
-  },
-
-  // Study Events (Logging)
-  events: {
-    base: '/events',
-    log: '/events/log',
-    bySession: (sessionId: string) => `/events/session/${sessionId}`,
+  studySessions: {
+    base: '/study-sessions',
+    start: '/study-sessions/start',
+    active: '/study-sessions/active',
+    recent: '/study-sessions/recent',
+    history: '/study-sessions/history',
+    statistics: '/study-sessions/statistics',
+    byId: (id: string) => `/study-sessions/${id}`,
+    pause: (id: string) => `/study-sessions/${id}/pause`,
+    resume: (id: string) => `/study-sessions/${id}/resume`,
+    end: (id: string) => `/study-sessions/${id}/end`,
+    events: (id: string) => `/study-sessions/${id}/events`,
   },
 
   // Survey & Assessment

@@ -35,6 +35,14 @@ export enum SessionStatus {
   CANCELLED = 'Cancelled',
 }
 
+// Session ended reason
+export enum SessionEndedReason {
+  COMPLETED = 'Completed',
+  TIMED_OUT = 'TimedOut',
+  CANCELLED = 'Cancelled',
+  SYSTEM_TERMINATED = 'SystemTerminated',
+}
+
 // Study event types (matching Backend StudyEvent)
 export enum StudyEventType {
   SESSION_START = 'SessionStart',

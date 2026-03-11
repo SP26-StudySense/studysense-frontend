@@ -8,6 +8,8 @@ import { FocusTips } from './components/FocusTips';
 import { SessionSummaryModal } from './components/SessionSummaryModal';
 import { SessionSuccessScreen } from './components/SessionSuccessScreen';
 import { useSessionStore, SelectedTask } from '@/store/session.store';
+import { useActiveSession } from './hooks';
+import { Loader2 } from 'lucide-react';
 
 // Mock tasks for demonstration (used when no tasks selected from roadmap)
 const MOCK_TASKS: SessionTask[] = [
@@ -71,8 +73,20 @@ export function SessionsPage() {
     const setSelectedTasks = useSessionStore((state) => state.setSelectedTasks);
     const toggleTaskCompletion = useSessionStore((state) => state.toggleTaskCompletion);
     const showSummary = useSessionStore((state) => state.showSummary);
+    const setShowSummary = useSessionStore((state) => state.setShowSummary);
     const showSuccess = useSessionStore((state) => state.showSuccess);
     const completeSession = useSessionStore((state) => state.completeSession);
+    const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
+    const hasActiveSession = useSessionStore((state) => state.activeSession !== null);
+
+    const { data: activeSessionData, isLoading } = useActiveSession();
+
+    // Hydrate store from API if active session exists
+    useEffect(() => {
+        if (activeSessionData && !hasActiveSession) {
+            setActiveSessionFromApi(activeSessionData);
+        }
+    }, [activeSessionData, hasActiveSession, setActiveSessionFromApi]);
 
     // Initialize with mock tasks if no tasks from roadmap
     useEffect(() => {
@@ -101,6 +115,19 @@ export function SessionsPage() {
         completeSession();
     };
 
+    const handleSessionEnd = () => {
+        // Just show the summary modal, user reviews and then we call API
+        setShowSummary(true);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex h-[60vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
+
     // Show success screen (full page)
     if (showSuccess) {
         return <SessionSuccessScreen isOpen={showSuccess} />;
@@ -123,7 +150,7 @@ export function SessionsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Column - Timer & Tasks */}
                     <div className="lg:col-span-7 space-y-6">
-                        <TimerCard />
+                        <TimerCard onSessionEnd={handleSessionEnd} />
                         <TaskSelector
                             tasks={displayTasks}
                             onToggleTask={handleToggleTask}
