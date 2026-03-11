@@ -80,6 +80,7 @@ export function RoadmapsList() {
     });
 
     const [previewRoadmap, setPreviewRoadmap] = useState<RoadmapTemplate | null>(null);
+    const [previewStartFn, setPreviewStartFn] = useState<(() => void) | null>(null);
 
     // Fetch user's study plans from API
     const { 
@@ -228,7 +229,7 @@ export function RoadmapsList() {
                                 key={roadmap.id}
                                 roadmap={roadmap}
                                 variant="template"
-                                onPreview={() => setPreviewRoadmap(roadmap)}
+                                onPreview={(startFn) => { setPreviewRoadmap(roadmap); setPreviewStartFn(() => startFn); }}
                                 existingRoadmapIds={existingRoadmapIds}
                             />
                         ))}
@@ -243,7 +244,8 @@ export function RoadmapsList() {
                 <RoadmapPreviewModal
                     roadmap={previewRoadmap}
                     isOpen={!!previewRoadmap}
-                    onClose={() => setPreviewRoadmap(null)}
+                    onClose={() => { setPreviewRoadmap(null); setPreviewStartFn(null); }}
+                    onStartLearning={previewStartFn ?? undefined}
                 />
             )}
         </div>
