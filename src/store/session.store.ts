@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { SessionStatus } from '@/shared/types';
+import type { ActiveSessionResponse, EndSessionResponse, SessionTaskItem } from '@/features/sessions/types';
 
 // Task from roadmap selection
 export interface SelectedTask {
@@ -14,27 +16,19 @@ export interface SelectedTask {
 // Node info from roadmap
 export interface SelectedNodeInfo {
   id: string;
+  roadmapNodeId?: number;
   title: string;
   planId?: string;
   planTitle?: string;
 }
 
-interface ActiveSession {
-  id: string;
-  planId: string;
-  nodeId: string;
-  startedAt: string;
-  status: SessionStatus;
-  elapsedMinutes: number;
-  currentTaskIndex: number;
-}
-
-// Session summary data
+// Session summary data (populated from API response)
 export interface SessionSummaryData {
   timeStudiedMinutes: number;
   tasksCompleted: number;
   totalTasks: number;
   xpEarned: number;
+  focusScore: number;
   rating: number;
   notes: string;
 }
@@ -51,11 +45,15 @@ interface SessionState {
   activeStudyPlanId: string | null;
   setActiveStudyPlanId: (id: string | null) => void;
 
-  // Active session
-  activeSession: ActiveSession | null;
-  setActiveSession: (session: ActiveSession | null) => void;
+  // Server-assigned session ID
+  sessionId: string | null;
+  setSessionId: (id: string | null) => void;
 
-  // Session timer
+  // Session status
+  sessionStatus: SessionStatus;
+  setSessionStatus: (status: SessionStatus) => void;
+
+  // Session timer (client-side)
   timerRunning: boolean;
   elapsedSeconds: number;
   startTimer: () => void;
@@ -63,6 +61,11 @@ interface SessionState {
   resetTimer: () => void;
   incrementElapsed: () => void;
   setElapsedSeconds: (seconds: number) => void;
+
+  // Pause tracking
+  pauseCount: number;
+  pauseSeconds: number;
+  setPauseData: (count: number, seconds: number) => void;
 
   // UI States
   showSummary: boolean;
@@ -75,20 +78,23 @@ interface SessionState {
   setSummaryData: (data: SessionSummaryData | null) => void;
 
   // Session actions
-  startSession: (session: Omit<ActiveSession, 'status' | 'elapsedMinutes'>) => void;
+  startSession: (sessionId: string, tasks?: SessionTaskItem[]) => void;
   pauseSession: () => void;
   resumeSession: () => void;
   endSession: () => void;
-  completeSession: () => void;
+  completeSession: (endResponse: EndSessionResponse) => void;
+  confirmSuccess: () => void;
   resetSessionFlow: () => void;
+
+  // Restore from API (on app reload)
+  setActiveSessionFromApi: (data: ActiveSessionResponse) => void;
 
   // Task navigation
   nextTask: () => void;
   previousTask: () => void;
   goToTask: (index: number) => void;
+  currentTaskIndex: number;
 }
-
-import { persist, createJSONStorage } from 'zustand/middleware';
 
 export const useSessionStore = create<SessionState>()(
   persist(
@@ -111,9 +117,13 @@ export const useSessionStore = create<SessionState>()(
       activeStudyPlanId: null,
       setActiveStudyPlanId: (id) => set({ activeStudyPlanId: id }),
 
-      // Active session
-      activeSession: null,
-      setActiveSession: (session) => set({ activeSession: session }),
+      // Session ID from server
+      sessionId: null,
+      setSessionId: (id) => set({ sessionId: id }),
+
+      // Session status
+      sessionStatus: SessionStatus.NOT_STARTED,
+      setSessionStatus: (status) => set({ sessionStatus: status }),
 
       // Timer
       timerRunning: false,
@@ -129,6 +139,11 @@ export const useSessionStore = create<SessionState>()(
       },
       setElapsedSeconds: (seconds) => set({ elapsedSeconds: seconds }),
 
+      // Pause tracking
+      pauseCount: 0,
+      pauseSeconds: 0,
+      setPauseData: (count, seconds) => set({ pauseCount: count, pauseSeconds: seconds }),
+
       // UI States
       showSummary: false,
       showSuccess: false,
@@ -140,126 +155,176 @@ export const useSessionStore = create<SessionState>()(
       setSummaryData: (data) => set({ summaryData: data }),
 
       // Session lifecycle
-      startSession: (sessionData) => {
-        const session: ActiveSession = {
-          ...sessionData,
-          status: SessionStatus.IN_PROGRESS,
-          elapsedMinutes: 0,
-        };
-        set({ activeSession: session, timerRunning: true, elapsedSeconds: 0 });
+      startSession: (sessionId, tasks) => {
+        const currentSelected = get().selectedTasks;
+
+        // Keep user's pre-selected tasks if they exist;
+        // only fall back to API-returned tasks when nothing was pre-selected.
+        const selectedTasks: SelectedTask[] =
+          currentSelected.length > 0
+            ? currentSelected
+            : tasks
+              ? tasks.map((t) => ({
+                  id: String(t.id),
+                  title: t.title,
+                  description: t.description,
+                  estimatedMinutes: t.estimatedMinutes,
+                  isCompleted: t.isCompleted,
+                }))
+              : [];
+
+        set({
+          sessionId,
+          sessionStatus: SessionStatus.IN_PROGRESS,
+          timerRunning: true,
+          elapsedSeconds: 0,
+          pauseCount: 0,
+          pauseSeconds: 0,
+          selectedTasks: selectedTasks,
+        });
       },
 
       pauseSession: () => {
-        const { activeSession } = get();
-        if (activeSession) {
-          set({
-            activeSession: { ...activeSession, status: SessionStatus.PAUSED },
-            timerRunning: false,
-          });
-        }
+        set({
+          sessionStatus: SessionStatus.PAUSED,
+          timerRunning: false,
+        });
       },
 
       resumeSession: () => {
-        const { activeSession } = get();
-        if (activeSession) {
-          set({
-            activeSession: { ...activeSession, status: SessionStatus.IN_PROGRESS },
-            timerRunning: true,
-          });
-        }
+        set({
+          sessionStatus: SessionStatus.IN_PROGRESS,
+          timerRunning: true,
+        });
       },
 
       endSession: () => {
+        // Stop timer and show summary modal.
+        // Actual XP/stats come from the API response in completeSession.
         const { elapsedSeconds, selectedTasks } = get();
         const completedTasks = selectedTasks.filter((t) => t.isCompleted).length;
-        const xpEarned = Math.floor(elapsedSeconds / 60) * 10 + completedTasks * 25;
 
         set({
+          sessionStatus: SessionStatus.PAUSED,
           timerRunning: false,
           showSummary: true,
           summaryData: {
             timeStudiedMinutes: Math.floor(elapsedSeconds / 60),
             tasksCompleted: completedTasks,
             totalTasks: selectedTasks.length,
-            xpEarned,
+            xpEarned: 0, // Will be populated from API
+            focusScore: 0,
             rating: 0,
             notes: '',
           },
         });
       },
 
-      completeSession: () => {
+      completeSession: (endResponse) => {
+        // Called after API `PATCH /end` succeeds with real data.
+        // Clear session state so localStorage doesn't persist stale data.
+        const { summaryData } = get();
         set({
+          sessionId: null,
+          sessionStatus: SessionStatus.NOT_STARTED,
+          timerRunning: false,
+          elapsedSeconds: 0,
           showSummary: false,
           showSuccess: true,
+          summaryData: summaryData
+            ? {
+                ...summaryData,
+                xpEarned: endResponse.xpEarned,
+                tasksCompleted: endResponse.tasksCompleted,
+                totalTasks: endResponse.totalTasks,
+                focusScore: endResponse.focusScore,
+              }
+            : null,
         });
+      },
+
+      confirmSuccess: () => {
+        // Alias for moving from success screen → reset
+        get().resetSessionFlow();
       },
 
       resetSessionFlow: () => {
         set({
-          activeSession: null,
+          sessionId: null,
+          sessionStatus: SessionStatus.NOT_STARTED,
           timerRunning: false,
           elapsedSeconds: 0,
+          pauseCount: 0,
+          pauseSeconds: 0,
           showSummary: false,
           showSuccess: false,
           summaryData: null,
           selectedNode: null,
           selectedTasks: [],
+          currentTaskIndex: 0,
+        });
+      },
+
+      // Restore from API on app reload
+      setActiveSessionFromApi: (data) => {
+        set({
+          sessionId: data.sessionId,
+          sessionStatus: data.status as SessionStatus,
+          elapsedSeconds: data.elapsedSeconds,
+          timerRunning: data.status === SessionStatus.IN_PROGRESS,
+          selectedNode: data.nodeId
+            ? {
+                id: String(data.nodeId),
+                roadmapNodeId: data.nodeId,
+                title: data.nodeTitle || '',
+                planId: data.planId ? String(data.planId) : undefined,
+                planTitle: data.planTitle || undefined,
+              }
+            : null,
         });
       },
 
       // Task navigation
+      currentTaskIndex: 0,
       nextTask: () => {
-        const { activeSession } = get();
-        if (activeSession) {
-          set({
-            activeSession: {
-              ...activeSession,
-              currentTaskIndex: activeSession.currentTaskIndex + 1,
-            },
-          });
-        }
+        const { currentTaskIndex } = get();
+        set({ currentTaskIndex: currentTaskIndex + 1 });
       },
 
       previousTask: () => {
-        const { activeSession } = get();
-        if (activeSession && activeSession.currentTaskIndex > 0) {
-          set({
-            activeSession: {
-              ...activeSession,
-              currentTaskIndex: activeSession.currentTaskIndex - 1,
-            },
-          });
+        const { currentTaskIndex } = get();
+        if (currentTaskIndex > 0) {
+          set({ currentTaskIndex: currentTaskIndex - 1 });
         }
       },
 
       goToTask: (index) => {
-        const { activeSession } = get();
-        if (activeSession) {
-          set({
-            activeSession: {
-              ...activeSession,
-              currentTaskIndex: index,
-            },
-          });
-        }
+        set({ currentTaskIndex: index });
       },
     }),
     {
       name: 'session-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ activeStudyPlanId: state.activeStudyPlanId }), // Only persist context
+      partialize: (state) => ({
+        activeStudyPlanId: state.activeStudyPlanId,
+        sessionId: state.sessionId,
+        sessionStatus: state.sessionStatus,
+        timerRunning: state.timerRunning,
+        elapsedSeconds: state.elapsedSeconds,
+        selectedNode: state.selectedNode,
+        selectedTasks: state.selectedTasks,
+      }),
     }
   )
 );
 
 // Selectors
-export const useActiveSession = () =>
-  useSessionStore((state) => state.activeSession);
+export const useActiveSessionStore = () =>
+  useSessionStore((state) => state.sessionId);
 export const useTimerRunning = () =>
   useSessionStore((state) => state.timerRunning);
 export const useHasActiveSession = () =>
-  useSessionStore((state) => state.activeSession !== null);
+  useSessionStore((state) => state.sessionId !== null);
 export const useSelectedTasks = () =>
   useSessionStore((state) => state.selectedTasks);
 export const useSelectedNode = () =>
@@ -268,4 +333,3 @@ export const useSessionSummary = () =>
   useSessionStore((state) => state.summaryData);
 export const useActiveStudyPlanId = () =>
   useSessionStore((state) => state.activeStudyPlanId);
-

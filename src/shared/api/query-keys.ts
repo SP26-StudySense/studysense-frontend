@@ -53,13 +53,14 @@ export const queryKeys = {
       ['roadmaps', 'detail', roadmapId, 'nodes', nodeId, 'progress'] as const,
   },
 
-  // Sessions
-  sessions: {
-    ...createQueryKeys('sessions'),
-    current: () => ['sessions', 'current'] as const,
-    history: (params?: QueryParams) => ['sessions', 'history', params] as const,
-    summary: (id: string) => ['sessions', 'detail', id, 'summary'] as const,
-    events: (id: string) => ['sessions', 'detail', id, 'events'] as const,
+  // Study Sessions
+  studySessions: {
+    ...createQueryKeys('studySessions'),
+    active: () => ['studySessions', 'active'] as const,
+    history: (params?: QueryParams) => ['studySessions', 'history', params] as const,
+    recent: (limit?: number) => ['studySessions', 'recent', limit] as const,
+    statistics: (period?: string) => ['studySessions', 'statistics', period] as const,
+    events: (id: string) => ['studySessions', 'detail', id, 'events'] as const,
   },
 
   // Survey Taking (user-facing survey flow)

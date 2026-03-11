@@ -21,6 +21,7 @@ export interface ModuleTask {
 
 export interface ModuleData {
     id: string;
+    roadmapNodeId?: number;
     title: string;
     status: 'completed' | 'in_progress' | 'not_started' | 'locked';
     tasks: ModuleTask[];
@@ -83,6 +84,7 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
         // Set selected node info
         const nodeInfo: SelectedNodeInfo = {
             id: module.id,
+            roadmapNodeId: module.roadmapNodeId,
             title: module.title,
             planId: studyPlanId || '1',
             planTitle: 'Learning Path',

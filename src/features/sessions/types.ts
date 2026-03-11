@@ -1,133 +1,197 @@
 /**
- * Study Session types matching Backend DTOs
+ * Study Session types matching Backend API DTOs
+ * @see STUDYSESSION_API_README.md
  */
 
-import { BaseEntity, SessionStatus, StudyEventType } from '@/shared/types';
+import { SessionStatus, SessionEndedReason, StudyEventType } from '@/shared/types';
 
-// Study Session entity
-export interface StudySession extends BaseEntity {
-    userId: string;
-    studyPlanId: string;
-    nodeId: string;
-    startTime: string;
-    endTime?: string;
-    status: SessionStatus;
-    durationMinutes: number;
-    plannedDurationMinutes: number;
-    tasksCompleted: number;
-    totalTasks: number;
-    focusScore?: number;
-    notes?: string;
+// ─── Shared sub-types ───────────────────────────────────────────────────────
+
+export interface SessionNodeInfo {
+  id: number;
+  title: string;
+  description: string;
 }
 
-// Start session request
+export interface SessionPlanInfo {
+  id: number;
+  title: string;
+}
+
+export interface SessionTaskItem {
+  id: number;
+  title: string;
+  description: string;
+  order: number;
+  estimatedMinutes: number;
+  isCompleted: boolean;
+}
+
+// ─── Start Session ──────────────────────────────────────────────────────────
+
 export interface StartSessionRequest {
-    studyPlanId: string;
-    nodeId: string;
-    plannedDurationMinutes: number;
+  studyPlanId?: number;
+  nodeId?: number;
+  moduleId?: number;
+  taskId?: number;
+  plannedDurationSeconds?: number;
+  timezone?: string;
 }
 
-// Start session response
 export interface StartSessionResponse {
-    session: StudySession;
-    node: SessionNode;
-    tasks: SessionTask[];
+  sessionId: string;
+  startAt: string;
+  status: SessionStatus;
+  node: SessionNodeInfo | null;
+  tasks: SessionTaskItem[];
 }
 
-// Session node (simplified node for session context)
-export interface SessionNode {
-    id: string;
-    title: string;
-    description: string;
-    resources: SessionResource[];
+// ─── Pause Session ──────────────────────────────────────────────────────────
+
+export interface PauseSessionResponse {
+  sessionId: string;
+  status: SessionStatus;
+  pauseCount: number;
+  activeSeconds: number;
+  pauseSeconds: number;
 }
 
-// Session resource
-export interface SessionResource {
-    id: string;
-    title: string;
-    type: string;
-    url: string;
-    isRequired: boolean;
+// ─── Resume Session ─────────────────────────────────────────────────────────
+
+export interface ResumeSessionResponse {
+  sessionId: string;
+  status: SessionStatus;
 }
 
-// Session task
-export interface SessionTask {
-    id: string;
-    title: string;
-    description: string;
-    order: number;
-    estimatedMinutes: number;
-    isCompleted: boolean;
-}
+// ─── End Session ────────────────────────────────────────────────────────────
 
-// End session request
 export interface EndSessionRequest {
-    notes?: string;
-    rating?: number;
-    feedback?: string;
+  endedReason?: SessionEndedReason;
+  selfRating?: number;
+  notes?: string;
+  actualDurationSeconds?: number;
+  activeSeconds?: number;
+  idleSeconds?: number;
+  tasksCompleted?: number[];
+  focusScore?: number;
+  fatigueScore?: number;
 }
 
-// Session summary
-export interface SessionSummary {
-    sessionId: string;
-    totalDuration: number;
-    tasksCompleted: number;
-    totalTasks: number;
-    focusScore: number;
-    nodeProgress: number;
-    planProgress: number;
-    streak: number;
-    achievements: SessionAchievement[];
-    recommendations: string[];
+export interface EndSessionResponse {
+  sessionId: string;
+  totalDurationMinutes: number;
+  tasksCompleted: number;
+  totalTasks: number;
+  focusScore: number;
+  xpEarned: number;
 }
 
-// Session achievement
-export interface SessionAchievement {
-    id: string;
-    title: string;
-    description: string;
-    icon: string;
-    unlockedAt: string;
-    focusScore: number;
+// ─── Active Session ─────────────────────────────────────────────────────────
+
+export interface ActiveSessionResponse {
+  sessionId: string;
+  status: SessionStatus;
+  startAt: string;
+  elapsedSeconds: number;
+  planId: number | null;
+  nodeId: number | null;
+  nodeTitle: string | null;
+  planTitle: string | null;
 }
 
-// Study Event (for logging)
-export interface StudyEvent extends BaseEntity {
-    sessionId: string;
-    eventType: StudyEventType;
-    taskId?: string;
-    metadata?: Record<string, unknown>;
-    timestamp: string;
+// ─── Session Detail ─────────────────────────────────────────────────────────
+
+export interface SessionDetailResponse {
+  id: string;
+  userId: string;
+  studyPlanId: number | null;
+  nodeId: number | null;
+  moduleId: number | null;
+  startAt: string;
+  endAt: string | null;
+  status: SessionStatus;
+  endedReason: SessionEndedReason | null;
+  plannedDurationSeconds: number | null;
+  actualDurationSeconds: number | null;
+  activeSeconds: number | null;
+  idleSeconds: number | null;
+  pauseCount: number;
+  pauseSeconds: number;
+  focusScore: number | null;
+  selfRating: number | null;
+  fatigueScore: number | null;
+  timezone: string | null;
+  createdAt: string;
+  node: SessionNodeInfo | null;
+  plan: SessionPlanInfo | null;
 }
 
-// Log event request
-export interface LogEventRequest {
-    sessionId: string;
-    eventType: StudyEventType;
-    taskId?: string;
-    metadata?: Record<string, unknown>;
+// ─── Session History ────────────────────────────────────────────────────────
+
+export interface SessionHistoryParams {
+  pageNumber?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  startDate?: string;
+  endDate?: string;
+  status?: string;
 }
 
-// Session history item
 export interface SessionHistoryItem {
-    id: string;
-    date: string;
-    nodeTitle: string;
-    planTitle: string;
-    durationMinutes: number;
-    tasksCompleted: number;
-    status: SessionStatus;
+  id: string;
+  date: string;
+  nodeTitle: string;
+  planTitle: string;
+  durationMinutes: number;
+  tasksCompleted: number;
+  totalTasks: number;
+  xpEarned: number;
+  rating: number;
+  status: SessionStatus;
 }
 
-// Session statistics
-export interface SessionStatistics {
-    totalSessions: number;
-    totalMinutes: number;
-    averageSessionLength: number;
-    completionRate: number;
-    currentStreak: number;
-    longestStreak: number;
-    sessionsThisWeek: number;
-    minutesThisWeek: number;
+// ─── Recent Sessions ────────────────────────────────────────────────────────
+
+export interface RecentSessionItem {
+  id: string;
+  durationMinutes: number;
+  tasksCompleted: number;
+  date: string;
+  rating: number;
+  nodeTitle: string;
 }
+
+// ─── Session Statistics ─────────────────────────────────────────────────────
+
+export interface SessionStatistics {
+  totalSessions: number;
+  totalMinutes: number;
+  averageSessionLength: number;
+  completionRate: number;
+  currentStreak: number;
+  longestStreak: number;
+  sessionsThisWeek: number;
+  minutesThisWeek: number;
+  totalXpEarned: number;
+  averageRating: number;
+}
+
+// ─── Study Events ───────────────────────────────────────────────────────────
+
+export interface LogEventRequest {
+  eventType: StudyEventType;
+  taskId?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LogEventResponse {
+  id: string;
+  sessionId: string;
+  eventType: StudyEventType;
+  taskId: number | null;
+  timestamp: string;
+}
+
+// Re-export enums for convenience
+export { SessionStatus, SessionEndedReason, StudyEventType };

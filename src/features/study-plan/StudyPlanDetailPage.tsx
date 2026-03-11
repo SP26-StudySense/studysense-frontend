@@ -80,6 +80,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
 
             return {
                 id: String(module.id),
+                roadmapNodeId: module.roadmapNodeId,
                 title: module.roadmapNodeName,
                 status: mappedStatus,
                 tasks: moduleTasks,
