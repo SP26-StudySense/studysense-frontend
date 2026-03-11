@@ -55,8 +55,7 @@ export function ManageRoadmapNode({
     contentType: "Video" as ContentType,
     title: "",
     description: "",
-    contentUrl: "",
-    thumbnailUrl: "",
+    url: "",
     duration: 0,
     isRequired: true,
   });
@@ -112,7 +111,7 @@ export function ManageRoadmapNode({
 
   // Handle content add
   const handleAddContent = () => {
-    if (!contentForm.title || !contentForm.contentUrl) return;
+    if (!contentForm.title || !contentForm.url) return;
 
     const newContent: NodeContent = {
       id: null,
@@ -121,8 +120,8 @@ export function ManageRoadmapNode({
       contentType: contentForm.contentType!,
       title: contentForm.title!,
       description: contentForm.description || "",
-      contentUrl: contentForm.contentUrl!,
-      thumbnailUrl: contentForm.thumbnailUrl,
+      url: contentForm.url!,
+      estimatedMinutes: contentForm.estimatedMinutes  ,
       duration: contentForm.duration,
       orderNo: contents.length,
       isRequired: contentForm.isRequired!,
@@ -137,8 +136,7 @@ export function ManageRoadmapNode({
       contentType: "Video" as ContentType,
       title: "",
       description: "",
-      contentUrl: "",
-      thumbnailUrl: "",
+      url: "",
       duration: 0,
       isRequired: true,
     });
@@ -360,20 +358,8 @@ export function ManageRoadmapNode({
                 </label>
                 <input
                   type="url"
-                  value={contentForm.contentUrl}
-                  onChange={(e) => setContentForm({ ...contentForm, contentUrl: e.target.value })}
-                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-                  placeholder="https://..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                  Thumbnail URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={contentForm.thumbnailUrl}
-                  onChange={(e) => setContentForm({ ...contentForm, thumbnailUrl: e.target.value })}
+                  value={contentForm.url}
+                  onChange={(e) => setContentForm({ ...contentForm, url: e.target.value })}
                   className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                   placeholder="https://..."
                 />
@@ -465,7 +451,7 @@ export function ManageRoadmapNode({
                         <div className="mt-2 flex items-center gap-4 text-xs text-neutral-500">
                           {content.duration && <span>{content.duration} min</span>}
                           <a
-                            href={content.contentUrl}
+                            href={content.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-[#00bae2] hover:underline"

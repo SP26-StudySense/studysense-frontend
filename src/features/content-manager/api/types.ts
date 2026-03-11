@@ -96,12 +96,13 @@ export interface RoadmapEdge {
 export interface NodeContent {
   id?: number | null; // null for new content, number for existing
   clientId?: string; // Client-side temporary ID
-  nodeId?: number; // Optional, inferred from context
+  nodeId?: number; 
+  nodeClientId?: string; 
   contentType: ContentType;
   title: string;
   description: string;
-  contentUrl: string;
-  thumbnailUrl?: string;
+  url: string;
+  estimatedMinutes?: number;
   duration?: number;
   orderNo?: number;
   isRequired: boolean;
@@ -123,6 +124,9 @@ export interface RoadmapDetail {
     title: string;
     description?: string;
     status?: RoadmapStatus;
+    version?: number;
+    createdAt?: Date;
+    createdById?: string;
   };
   nodes: RoadmapNode[];
   edges: RoadmapEdge[];
@@ -155,6 +159,7 @@ export interface CreateRoadmapGraphRequest {
   };
   nodes: RoadmapNode[]; // Use id=null or omit id
   edges: RoadmapEdge[]; // Use id=null or omit id
+  contents: NodeContent[]; // Use id=null or omit id
 }
 
 /**
@@ -172,9 +177,11 @@ export interface SyncRoadmapGraphRequest {
     title?: string;
     description?: string;
     status?: RoadmapStatus;
+    version?: number;
   };
   nodes: RoadmapNode[]; // Include all nodes you want to keep
   edges: RoadmapEdge[]; // Include all edges you want to keep
+  contents: NodeContent[]; // Include all contents you want to keep
 }
 
 /**

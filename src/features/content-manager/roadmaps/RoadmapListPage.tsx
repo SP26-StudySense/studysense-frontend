@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ConfirmationModal } from "@/shared/ui";
 import { useManagerRoadmaps } from "../api/queries";
 import { useDeleteRoadmap, useCreateRoadmapGraph } from "../api/mutations";
-import type { GetRoadmapsParams, RoadmapStatus } from "../api/types";
+import type { GetRoadmapsParams, NodeContent, RoadmapNode, RoadmapStatus } from "../api/types";
 
 type ModalState = 
   | { type: 'none' }
@@ -259,43 +259,42 @@ export function RoadmapListPage() {
   };
 
   const handleCreateRoadmap = (data: { title: string; description: string; subjectId: number }) => {
-    createRoadmapMutation.mutate(
-      {
-        roadmap: {
-          subjectId: data.subjectId,
-          title: data.title,
-          description: data.description,
-        },
-        nodes: [], // Empty roadmap initially
-        edges: [],
-      },
-      {
-        onSuccess: () => {
-          setModalState({ type: 'none' });
-        },
-      }
-    );
+    // createRoadmapMutation.mutate(
+    //   {
+    //     roadmap: {
+    //       subjectId: data.subjectId,
+    //       title: data.title,
+    //       description: data.description,
+    //     },
+    //     nodes: [], // Empty roadmap initially
+    //     edges: [],
+    //   },
+    //   {
+    //     onSuccess: () => {
+    //       setModalState({ type: 'none' });
+    //     },
+    //   }
+    // );
   };
-
   const handleAIGenerate = (data: { title: string; description: string; subjectId: number }) => {
     // TODO: Call AI generation API endpoint
     console.log("AI Generate:", data);
-    createRoadmapMutation.mutate(
-      {
-        roadmap: {
-          subjectId: data.subjectId,
-          title: data.title,
-          description: data.description,
-        },
-        nodes: [], // Will be populated by AI
-        edges: [],
-      },
-      {
-        onSuccess: () => {
-          setModalState({ type: 'none' });
-        },
-      }
-    );
+    // createRoadmapMutation.mutate(
+    //   {
+    //     roadmap: {
+    //       subjectId: data.subjectId,
+    //       title: data.title,
+    //       description: data.description,
+    //     },
+    //     nodes: [], // Will be populated by AI
+    //     edges: [],
+    //   },
+    //   {
+    //     onSuccess: () => {
+    //       setModalState({ type: 'none' });
+    //     },
+    //   }
+    // );
   };
 
   const handleDeleteRoadmap = () => {
