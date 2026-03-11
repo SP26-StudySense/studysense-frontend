@@ -8,6 +8,7 @@ import { useStartSession, usePauseSession, useResumeSession, useEndSession } fro
 import { SessionStatus } from '@/shared/types';
 import { toast } from '@/shared/lib';
 import { ApiException } from '@/shared/api/errors';
+import { useAnalytics } from '@/shared/hooks/use-analytics';
 
 interface TimerCardProps {
     className?: string;
@@ -36,6 +37,9 @@ export function TimerCard({ className }: TimerCardProps) {
     const pauseMutation = usePauseSession();
     const resumeMutation = useResumeSession();
     const endMutation = useEndSession();
+
+    // Analytics
+    const { trackClick, trackInteraction } = useAnalytics();
 
     // Error state for start session
     const [startError, setStartError] = useState<string | null>(null);
@@ -103,6 +107,12 @@ export function TimerCard({ className }: TimerCardProps) {
             {
                 onSuccess: (data) => {
                     storeStartSession(data.sessionId, data.tasks);
+                    trackInteraction('session_started', {
+                        sessionId: data.sessionId,
+                        nodeId: payload.nodeId,
+                        studyPlanId: payload.studyPlanId,
+                        taskCount: selectedTasks.length,
+                    });
                     toast.success('Session started!');
                 },
                 onError: (error) => {
@@ -134,30 +144,37 @@ export function TimerCard({ className }: TimerCardProps) {
 
     const handlePause = useCallback(() => {
         if (!sessionId) return;
+        trackClick('pause_session', { sessionId, elapsedSeconds });
         pauseMutation.mutate(sessionId, {
             onSuccess: (data) => {
                 storePauseSession();
                 useSessionStore.getState().setPauseData(data.pauseCount, data.pauseSeconds);
             },
         });
-    }, [sessionId, pauseMutation, storePauseSession]);
+    }, [sessionId, pauseMutation, storePauseSession, trackClick, elapsedSeconds]);
 
     const handleResume = useCallback(() => {
         if (!sessionId) return;
+        trackClick('resume_session', { sessionId, elapsedSeconds });
         resumeMutation.mutate(sessionId, {
             onSuccess: () => {
                 storeResumeSession();
             },
         });
-    }, [sessionId, resumeMutation, storeResumeSession]);
+    }, [sessionId, resumeMutation, storeResumeSession, trackClick, elapsedSeconds]);
 
     const handleReset = useCallback(() => {
         storeResetSessionFlow();
     }, [storeResetSessionFlow]);
 
     const handleEndSession = useCallback(() => {
+        trackInteraction('session_ended', {
+            sessionId,
+            totalSeconds: elapsedSeconds,
+            taskCount: selectedTasks.length,
+        });
         storeEndSession();
-    }, [storeEndSession]);
+    }, [storeEndSession, trackInteraction, sessionId, elapsedSeconds, selectedTasks.length]);
 
     const isAnyPending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending || endMutation.isPending;
 

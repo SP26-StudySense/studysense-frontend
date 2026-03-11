@@ -10,6 +10,7 @@ import { SessionSuccessScreen } from './components/SessionSuccessScreen';
 import { useSessionStore, SelectedTask } from '@/store/session.store';
 import { useActiveSession } from './api/queries';
 import { SessionStatus } from '@/shared/types';
+import { useAnalytics } from '@/shared/hooks/use-analytics';
 
 // Helper to convert SelectedTask to SessionTask format
 const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
@@ -33,6 +34,7 @@ export function SessionsPage() {
     const showSuccess = useSessionStore((state) => state.showSuccess);
     const sessionId = useSessionStore((state) => state.sessionId);
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
+    const { trackClick, trackInteraction } = useAnalytics();
 
     // Check for active session on mount (restore interrupted sessions)
     const { data: activeSession, isLoading: isCheckingActive } = useActiveSession({
@@ -51,6 +53,7 @@ export function SessionsPage() {
         : [];
 
     const handleToggleTask = (taskId: string) => {
+        trackInteraction('toggle_task', { taskId, page: 'sessions' });
         toggleTaskCompletion(taskId);
     };
 

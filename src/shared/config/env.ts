@@ -14,6 +14,10 @@ const envSchema = z.object({
   NEXT_PUBLIC_AUTH_TOKEN_KEY: z.string().default('sss_access_token'),
   NEXT_PUBLIC_AUTH_REFRESH_KEY: z.string().default('sss_refresh_token'),
 
+  // Analytics
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().default(''),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().default('https://us.i.posthog.com'),
+
   // Feature Flags
   NEXT_PUBLIC_ENABLE_ANALYTICS: z.coerce.boolean().default(false),
   NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS: z.coerce.boolean().default(true),
@@ -30,6 +34,8 @@ function getEnv(): Env {
     NEXT_PUBLIC_API_TIMEOUT: process.env.NEXT_PUBLIC_API_TIMEOUT,
     NEXT_PUBLIC_AUTH_TOKEN_KEY: process.env.NEXT_PUBLIC_AUTH_TOKEN_KEY,
     NEXT_PUBLIC_AUTH_REFRESH_KEY: process.env.NEXT_PUBLIC_AUTH_REFRESH_KEY,
+    NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+    NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
     NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS: process.env.NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS,
   });
