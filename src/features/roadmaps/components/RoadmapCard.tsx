@@ -16,7 +16,7 @@ import { showWarning, showInfo } from '@/shared/lib/toast';
 interface RoadmapCardProps {
     roadmap: RoadmapTemplate | UserLearningRoadmap;
     variant: 'template' | 'learning';
-    onPreview?: () => void;
+    onPreview?: (startFn: () => void) => void;
     existingRoadmapIds?: Set<number>; // Track existing study plans
 }
 
@@ -194,7 +194,7 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onPreview?.();
+                                onPreview?.(handleClick);
                             }}
                             className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-100 hover:bg-[#00bae2]/10 hover:text-[#00bae2] text-neutral-600 transition-all duration-200 hover:scale-110"
                             title="Preview roadmap"
