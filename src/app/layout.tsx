@@ -44,8 +44,8 @@ export const metadata: Metadata = {
     creator: '@studysense',
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
+    icon: ['/favicon.ico', '/icon-32.png'],
+    shortcut: '/icon-32.png',
     apple: '/apple-touch-icon.png',
   },
   manifest: '/site.webmanifest',
@@ -68,6 +68,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={cn(
           'min-h-screen bg-background font-sans antialiased overflow-x-hidden',
           GeistSans.variable,

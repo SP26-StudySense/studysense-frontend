@@ -8,12 +8,13 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
 import Cookies from 'js-cookie';
 
-import { post, get } from '@/shared/api/client';
+import { post } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { queryKeys } from '@/shared/api/query-keys';
 import { routes } from '@/shared/config/routes';
 import { env } from '@/shared/config';
 import { toast } from '@/shared/lib';
+import { UserRole } from '@/shared/types';
 import type {
   LoginRequest,
   LoginResponse,
@@ -29,6 +30,9 @@ import type {
   GoogleLoginCallbackData,
   User,
 } from '../types';
+import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
+import { SurveyTriggerType } from '@/features/survey/api/types';
+import { SurveyTriggerReason } from '@/features/survey/types';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
@@ -85,6 +89,26 @@ function clearUserFromStorage(): void {
 }
 
 /**
+ * Check ON_REGISTER trigger mapping and return the survey redirect URL if pending.
+ * Returns null if no pending survey or if the check fails (fail-safe).
+ */
+async function getOnRegisterSurveyUrl(): Promise<string | null> {
+  try {
+    const result = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_REGISTER);
+    if (result.hasPendingSurvey && result.surveyCode) {
+      const params = new URLSearchParams({
+        returnTo: routes.public.home,
+        triggerReason: SurveyTriggerReason.INITIAL,
+      });
+      return `/surveys/${result.surveyCode}?${params.toString()}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Login mutation
  * Response includes accessToken directly (not nested in tokens)
  * Refresh token is automatically set via HttpOnly cookie by backend
@@ -96,7 +120,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginRequest) =>
       post<LoginResponse>(endpoints.auth.login, data),
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       // Store access token in cookie
       setAccessToken(response.accessToken, response.accessTokenExpiresUtc);
 
@@ -107,13 +131,31 @@ export function useLogin() {
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
 
       // Show success toast
-      // Show success toast
       toast.success('Login successful!', {
         description: `Welcome ${response.user.firstName || response.user.email}`,
       });
 
-      // Redirect to returnUrl or dashboard
-      router.push(response.returnUrl || routes.dashboard.home);
+      // Redirect Analyst users directly to analyst dashboard
+      const isAnalyst = response.user.roles?.includes(UserRole.ANALYST);
+      if (isAnalyst) {
+        router.push(routes.analyst.home);
+        return;
+      }
+
+      // Check ON_REGISTER trigger (only for regular users)
+      const isRegularUser = response.user.roles?.includes(UserRole.USER);
+      if (isRegularUser) {
+        const surveyUrl = await getOnRegisterSurveyUrl();
+        if (surveyUrl) {
+          toast.info('Please complete a quick survey', {
+            description: 'This helps us personalize your learning experience',
+          });
+          router.push(surveyUrl);
+          return;
+        }
+      }
+
+      router.push(routes.public.home);
     },
     onError: (error) => {
       // Clear any stale auth data
@@ -287,15 +329,11 @@ export function useGoogleLogin() {
   const popupRef = useRef<Window | null>(null);
 
   const handleMessage = useCallback(
-    (event: MessageEvent<GoogleLoginCallbackData>) => {
-      console.log('[Google Login] Received message:', event.origin, event.data);
-
+    async (event: MessageEvent<GoogleLoginCallbackData>) => {
       // Validate origin - should match API origin
       const apiUrl = new URL(env.NEXT_PUBLIC_API_URL_HTTP);
-      console.log('[Google Login] Expected origin:', apiUrl.origin);
 
       if (event.origin !== apiUrl.origin) {
-        console.log('[Google Login] Origin mismatch, ignoring');
         return;
       }
 
@@ -312,7 +350,6 @@ export function useGoogleLogin() {
       if (token && user) {
         // ALWAYS normalize user data - backend may send PascalCase keys
         const anyUser = user as any;
-        console.log('[Google Login] Raw user data:', JSON.stringify(anyUser));
 
         const normalizedUser = {
           id: anyUser.id || anyUser.Id || '',
@@ -329,9 +366,6 @@ export function useGoogleLogin() {
           roles: anyUser.roles || anyUser.Roles || [],
         };
 
-
-        console.log('[Google Login] Normalized user data:', JSON.stringify(normalizedUser));
-
         // Store access token
         setAccessToken(token);
 
@@ -346,8 +380,35 @@ export function useGoogleLogin() {
           description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
         });
 
-        // Redirect
-        router.push(returnUrl || routes.dashboard.home);
+        // Redirect Analyst users directly to analyst dashboard
+        const isAnalyst = normalizedUser.roles?.includes(UserRole.ANALYST);
+        if (isAnalyst) {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          router.push(routes.analyst.home);
+          return;
+        }
+
+        // Check ON_REGISTER trigger (only for regular users)
+        const isRegularUser = normalizedUser.roles?.includes(UserRole.USER);
+        if (isRegularUser) {
+          const surveyUrl = await getOnRegisterSurveyUrl();
+          if (surveyUrl) {
+            toast.info('Please complete a quick survey', {
+              description: 'This helps us personalize your learning experience',
+            });
+            // Close popup before redirecting
+            if (popupRef.current && !popupRef.current.closed) {
+              popupRef.current.close();
+            }
+            router.push(surveyUrl);
+            return;
+          }
+        }
+
+        // Redirect to landing page
+        router.push(routes.public.home);
       }
 
       // Close popup if still open

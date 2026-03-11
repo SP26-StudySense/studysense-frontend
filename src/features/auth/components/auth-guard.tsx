@@ -16,6 +16,7 @@ interface AuthGuardProps {
 
 interface RoleGuardProps extends AuthGuardProps {
   allowedRoles: UserRole[];
+  redirectTo?: string;
 }
 
 /**
@@ -37,20 +38,26 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const { data: user, isLoading, error } = useCurrentUser();
 
+  console.log('[AuthGuard] State:', { user: !!user, isLoading, error: error?.message });
+
   useEffect(() => {
     if (!isLoading && (!user || error)) {
+      console.log('[AuthGuard] Redirecting to login - no user');
       router.push(routes.auth.login);
     }
   }, [user, isLoading, error, router]);
 
   if (isLoading) {
+    console.log('[AuthGuard] Loading...');
     return fallback || <DefaultLoading />;
   }
 
   if (!user) {
+    console.log('[AuthGuard] No user, showing loading');
     return fallback || <DefaultLoading />;
   }
 
+  console.log('[AuthGuard] User authenticated, rendering children');
   return <>{children}</>;
 }
 
@@ -62,21 +69,30 @@ export function GuestGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser({ enabled: true });
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.push(routes.dashboard.home);
-    }
-  }, [user, isLoading, router]);
+  console.log('[GuestGuard] State:', { user: !!user, isLoading });
+
+  // TEMPORARY: Disable redirect to allow login
+  // useEffect(() => {
+  //   if (!isLoading && user) {
+  //     console.log('[GuestGuard] User exists, redirecting to dashboard');
+  //     router.push(routes.dashboard.home);
+  //   }
+  // }, [user, isLoading, router]);
 
   if (isLoading) {
+    console.log('[GuestGuard] Loading...');
     return fallback || <DefaultLoading />;
   }
 
-  if (user) {
-    return fallback || <DefaultLoading />;
-  }
-
+  // TEMPORARY: Always show login page
+  console.log('[GuestGuard] Rendering children (temp bypass)');
   return <>{children}</>;
+
+  // if (user) {
+  //   return fallback || <DefaultLoading />;
+  // }
+
+  // return <>{children}</>;
 }
 
 /**
@@ -87,9 +103,11 @@ export function RoleGuard({
   children,
   allowedRoles,
   fallback,
+  redirectTo,
 }: RoleGuardProps) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
+  const destination = redirectTo ?? routes.dashboard.home;
 
   useEffect(() => {
     // Check if user has any of the allowed roles
@@ -97,9 +115,9 @@ export function RoleGuard({
       allowedRoles.map(r => r.toString()).includes(role)
     );
     if (!isLoading && user && !hasAllowedRole) {
-      router.push(routes.dashboard.home);
+      router.push(destination);
     }
-  }, [user, isLoading, allowedRoles, router]);
+  }, [user, isLoading, allowedRoles, router, destination]);
 
   // Check if user has any of the allowed roles
   const hasAllowedRole = user?.roles?.some(role =>
@@ -119,6 +137,22 @@ export function RoleGuard({
 export function AdminGuard({ children, fallback }: AuthGuardProps) {
   return (
     <RoleGuard allowedRoles={[UserRole.ADMIN]} fallback={fallback}>
+      {children}
+    </RoleGuard>
+  );
+}
+
+/**
+ * Analyst Guard - Protects analyst-only routes
+ * Redirects to landing page if user doesn't have Analyst role
+ */
+export function AnalystGuard({ children, fallback }: AuthGuardProps) {
+  return (
+    <RoleGuard
+      allowedRoles={[UserRole.ANALYST]}
+      redirectTo={routes.public.home}
+      fallback={fallback}
+    >
       {children}
     </RoleGuard>
   );

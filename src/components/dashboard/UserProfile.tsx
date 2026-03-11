@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LayoutDashboard, Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export function UserProfile() {
@@ -58,15 +58,6 @@ export function UserProfile() {
                             {user.email}
                         </p>
                     </div>
-
-                    {/* Dashboard Link */}
-                    <Link
-                        href="/dashboard"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
-                    >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Dashboard
-                    </Link>
 
                     {/* Profile Link */}
                     <Link

@@ -48,6 +48,10 @@ interface SessionState {
   setSelectedTasks: (tasks: SelectedTask[]) => void;
   toggleTaskCompletion: (taskId: string) => void;
 
+  // Active Context
+  activeStudyPlanId: string | null;
+  setActiveStudyPlanId: (id: string | null) => void;
+
   // Active session
   activeSession: ActiveSession | null;
   setActiveSession: (session: ActiveSession | null) => void;
@@ -183,27 +187,27 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     });
   },
 
-  completeSession: () => {
-    set({
-      showSummary: false,
-      showSuccess: true,
-    });
-  },
+      // Active Context
+      activeStudyPlanId: null,
+      setActiveStudyPlanId: (id) => set({ activeStudyPlanId: id }),
 
-  resetSessionFlow: () => {
-    set({
+      // Active session
       activeSession: null,
+      setActiveSession: (session) => set({ activeSession: session }),
+
+      // Timer
       timerRunning: false,
       elapsedSeconds: 0,
       pauseCount: 0,
       pauseSeconds: 0,
       showSummary: false,
       showSuccess: false,
+      setShowSummary: (show) => set({ showSummary: show }),
+      setShowSuccess: (show) => set({ showSuccess: show }),
+
+      // Summary data
       summaryData: null,
-      selectedNode: null,
-      selectedTasks: [],
-    });
-  },
+      setSummaryData: (data) => set({ summaryData: data }),
 
   setActiveSessionFromApi: (apiSession) => {
     if (!apiSession) return;
@@ -256,8 +260,8 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
         },
       });
     }
-  },
-}));
+  )
+);
 
 // Selectors
 export const useActiveSession = () =>
@@ -272,4 +276,6 @@ export const useSelectedNode = () =>
   useSessionStore((state) => state.selectedNode);
 export const useSessionSummary = () =>
   useSessionStore((state) => state.summaryData);
+export const useActiveStudyPlanId = () =>
+  useSessionStore((state) => state.activeStudyPlanId);
 

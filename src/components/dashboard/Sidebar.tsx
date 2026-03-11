@@ -7,8 +7,6 @@ import {
     BookOpen,
     Map,
     Calendar,
-    Users,
-    Settings,
     LogOut,
     GitFork,
     History
@@ -18,22 +16,19 @@ import { cn } from '@/shared/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useStudyPlans } from '@/features/study-plan/api';
+import { useSessionStore } from '@/store/session.store';
 
-const sidebarItems = [
+const baseSidebarItems = [
     {
         title: 'Overview',
         href: '/dashboard',
         icon: LayoutDashboard,
     },
     {
-        title: 'Study Plans',
+        title: 'Study Schedule',
         href: '/study-plans/1',
         icon: BookOpen,
-    },
-    {
-        title: 'Roadmaps',
-        href: '/roadmaps',
-        icon: Map,
     },
     {
         title: 'Sessions',
@@ -45,21 +40,50 @@ const sidebarItems = [
         href: '/sessions/history',
         icon: History,
     },
-    {
-        title: 'Community',
-        href: '/community',
-        icon: Users,
-    },
-    {
-        title: 'Settings',
-        href: '/settings',
-        icon: Settings,
-    },
 ];
 
 export function Sidebar() {
     const pathname = usePathname();
     const { logout, isLoggingOut } = useAuth();
+    const { data: studyPlans = [] } = useStudyPlans();
+
+    const activeStudyPlanIdStore = useSessionStore((state) => state.activeStudyPlanId);
+
+    const activeStudyPlanId = (() => {
+        // 1. If we have a stored active ID and we are on dashboard or some other page that doesn't specify ID, use it
+        if (activeStudyPlanIdStore && !pathname.match(/^\/(study-plans|my-roadmap)\/(\d+)/)) {
+            return activeStudyPlanIdStore;
+        }
+
+        const match = pathname.match(/^\/(study-plans|my-roadmap)\/(\d+)/);
+        if (match) return match[2];
+        // Sort by createdAt descending to get the most recent study plan
+        if (studyPlans.length > 0) {
+            const sortedPlans = [...studyPlans].sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            return String(sortedPlans[0].id);
+        }
+        return null;
+    })();
+
+    // Build sidebar items with dynamic study plan and roadmap links
+    const sidebarItems = activeStudyPlanId
+        ? [
+            baseSidebarItems[0], // Overview
+            {
+                title: 'Study Schedule',
+                href: `/study-plans/${activeStudyPlanId}`,
+                icon: BookOpen,
+            },
+            {
+                title: 'My Roadmap',
+                href: `/my-roadmap/${activeStudyPlanId}`,
+                icon: Map,
+            },
+            ...baseSidebarItems.slice(2), // Sessions, History
+        ]
+        : baseSidebarItems;
 
     // Check if a link is active
     const isActive = (href: string) => {
@@ -71,7 +95,11 @@ export function Sidebar() {
             return false;
         }
         // Exception: Highlight 'Study Plans' for any study plan page
-        if (href === '/study-plans/1' && pathname.startsWith('/study-plans')) {
+        if (href.startsWith('/study-plans') && pathname.startsWith('/study-plans')) {
+            return true;
+        }
+        // Exception: Highlight 'My Roadmap' for any my-roadmap page
+        if (href.startsWith('/my-roadmap') && pathname.startsWith('/my-roadmap')) {
             return true;
         }
         return pathname.startsWith(href);
@@ -81,8 +109,8 @@ export function Sidebar() {
         <aside className="fixed left-0 top-0 z-30 flex h-screen w-72 flex-col border-r border-neutral-200/60 bg-white/80 backdrop-blur-xl">
             {/* Logo */}
             <div className="flex h-20 shrink-0 items-center px-6">
-                <Link href="/dashboard" className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-[#c1ff72] shadow-lg shadow-neutral-900/10">
+                <Link href="/" className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-lg shadow-neutral-900/10">
                         <GitFork className="h-[22px] w-[22px]" strokeWidth={2.5} />
                     </div>
                     <span className="text-xl font-bold tracking-tight text-neutral-900">
@@ -110,7 +138,7 @@ export function Sidebar() {
                         >
                             <item.icon className={cn(
                                 "h-[18px] w-[18px] transition-colors",
-                                isActive(item.href) ? "text-[#c1ff72]" : "text-neutral-500 group-hover:text-neutral-900"
+                                isActive(item.href) ? "text-white" : "text-neutral-500 group-hover:text-neutral-900"
                             )} strokeWidth={2} />
                             {item.title}
                         </Link>

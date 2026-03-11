@@ -4,9 +4,30 @@ import type { NextRequest } from 'next/server';
 import {
     isAuthRoute,
     isProtectedRoute,
+    isAnalystRoute,
     routes,
 } from '@/shared/config/routes';
 import { env } from '@/shared/config/env';
+
+// The claim key ASP.NET Core Identity uses for roles in JWT
+const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
+/**
+ * Decode roles from a JWT token without external libraries.
+ * Works in Next.js Edge runtime.
+ */
+function getRolesFromToken(token: string): string[] {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return [];
+        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        const roleValue = decoded[ROLE_CLAIM];
+        if (!roleValue) return [];
+        return Array.isArray(roleValue) ? roleValue : [roleValue];
+    } catch {
+        return [];
+    }
+}
 
 // API Proxy prefix
 const API_PROXY_PREFIX = '/api/proxy';
@@ -40,9 +61,9 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     const headers = new Headers(request.headers);
     headers.delete('host');
 
-    // Handle Content-Type header
+    // Handle Content-Type header - only set for requests with body (POST, PUT, PATCH)
     const originalContentType = request.headers.get('Content-Type');
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'DELETE') {
         if (!originalContentType) {
             headers.set('Content-Type', 'application/json');
         }
@@ -55,9 +76,10 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     }
 
     try {
-        // Get request body for non-GET requests
+        // Get request body for non-GET/HEAD/DELETE requests
+        // DELETE requests typically don't have a body
         let body: BodyInit | undefined;
-        if (request.method !== 'GET' && request.method !== 'HEAD') {
+        if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'DELETE') {
             const contentType = request.headers.get('Content-Type') || '';
 
             if (contentType.includes('multipart/form-data')) {
@@ -181,6 +203,17 @@ export function middleware(request: NextRequest) {
         const loginUrl = new URL(routes.auth.login, request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(loginUrl);
+    }
+
+    // Protect analyst routes: must be authenticated and have Analyst role
+    if (isAnalystRoute(pathname)) {
+        if (!isAuthenticated) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+        const roles = getRolesFromToken(accessToken!);
+        if (!roles.includes('Analyst')) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
     }
 
     return NextResponse.next();

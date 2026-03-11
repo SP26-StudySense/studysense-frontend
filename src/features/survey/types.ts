@@ -59,6 +59,8 @@ export enum QuestionType {
   RATING = 'Rating',
   SCALE = 'Scale',
   TIME = 'Time',
+  SHORT_ANSWER = 'ShortAnswer',
+  FREE_TEXT = 'FreeText',
 }
 
 // Question option (for choice questions)
@@ -67,6 +69,8 @@ export interface QuestionOption {
   value: string;
   label: string;
   order: number;
+  allowFreeText?: boolean;
+  freeTextValue?: string;
 }
 
 // Question validation rules
@@ -78,14 +82,48 @@ export interface QuestionValidation {
   pattern?: string;
 }
 
-// Survey response
+// Survey response (for UI state)
 export interface SurveyResponse {
   questionId: string;
   value: string | string[] | number;
   answeredAt: string;
 }
 
-// Submit survey request
+// Backend API types for TakeSurvey
+export enum SurveyTriggerReason {
+  INITIAL = 'Initial',
+  RESURVEY = 'Resurvey',
+  MANUAL = 'Manual',
+}
+
+export interface SurveyAnswerInput {
+  questionId: number;
+  optionId?: number | null;
+  numberValue?: number | null;
+  textValue?: string | null;
+  answeredAt: string;
+}
+
+export interface TakeSurveyRequest {
+  startedAt: string;
+  submittedAt: string | null;
+  triggerReason: SurveyTriggerReason;
+  answers: SurveyAnswerInput[];
+}
+
+export interface TakeSurveyResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    responseId: number;
+    status: string; // "InProgress" | "Completed"
+    answeredCount: number;
+    totalQuestions: number;
+    validationErrors?: string[];
+  };
+}
+
+// Legacy - for backward compatibility
 export interface SubmitSurveyRequest {
   surveyId: string;
   responses: SurveyResponse[];
