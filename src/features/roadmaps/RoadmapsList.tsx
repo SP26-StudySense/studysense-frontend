@@ -9,7 +9,6 @@ import { SearchFilterBar } from './components/SearchFilterBar';
 import { RoadmapPreviewModal } from './components/RoadmapPreviewModal';
 import { StartLearningOverlay } from './components/StartLearningOverlay';
 import { useStartLearning } from './hooks/useStartLearning';
-import { filterRoadmaps } from './mock-data';
 import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Plus, Eye, Edit, Trash2, X, Sparkles, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { ConfirmationModal } from "@/shared/ui";
@@ -236,6 +237,7 @@ function AIGenerateModal({
 }
 
 export function RoadmapListPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState<GetRoadmapsParams>({
     pageIndex: 1,
     pageSize: 6,
@@ -351,7 +353,7 @@ export function RoadmapListPage() {
 
         <div className="flex gap-2">
           <button
-            onClick={() => setModalState({ type: 'aiGenerate' })}
+            onClick={() => router.push('/content-roadmaps/generate')}
             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
           >
             <Sparkles className="h-4 w-4" />
@@ -446,7 +448,6 @@ export function RoadmapListPage() {
 
               {/* Stats */}
               <div className="mb-4 flex items-center gap-4 text-xs text-neutral-500">
-                <div>v{roadmap.version}</div>
                 <div>Created at {new Date(roadmap.createdAt).toLocaleDateString()}</div>
               </div>
 
@@ -458,13 +459,6 @@ export function RoadmapListPage() {
                 >
                   <Eye className="inline h-3.5 w-3.5 mr-1" />
                   View
-                </Link>
-                <Link
-                  href={`/content-roadmaps/${roadmap.id}/edit`}
-                  className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-center text-xs font-medium text-neutral-700 transition-all hover:bg-neutral-50"
-                >
-                  <Edit className="inline h-3.5 w-3.5 mr-1" />
-                  Edit
                 </Link>
                 <button
                   onClick={() => setModalState({ type: 'delete', roadmapId: roadmap.id, title: roadmap.title })}

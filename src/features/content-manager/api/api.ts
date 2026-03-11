@@ -24,6 +24,8 @@ import type {
   DeleteNodeResponse,
   DeleteEdgeResponse,
   DeleteContentResponse,
+  GenerateRoadmapRequest,
+  GenerateRoadmapResponse,
 } from './types';
 
 // ==================== Utility Functions ====================
@@ -135,4 +137,14 @@ export async function syncRoadmapGraph(
     `/roadmaps/${roadmapId}/graph`,
     graphData
   );
+}
+
+/**
+ * Generate roadmap using AI
+ * POST /api/ai/create-road-map
+ */
+export async function generateRoadmapAI(
+  request: GenerateRoadmapRequest
+): Promise<GenerateRoadmapResponse> {
+  return post<GenerateRoadmapResponse>("/ai/create-road-map", request);
 }

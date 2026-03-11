@@ -368,6 +368,64 @@ export type NewNodeContent = Omit<NodeContent, 'id' | 'nodeId'> & {
   clientId?: string;
 };
 
+// Request
+export interface GenerateRoadmapRequest {
+  message: string;
+}
+
+// Roadmap metadata
+export interface AIRoadmapMetadata {
+  subjectId: number;
+  title: string;
+  description?: string | null;
+}
+
+// Node
+export interface AIRoadmapNode {
+  clientId: string;
+  title: string;
+  description: string;
+  difficulty: NodeDifficulty;
+  orderNo?: number;
+}
+
+// Content
+export interface AIRoadmapContent {
+  clientId: string;
+  nodeClientId: string;
+  contentType: ContentType;
+  title: string;
+  description: string;
+  url?: string | null;
+  estimatedMinutes?: number | null;
+  difficulty?: NodeDifficulty;
+  orderNo?: number;
+  isRequired: boolean;
+}
+
+// Edge
+export interface AIRoadmapEdge {
+  fromNodeClientId: string;
+  toNodeClientId: string;
+  edgeType: EdgeType;
+  orderNo?: number | null;
+}
+
+// Raw roadmap from AI
+export interface AIRoadmapGraph {
+  roadmap: AIRoadmapMetadata;
+  nodes: AIRoadmapNode[];
+  contents: AIRoadmapContent[];
+  edges: AIRoadmapEdge[];
+}
+
+// Response
+export interface GenerateRoadmapResponse {
+  success: boolean;
+  message: string;
+  rawroadmap: AIRoadmapGraph;
+}
+
 // ==================== API Operation Types ====================
 
 /**

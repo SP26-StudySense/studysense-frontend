@@ -11,6 +11,8 @@ import type {
   GetRoadmapsResponse,
   RoadmapDetail,
   NodeContent,
+  GenerateRoadmapResponse,
+  GenerateRoadmapRequest,
 } from './types';
 
 // ==================== Query Hooks ====================
@@ -111,6 +113,19 @@ export function useNodeContents(
     queryKey: cmQueryKeys.nodeContents(roadmapId, nodeId),
     queryFn: () => api.getNodeContents({ roadmapId, nodeId }),
     enabled: !!roadmapId && !!nodeId,
+    staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+ export function useGenerateRoadmapAI(
+  request: GenerateRoadmapRequest,
+  options?: Omit<UseQueryOptions<GenerateRoadmapResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: ['generateRoadmapAI', request],
+    queryFn: () => api.generateRoadmapAI(request),
+    enabled: !!request.message,
     staleTime: 5 * 60 * 1000,
     ...options,
   });
