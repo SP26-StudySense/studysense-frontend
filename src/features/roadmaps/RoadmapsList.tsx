@@ -1,15 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useQueries } from '@tanstack/react-query';
 import { RoadmapCard } from './components/RoadmapCard';
 import { SearchFilterBar } from './components/SearchFilterBar';
 import { RoadmapPreviewModal } from './components/RoadmapPreviewModal';
-import { StartLearningOverlay } from './components/StartLearningOverlay';
-import { useStartLearning } from './hooks/useStartLearning';
-import { filterRoadmaps } from './mock-data';
 import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
@@ -77,11 +73,6 @@ function useRoadmapNodeCounts(roadmapIds: number[]) {
 }
 
 export function RoadmapsList() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const startRoadmapId = searchParams.get('startRoadmapId');
-    const autoStartTriggered = useRef(false);
-
     const [filters, setFilters] = useState<RoadmapFilters>({
         search: '',
         difficulty: 'all',
@@ -89,36 +80,6 @@ export function RoadmapsList() {
     });
 
     const [previewRoadmap, setPreviewRoadmap] = useState<RoadmapTemplate | null>(null);
-    const [showAutoStartOverlay, setShowAutoStartOverlay] = useState(false);
-    const [autoStartRoadmapTitle, setAutoStartRoadmapTitle] = useState('');
-
-    // useStartLearning instance dedicated to post-survey auto-start
-    const {
-        startLearning: autoStartLearning,
-        currentStep: autoStartStep,
-        error: autoStartError,
-        reset: autoStartReset,
-    } = useStartLearning({
-        onSuccess: () => {
-            setShowAutoStartOverlay(false);
-        },
-        onError: () => {
-            // keep overlay open to show error
-        },
-    });
-
-    const handleAutoStartClose = () => {
-        if (autoStartError && autoStartError.toLowerCase().includes('already exists')) {
-            router.push('/dashboard');
-        }
-        setShowAutoStartOverlay(false);
-        autoStartReset();
-    };
-
-    const handleAutoStartRetry = async () => {
-        autoStartReset();
-        await autoStartLearning(Number(startRoadmapId));
-    };
 
     // Fetch user's study plans from API
     const { 
@@ -176,24 +137,6 @@ export function RoadmapsList() {
         () => new Set(studyPlans.map((plan) => plan.roadmapId)),
         [studyPlans]
     );
-
-    // Auto-start learning when returning from survey (?startRoadmapId=<id>)
-    useEffect(() => {
-        if (!startRoadmapId || autoStartTriggered.current) return;
-        if (isLoading) return; // wait for roadmaps data
-
-        autoStartTriggered.current = true;
-
-        const roadmapId = Number(startRoadmapId);
-        const roadmapItem = roadmapsData?.roadmaps?.items?.find((r) => r.id === roadmapId);
-        setAutoStartRoadmapTitle(roadmapItem?.title ?? 'Roadmap');
-        setShowAutoStartOverlay(true);
-
-        // Clean the URL so a page refresh doesn't re-trigger
-        router.replace('/roadmaps');
-
-        autoStartLearning(roadmapId);
-    }, [startRoadmapId, isLoading, roadmapsData, autoStartLearning, router]);
 
     const hasActiveFilters = Boolean(filters.search || filters.difficulty !== 'all' || filters.category !== 'all');
 
@@ -303,16 +246,6 @@ export function RoadmapsList() {
                     onClose={() => setPreviewRoadmap(null)}
                 />
             )}
-
-            {/* Auto-start overlay — triggered after returning from ON_START_ROADMAP survey */}
-            <StartLearningOverlay
-                isOpen={showAutoStartOverlay}
-                currentStep={autoStartStep}
-                roadmapTitle={autoStartRoadmapTitle}
-                error={autoStartError || undefined}
-                onRetry={handleAutoStartRetry}
-                onClose={handleAutoStartClose}
-            />
         </div>
     );
 }
