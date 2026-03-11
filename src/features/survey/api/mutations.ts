@@ -16,13 +16,15 @@ import { submitSurvey, transformResponseToAnswers } from './api';
  *
  * @param returnTo - path to redirect after a successful submit.
  *                   Defaults to '/' (landing page) when omitted.
+ * @param roadmapId - roadmap id to include in payload for roadmap target survey (id = 3)
  */
 export function useSubmitSurvey(
   surveyId: number,
   questionTypes: Record<string, QuestionType>,
   startedAt: Date,
   triggerReason: SurveyTriggerReason,
-  returnTo: string = '/'
+  returnTo: string = '/',
+  roadmapId?: number
 ) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -34,12 +36,19 @@ export function useSubmitSurvey(
         return transformResponseToAnswers(r, questionType);
       });
 
-      return submitSurvey(surveyId, {
+      const payload: any = {
         startedAt: startedAt.toISOString(),
         submittedAt: new Date().toISOString(),
         triggerReason,
         answers,
-      });
+      };
+
+      // Include roadmapId for roadmap target survey (id = 3)
+      if (surveyId === 3 && roadmapId !== undefined) {
+        payload.roadmapId = roadmapId;
+      }
+
+      return submitSurvey(surveyId, payload);
     },
     onSuccess: (data) => {
       clearSurveyDraft(surveyId);

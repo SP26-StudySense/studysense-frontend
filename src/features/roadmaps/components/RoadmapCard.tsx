@@ -81,6 +81,7 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
                     const params = new URLSearchParams({
                         triggerReason: SurveyTriggerReason.RESURVEY,
                         returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                        roadmapId: roadmap.id.toString(),
                     });
                     router.push(`/surveys/${pending.surveyCode}?${params.toString()}`);
                     return;
