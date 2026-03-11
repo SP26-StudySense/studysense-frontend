@@ -1,38 +1,30 @@
-import type { Metadata } from 'next';
+'use client';
 
-import { WelcomeBanner } from '@/features/dashboard/components/WelcomeBanner';
-import { StatsOverview } from '@/features/dashboard/components/StatsOverview';
-import { TodaysPlan } from '@/features/dashboard/components/TodaysPlan';
-import { RecentSessions } from '@/features/dashboard/components/RecentSessions';
-import { QuickActions } from '@/features/dashboard/components/QuickActions';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
-export const metadata: Metadata = {
-  title: 'Dashboard',
-  description: 'Your learning dashboard',
-};
+export default function DashboardRootPage() {
+  const router = useRouter();
 
-export default function DashboardPage() {
+  useEffect(() => {
+    // Check for active study plan in session storage
+    if (typeof window !== 'undefined') {
+      const activeStudyPlanId = sessionStorage.getItem('activeStudyPlanId');
+      
+      if (activeStudyPlanId) {
+        // Redirect to specific study plan dashboard
+        router.replace(`/dashboard/${activeStudyPlanId}`);
+      } else {
+        // No active study plan, redirect to roadmaps to choose one
+        router.replace('/roadmaps');
+      }
+    }
+  }, [router]);
+
   return (
-    <div className="space-y-8 pb-8">
-      {/* Welcome Section */}
-      <WelcomeBanner />
-
-      {/* Stats Grid */}
-      <StatsOverview />
-
-      {/* Main Content Layout */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left Column (2/3 width) */}
-        <div className="space-y-8 lg:col-span-2">
-          <TodaysPlan />
-          <RecentSessions />
-        </div>
-
-        {/* Right Column (1/3 width) */}
-        <div className="space-y-8">
-          <QuickActions />
-        </div>
-      </div>
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <LoadingSpinner size="lg" />
     </div>
   );
 }

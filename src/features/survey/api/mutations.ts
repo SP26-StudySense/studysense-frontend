@@ -68,7 +68,13 @@ export function useSubmitSurvey(
         });
       }
 
-      router.push(returnTo);
+      // Special handling for roadmap target survey (id = 3)
+      // Redirect to plan generation page to wait for AI processing
+      if (surveyId === 3 && roadmapId !== undefined) {
+        router.push(`/plan-generation?roadmapId=${roadmapId}`);
+      } else {
+        router.push(returnTo);
+      }
     },
     onError: (error) => {
       toast.apiError(error, 'Failed to submit survey');

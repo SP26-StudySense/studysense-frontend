@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { StatsCard } from './components/StatsCard';
 import { RoadmapTimeline, RoadmapModule } from './components/RoadmapTimeline';
 import { ModuleTasksPanel, ModuleData, ModuleTask } from './components/ModuleTasksPanel';
 import { CalendarView } from './components/CalendarView';
 import { useStudyPlan, useTasksByPlan } from './api/queries';
-import { ModuleStatus, TaskStatus, StudyModuleDto, TaskItemDto } from './api/types';
+import { ModuleStatus, TaskStatus, StudyModuleDto, TaskItemDto, StudyPlanStatus } from './api/types';
 
 interface StudyPlanDetailPageProps {
     planId?: string;
@@ -41,11 +42,53 @@ function isTaskCompleted(status?: TaskStatus): boolean {
 
 export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [shouldPoll, setShouldPoll] = useState(false);
+    const queryClient = useQueryClient();
+    const prevStatusRef = useRef<StudyPlanStatus | undefined>();
 
-    // Fetch study plan and tasks from API
-    const { data: studyPlan, isLoading: isLoadingPlan, error: planError } = useStudyPlan(planId);
+    // Fetch study plan with conditional polling
+    const { data: studyPlan, isLoading: isLoadingPlan, error: planError } = useStudyPlan(planId, {
+        refetchInterval: shouldPoll ? 5000 : false, // Poll every 5 seconds if generating
+    });
     const { data: tasks = [], isLoading: isLoadingTasks } = useTasksByPlan(planId);
+
+    // Debug logging
+    useEffect(() => {
+        console.log('📊 [StudyPlanDetailPage] Data:', {
+            planId,
+            studyPlanStatus: studyPlan?.status,
+            modulesCount: studyPlan?.modules?.length || 0,
+            tasksCount: tasks.length,
+            isLoadingTasks,
+        });
+    }, [planId, studyPlan?.status, studyPlan?.modules?.length, tasks.length, isLoadingTasks]);
+
+    // Enable polling if status is GeneratingTasks
+    useEffect(() => {
+        if (studyPlan?.status === StudyPlanStatus.GeneratingTasks) {
+            setShouldPoll(true);
+        } else if (studyPlan?.status === StudyPlanStatus.Ready || studyPlan?.status === StudyPlanStatus.Failed) {
+            setShouldPoll(false);
+        }
+    }, [studyPlan?.status]);
+
+    // Refetch tasks when study plan transitions to Ready status
+    useEffect(() => {
+        const currentStatus = studyPlan?.status;
+        const prevStatus = prevStatusRef.current;
+        
+        if (
+            prevStatus === StudyPlanStatus.GeneratingTasks &&
+            currentStatus === StudyPlanStatus.Ready &&
+            planId
+        ) {
+            console.log('🔄 Study plan became Ready, refetching tasks...');
+            queryClient.invalidateQueries({ queryKey: ['tasks', 'byPlan', planId] });
+        }
+        
+        prevStatusRef.current = currentStatus;
+    }, [studyPlan?.status, planId, queryClient]);
 
     // Transform API data to UI format
     const modulesWithTasks: ModuleData[] = useMemo(() => {
@@ -89,7 +132,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     }, [studyPlan, tasks]);
 
     // Set first in-progress module as default selected
-    useMemo(() => {
+    useEffect(() => {
         if (modulesWithTasks.length > 0 && selectedModuleId === null) {
             const firstInProgress = modulesWithTasks.find(m => m.status === 'in_progress');
             const firstNotStarted = modulesWithTasks.find(m => m.status === 'not_started');
@@ -143,12 +186,11 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                 dates.push(new Date(task.scheduledDate));
             }
         });
-        dates.push(selectedDate);
         return dates;
-    }, [tasks, selectedDate]);
+    }, [tasks]);
 
-    // Loading state
-    if (isLoadingPlan || isLoadingTasks) {
+    // Loading state - only block on plan loading, not tasks
+    if (isLoadingPlan) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center">
                 <div className="text-center">
@@ -219,13 +261,6 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                                 </div>
                             </div>
                         </div>
-
-                        <div className="flex gap-3">
-                            <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-5 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-[#00bae2]/25 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 transition-all duration-300">
-                                <Sparkles className="h-4 w-4" />
-                                Generate plan with AI
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -262,12 +297,18 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                             taskDates={taskDates}
                         />
 
+                        {/* Tasks Panel */}
                         {selectedModule ? (
                             <ModuleTasksPanel
                                 module={selectedModule}
                                 onClose={() => setSelectedModuleId(null)}
                                 className="h-[calc(100vh-450px)] min-h-[400px]"
                                 studyPlanId={planId}
+                                filterDate={selectedDate}
+                                allTasks={tasks}
+                                allModules={studyPlan?.modules}
+                                onClearDateFilter={() => setSelectedDate(null)}
+                                isLoadingTasks={isLoadingTasks}
                             />
                         ) : (
                             <div className="h-[calc(100vh-450px)] min-h-[400px] flex items-center justify-center rounded-3xl bg-white/50 border border-neutral-200/60 p-6 text-neutral-400">
