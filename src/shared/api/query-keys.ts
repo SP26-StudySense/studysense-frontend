@@ -54,12 +54,13 @@ export const queryKeys = {
   },
 
   // Sessions
-  sessions: {
-    ...createQueryKeys('sessions'),
-    current: () => ['sessions', 'current'] as const,
-    history: (params?: QueryParams) => ['sessions', 'history', params] as const,
-    summary: (id: string) => ['sessions', 'detail', id, 'summary'] as const,
-    events: (id: string) => ['sessions', 'detail', id, 'events'] as const,
+  studySessions: {
+    ...createQueryKeys('studySessions'),
+    active: () => ['studySessions', 'active'] as const,
+    recent: () => ['studySessions', 'recent'] as const,
+    statistics: (period?: string) => ['studySessions', 'statistics', period] as const,
+    history: (params?: QueryParams) => ['studySessions', 'history', params] as const,
+    detail: (id: string) => ['studySessions', 'detail', id] as const,
   },
 
   // Surveys

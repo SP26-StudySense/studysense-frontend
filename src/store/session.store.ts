@@ -20,12 +20,13 @@ export interface SelectedNodeInfo {
 }
 
 interface ActiveSession {
-  id: string;
-  planId: string;
-  nodeId: string;
+  id: string;      // This will map to the backend sessionId
+  planId?: string;
+  nodeId?: string;
+  moduleId?: string;
+  taskId?: string; // Optional task specific session
   startedAt: string;
   status: SessionStatus;
-  elapsedMinutes: number;
   currentTaskIndex: number;
 }
 
@@ -54,11 +55,14 @@ interface SessionState {
   // Session timer
   timerRunning: boolean;
   elapsedSeconds: number;
+  pauseCount: number;
+  pauseSeconds: number;
   startTimer: () => void;
   pauseTimer: () => void;
   resetTimer: () => void;
   incrementElapsed: () => void;
   setElapsedSeconds: (seconds: number) => void;
+  incrementPauseSeconds: () => void;
 
   // UI States
   showSummary: boolean;
@@ -71,12 +75,13 @@ interface SessionState {
   setSummaryData: (data: SessionSummaryData | null) => void;
 
   // Session actions
-  startSession: (session: Omit<ActiveSession, 'status' | 'elapsedMinutes'>) => void;
+  startSession: (session: Omit<ActiveSession, 'status' | 'currentTaskIndex'>) => void;
   pauseSession: () => void;
   resumeSession: () => void;
-  endSession: () => void;
+  endSession: (summary: SessionSummaryData) => void; // Receive data from backend
   completeSession: () => void;
   resetSessionFlow: () => void;
+  setActiveSessionFromApi: (apiSession: any) => void;
 
   // Task navigation
   nextTask: () => void;
@@ -106,16 +111,22 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
   // Timer
   timerRunning: false,
   elapsedSeconds: 0,
+  pauseCount: 0,
+  pauseSeconds: 0,
   startTimer: () => set({ timerRunning: true }),
   pauseTimer: () => set({ timerRunning: false }),
   resetTimer: () => {
-    set({ elapsedSeconds: 0, timerRunning: false });
+    set({ elapsedSeconds: 0, pauseCount: 0, pauseSeconds: 0, timerRunning: false });
   },
   incrementElapsed: () => {
     const { elapsedSeconds } = get();
     set({ elapsedSeconds: elapsedSeconds + 1 });
   },
   setElapsedSeconds: (seconds) => set({ elapsedSeconds: seconds }),
+  incrementPauseSeconds: () => {
+    const { pauseSeconds } = get();
+    set({ pauseSeconds: pauseSeconds + 1 });
+  },
 
   // UI States
   showSummary: false,
@@ -132,17 +143,24 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     const session: ActiveSession = {
       ...sessionData,
       status: SessionStatus.IN_PROGRESS,
-      elapsedMinutes: 0,
+      currentTaskIndex: 0,
     };
-    set({ activeSession: session, timerRunning: true, elapsedSeconds: 0 });
+    set({
+      activeSession: session,
+      timerRunning: true,
+      elapsedSeconds: 0,
+      pauseCount: 0,
+      pauseSeconds: 0
+    });
   },
 
   pauseSession: () => {
-    const { activeSession } = get();
+    const { activeSession, pauseCount } = get();
     if (activeSession) {
       set({
         activeSession: { ...activeSession, status: SessionStatus.PAUSED },
         timerRunning: false,
+        pauseCount: pauseCount + 1
       });
     }
   },
@@ -157,22 +175,11 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
     }
   },
 
-  endSession: () => {
-    const { elapsedSeconds, selectedTasks } = get();
-    const completedTasks = selectedTasks.filter((t) => t.isCompleted).length;
-    const xpEarned = Math.floor(elapsedSeconds / 60) * 10 + completedTasks * 25;
-
+  endSession: (summaryData) => {
     set({
       timerRunning: false,
       showSummary: true,
-      summaryData: {
-        timeStudiedMinutes: Math.floor(elapsedSeconds / 60),
-        tasksCompleted: completedTasks,
-        totalTasks: selectedTasks.length,
-        xpEarned,
-        rating: 0,
-        notes: '',
-      },
+      summaryData: summaryData,
     });
   },
 
@@ -188,11 +195,29 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
       activeSession: null,
       timerRunning: false,
       elapsedSeconds: 0,
+      pauseCount: 0,
+      pauseSeconds: 0,
       showSummary: false,
       showSuccess: false,
       summaryData: null,
       selectedNode: null,
       selectedTasks: [],
+    });
+  },
+
+  setActiveSessionFromApi: (apiSession) => {
+    if (!apiSession) return;
+    set({
+      activeSession: {
+        id: apiSession.sessionId,
+        planId: apiSession.planId,
+        nodeId: apiSession.nodeId,
+        startedAt: apiSession.startAt,
+        status: apiSession.status,
+        currentTaskIndex: 0
+      },
+      elapsedSeconds: apiSession.elapsedSeconds,
+      timerRunning: apiSession.status === SessionStatus.IN_PROGRESS,
     });
   },
 

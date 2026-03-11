@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Square } from 'lucide-react';
+import { Play, Pause, RotateCcw, Square, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore } from '@/store/session.store';
+import { useStartSession, usePauseSession, useResumeSession } from '../hooks';
 
 interface TimerCardProps {
     onSessionStart?: () => void;
@@ -18,7 +19,11 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
     const pauseTimer = useSessionStore((state) => state.pauseTimer);
     const resetTimer = useSessionStore((state) => state.resetTimer);
     const incrementElapsed = useSessionStore((state) => state.incrementElapsed);
-    const endSession = useSessionStore((state) => state.endSession);
+    const incrementPauseSeconds = useSessionStore((state) => state.incrementPauseSeconds);
+
+    const { mutateAsync: startSessionApi, isPending: isStarting } = useStartSession();
+    const { mutateAsync: pauseSessionApi, isPending: isPausing } = usePauseSession();
+    const { mutateAsync: resumeSessionApi, isPending: isResuming } = useResumeSession();
 
     const formatTime = (totalSeconds: number) => {
         const mins = Math.floor(totalSeconds / 60);
@@ -33,6 +38,10 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
             interval = setInterval(() => {
                 incrementElapsed();
             }, 1000);
+        } else if (hasStarted) {
+            interval = setInterval(() => {
+                incrementPauseSeconds();
+            }, 1000);
         }
 
         return () => {
@@ -40,27 +49,49 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
         };
     }, [timerRunning, incrementElapsed]);
 
-    const handleStart = useCallback(() => {
-        startTimer();
-        onSessionStart?.();
-    }, [startTimer, onSessionStart]);
+    const handleStart = useCallback(async () => {
+        try {
+            await startSessionApi({});
+            startTimer();
+            onSessionStart?.();
+        } catch (error) {
+            console.error('Failed to start session', error);
+        }
+    }, [startSessionApi, startTimer, onSessionStart]);
 
-    const handlePause = useCallback(() => {
-        pauseTimer();
-    }, [pauseTimer]);
+    const handlePause = useCallback(async () => {
+        const { activeSession } = useSessionStore.getState();
+        if (!activeSession) return;
 
-    const handleResume = useCallback(() => {
-        startTimer();
-    }, [startTimer]);
+        try {
+            await pauseSessionApi(activeSession.id);
+            pauseTimer();
+        } catch (error) {
+            console.error('Failed to pause session', error);
+        }
+    }, [pauseSessionApi, pauseTimer]);
+
+    const handleResume = useCallback(async () => {
+        const { activeSession } = useSessionStore.getState();
+        if (!activeSession) return;
+
+        try {
+            await resumeSessionApi(activeSession.id);
+            startTimer();
+        } catch (error) {
+            console.error('Failed to resume session', error);
+        }
+    }, [resumeSessionApi, startTimer]);
 
     const handleReset = useCallback(() => {
         resetTimer();
     }, [resetTimer]);
 
     const handleEndSession = useCallback(() => {
-        endSession();
+        // We handle the actual API call in SessionSummaryModal
+        // Here we just stop the timer and show the modal
         onSessionEnd?.();
-    }, [endSession, onSessionEnd]);
+    }, [onSessionEnd]);
 
     const hasStarted = elapsedSeconds > 0 || timerRunning;
 
@@ -91,9 +122,14 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
                 {!hasStarted ? (
                     <button
                         onClick={handleStart}
-                        className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300"
+                        disabled={isStarting}
+                        className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:hover:scale-100"
                     >
-                        <Play className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" />
+                        {isStarting ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <Play className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" />
+                        )}
                         Start Session
                     </button>
                 ) : (
@@ -101,17 +137,19 @@ export function TimerCard({ onSessionStart, onSessionEnd, className }: TimerCard
                         {timerRunning ? (
                             <button
                                 onClick={handlePause}
-                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300"
+                                disabled={isPausing}
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:hover:scale-100"
                             >
-                                <Pause className="h-5 w-5" fill="currentColor" />
+                                {isPausing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Pause className="h-5 w-5" fill="currentColor" />}
                                 Pause
                             </button>
                         ) : (
                             <button
                                 onClick={handleResume}
-                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300"
+                                disabled={isResuming}
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-70 disabled:hover:scale-100"
                             >
-                                <Play className="h-5 w-5" fill="currentColor" />
+                                {isResuming ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" fill="currentColor" />}
                                 Resume
                             </button>
                         )}

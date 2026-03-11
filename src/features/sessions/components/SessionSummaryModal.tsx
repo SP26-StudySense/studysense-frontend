@@ -1,9 +1,9 @@
-'use client';
-
 import { useState } from 'react';
-import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map } from 'lucide-react';
+import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { useSessionStore, SessionSummaryData } from '@/store/session.store';
+import { useSessionStore } from '@/store/session.store';
+import { useEndSession } from '../hooks';
+import { SessionEndedReason } from '@/shared/types';
 
 interface SessionSummaryModalProps {
     isOpen: boolean;
@@ -14,12 +14,53 @@ interface SessionSummaryModalProps {
 export function SessionSummaryModal({ isOpen, onSaveAndContinue, className }: SessionSummaryModalProps) {
     const summaryData = useSessionStore((state) => state.summaryData);
     const setSummaryData = useSessionStore((state) => state.setSummaryData);
+    const activeSession = useSessionStore((state) => state.activeSession);
+    const selectedTasks = useSessionStore((state) => state.selectedTasks);
+    const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
+    const pauseSeconds = useSessionStore((state) => state.pauseSeconds);
     const [hoveredStar, setHoveredStar] = useState(0);
+
+    const { mutateAsync: endSessionApi, isPending } = useEndSession();
+    const endSessionStore = useSessionStore((state) => state.endSession);
 
     if (!isOpen || !summaryData) return null;
 
     const handleStarClick = (rating: number) => {
         setSummaryData({ ...summaryData, rating });
+    };
+
+    const handleSave = async () => {
+        if (!activeSession) return;
+
+        const completedTasksIds = selectedTasks
+            .filter(t => t.isCompleted)
+            .map(t => t.id);
+
+        try {
+            const response = await endSessionApi({
+                id: activeSession.id,
+                data: {
+                    selfRating: summaryData.rating,
+                    activeSeconds: elapsedSeconds - pauseSeconds,
+                    idleSeconds: pauseSeconds,
+                    actualDurationSeconds: elapsedSeconds,
+                    tasksCompleted: completedTasksIds,
+                    endedReason: SessionEndedReason.COMPLETED
+                }
+            });
+
+            // Update store with real summary data from API
+            endSessionStore({
+                ...summaryData,
+                xpEarned: response.xpEarned,
+                tasksCompleted: response.tasksCompleted,
+                totalTasks: response.totalTasks,
+            });
+
+            onSaveAndContinue();
+        } catch (error) {
+            console.error('Failed to save session summary', error);
+        }
     };
 
     return (
@@ -127,9 +168,11 @@ export function SessionSummaryModal({ isOpen, onSaveAndContinue, className }: Se
                 {/* Save Button */}
                 <div className="px-8 pb-8">
                     <button
-                        onClick={onSaveAndContinue}
-                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-[1.02] transition-all"
+                        onClick={handleSave}
+                        disabled={isPending}
+                        className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:hover:scale-100"
                     >
+                        {isPending && <Loader2 className="h-5 w-5 animate-spin" />}
                         Save & Continue
                     </button>
                 </div>
