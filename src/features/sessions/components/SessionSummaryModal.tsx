@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SessionSummaryData } from '@/store/session.store';
 import { useEndSession } from '../api/mutations';
+import { markTaskCompleted } from '../api/api';
 import { SessionEndedReason } from '@/shared/types';
 import { toast } from '@/shared/lib';
 
@@ -12,11 +14,13 @@ interface SessionSummaryModalProps {
 }
 
 export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalProps) {
+    const queryClient = useQueryClient();
     const summaryData = useSessionStore((state) => state.summaryData);
     const setSummaryData = useSessionStore((state) => state.setSummaryData);
     const sessionId = useSessionStore((state) => state.sessionId);
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
+    const selectedNode = useSessionStore((state) => state.selectedNode);
     const completeSession = useSessionStore((state) => state.completeSession);
     const [hoveredStar, setHoveredStar] = useState(0);
     const [notes, setNotes] = useState('');
@@ -52,7 +56,29 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                 },
             },
             {
-                onSuccess: (data) => {
+                onSuccess: async (data) => {
+                    // Update completed tasks to Completed status
+                    const moduleId = Number(selectedNode?.id);
+                    if (moduleId) {
+                        const completedTasks = selectedTasks.filter((t) => t.isCompleted);
+                        await Promise.allSettled(
+                            completedTasks.map((t) =>
+                                markTaskCompleted(Number(t.id), moduleId, {
+                                    title: t.title,
+                                    description: t.description,
+                                    estimatedMinutes: t.estimatedMinutes,
+                                })
+                            )
+                        );
+                    }
+
+                    // Refresh task/session data immediately across pages (schedule/history)
+                    await Promise.all([
+                        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+                        queryClient.invalidateQueries({ queryKey: ['studyPlans'] }),
+                        queryClient.invalidateQueries({ queryKey: ['study-sessions'] }),
+                    ]);
+
                     completeSession(data);
                 },
                 onError: (error) => {

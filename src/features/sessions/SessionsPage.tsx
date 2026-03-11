@@ -19,7 +19,8 @@ const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
         category: 'Study Plan',
         subcategory: task.description || '',
         duration: task.estimatedMinutes,
-        isSelected: !task.isCompleted,
+        // In this UI, checked means task completed.
+        isSelected: task.isCompleted,
     }));
 };
 

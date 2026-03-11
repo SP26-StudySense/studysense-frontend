@@ -64,10 +64,6 @@ interface SessionState {
   incrementElapsed: () => void;
   setElapsedSeconds: (seconds: number) => void;
   incrementPauseSeconds: () => void;
-
-  // Pause tracking
-  pauseCount: number;
-  pauseSeconds: number;
   setPauseData: (count: number, seconds: number) => void;
 
   // UI States
@@ -88,7 +84,6 @@ interface SessionState {
   completeSession: (endResponse: EndSessionResponse) => void;
   confirmSuccess: () => void;
   resetSessionFlow: () => void;
-  setActiveSessionFromApi: (apiSession: any) => void;
 
   // Restore from API (on app reload)
   setActiveSessionFromApi: (data: ActiveSessionResponse) => void;
@@ -142,6 +137,10 @@ export const useSessionStore = create<SessionState>()(
         set({ elapsedSeconds: elapsedSeconds + 1 });
       },
       setElapsedSeconds: (seconds) => set({ elapsedSeconds: seconds }),
+      incrementPauseSeconds: () => {
+        const { pauseSeconds } = get();
+        set({ pauseSeconds: pauseSeconds + 1 });
+      },
 
       // Pause tracking
       pauseCount: 0,
@@ -187,10 +186,6 @@ export const useSessionStore = create<SessionState>()(
           selectedTasks: selectedTasks,
         });
       },
-      elapsedSeconds: apiSession.elapsedSeconds,
-      timerRunning: apiSession.status === SessionStatus.IN_PROGRESS,
-    });
-  },
 
       pauseSession: () => {
         set({

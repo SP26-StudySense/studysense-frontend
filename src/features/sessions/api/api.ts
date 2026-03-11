@@ -3,7 +3,7 @@
  * No React hooks. Can be used anywhere: hooks, server actions, tests.
  */
 
-import { get, post, patch } from '@/shared/api/client';
+import { get, post, patch, put } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import type {
   StartSessionRequest,
@@ -24,6 +24,24 @@ import type {
 import type { PaginatedResponse } from '@/shared/types';
 
 const ep = endpoints.studySessions;
+
+// ─── Task Update ────────────────────────────────────────────────────────────
+
+export async function markTaskCompleted(taskId: number, moduleId: number, task: {
+  title: string;
+  description?: string;
+  estimatedMinutes: number;
+}): Promise<void> {
+  await put(endpoints.tasks.byId(String(taskId)), {
+    studyPlanModuleId: moduleId,
+    title: task.title,
+    description: task.description,
+    status: 'Completed',
+    estimatedDurationSeconds: task.estimatedMinutes * 60,
+    scheduledDate: new Date().toISOString(),
+    completedAt: new Date().toISOString(),
+  });
+}
 
 // ─── Session Lifecycle ──────────────────────────────────────────────────────
 
