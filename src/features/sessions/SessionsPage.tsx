@@ -28,6 +28,7 @@ export function SessionsPage() {
     const selectedNode = useSessionStore((state) => state.selectedNode);
     const toggleTaskCompletion = useSessionStore((state) => state.toggleTaskCompletion);
     const showSummary = useSessionStore((state) => state.showSummary);
+    const setShowSummary = useSessionStore((state) => state.setShowSummary);
     const showSuccess = useSessionStore((state) => state.showSuccess);
     const sessionId = useSessionStore((state) => state.sessionId);
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);

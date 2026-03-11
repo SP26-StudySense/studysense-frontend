@@ -240,6 +240,29 @@ export function SessionHistoryPage() {
                     <p className="text-neutral-500 mb-6">Start your first study session to see your history here</p>
                 </div>
             )}
+
+            {/* Pagination Controls */}
+            {historyData && historyData.totalPages > 1 && (
+                <div className="flex justify-center mt-8 gap-2">
+                    <button
+                        onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+                        disabled={!historyData.hasPreviousPage}
+                        className="px-4 py-2 rounded-lg border border-neutral-200 text-neutral-600 disabled:opacity-50 hover:bg-neutral-50"
+                    >
+                        Previous
+                    </button>
+                    <span className="px-4 py-2 text-neutral-600">
+                        Page {historyData.pageNumber} of {historyData.totalPages}
+                    </span>
+                    <button
+                        onClick={() => setPageNumber(p => p + 1)}
+                        disabled={!historyData.hasNextPage}
+                        className="px-4 py-2 rounded-lg border border-neutral-200 text-neutral-600 disabled:opacity-50 hover:bg-neutral-50"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

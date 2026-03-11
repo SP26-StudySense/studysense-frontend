@@ -55,6 +55,10 @@ export function TimerCard({ className }: TimerCardProps) {
             interval = setInterval(() => {
                 incrementElapsed();
             }, 1000);
+        } else if (hasStarted) {
+            interval = setInterval(() => {
+                incrementPauseSeconds();
+            }, 1000);
         }
 
         return () => {

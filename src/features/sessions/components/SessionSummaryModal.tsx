@@ -1,7 +1,5 @@
-'use client';
-
 import { useState } from 'react';
-import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map } from 'lucide-react';
+import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SessionSummaryData } from '@/store/session.store';
 import { useEndSession } from '../api/mutations';
@@ -24,6 +22,9 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     const [notes, setNotes] = useState('');
 
     const endMutation = useEndSession();
+
+    const { mutateAsync: endSessionApi, isPending } = useEndSession();
+    const endSessionStore = useSessionStore((state) => state.endSession);
 
     if (!isOpen || !summaryData) return null;
 
