@@ -139,6 +139,12 @@ export function RoadmapsList() {
         [studyPlans]
     );
 
+    // Create map of roadmapId -> studyPlanId for existing plans
+    const roadmapToStudyPlanMap = useMemo(
+        () => new Map(studyPlans.map((plan) => [plan.roadmapId, plan.id])),
+        [studyPlans]
+    );
+
     const hasActiveFilters = Boolean(filters.search || filters.difficulty !== 'all' || filters.category !== 'all');
 
     return (
@@ -231,6 +237,7 @@ export function RoadmapsList() {
                                 variant="template"
                                 onPreview={(startFn) => { setPreviewRoadmap(roadmap); setPreviewStartFn(() => startFn); }}
                                 existingRoadmapIds={existingRoadmapIds}
+                                roadmapToStudyPlanMap={roadmapToStudyPlanMap}
                             />
                         ))}
                     </div>

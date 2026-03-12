@@ -2,6 +2,7 @@
 
 import { Search, Filter, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { RoadmapPreviewGraph } from './components/RoadmapPreviewGraph';
 import { useStudyPlan } from '@/features/study-plan/api';
 
@@ -16,6 +17,16 @@ export function RoadmapDetailPage({ studyPlanId }: RoadmapDetailPageProps) {
     const { data: studyPlan, isLoading: isLoadingStudyPlan, error: studyPlanError } = useStudyPlan(
         studyPlanId.toString()
     );
+
+    // Update document title with roadmap name
+    useEffect(() => {
+        if (studyPlan?.roadmapName) {
+            document.title = `${studyPlan.roadmapName} - My Roadmap | StudySense`;
+        }
+        return () => {
+            document.title = 'My Roadmap | StudySense';
+        };
+    }, [studyPlan?.roadmapName]);
 
     // Loading state
     if (isLoadingStudyPlan) {

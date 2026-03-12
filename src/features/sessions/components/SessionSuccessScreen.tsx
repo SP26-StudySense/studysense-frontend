@@ -3,7 +3,7 @@
 import { Sparkles, Home, Map } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/shared/lib/utils';
-import { useSessionStore } from '@/store/session.store';
+import { useSessionStore, useActiveStudyPlanId } from '@/store/session.store';
 
 interface SessionSuccessScreenProps {
     isOpen: boolean;
@@ -14,12 +14,14 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
     const router = useRouter();
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
     const summaryData = useSessionStore((state) => state.summaryData);
+    const activeStudyPlanId = useActiveStudyPlanId();
 
     if (!isOpen) return null;
 
     const handleBackToDashboard = () => {
         resetSessionFlow();
-        router.push('/dashboard');
+        const dashboardPath = activeStudyPlanId ? `/dashboard/${activeStudyPlanId}` : '/dashboard';
+        router.push(dashboardPath);
     };
 
     const handleViewRoadmap = () => {

@@ -18,6 +18,7 @@ interface RoadmapCardProps {
     variant: 'template' | 'learning';
     onPreview?: (startFn: () => void) => void;
     existingRoadmapIds?: Set<number>; // Track existing study plans
+    roadmapToStudyPlanMap?: Map<number, number>; // Map roadmapId to studyPlanId
 }
 
 const difficultyColors = {
@@ -26,12 +27,11 @@ const difficultyColors = {
     advanced: 'bg-red-100 text-red-700 border-red-200',
 };
 
-export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }: RoadmapCardProps) {
+export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
     const router = useRouter();
     const [showOverlay, setShowOverlay] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
 
-    // Check if this roadmap already has a study plan
     // Check if this roadmap already has a study plan
     const hasExistingPlan = existingRoadmapIds?.has(Number(roadmap.id)) ?? false;
 
@@ -59,15 +59,15 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
         if (variant === 'learning' && isLearningRoadmap(roadmap)) {
             // Continue learning -> go to dashboard
             setActiveStudyPlanId(roadmap.studyPlanId);
-            router.push('/dashboard');
+            router.push(`/dashboard/${roadmap.studyPlanId}`);
         } else {
-            // Check if roadmap already has a study plan, redirect instead of creating
-            if (hasExistingPlan) {
-                // Find the existing study plan
-                const existingStudyPlan = (roadmap as any).studyPlanId;
-                if (existingStudyPlan) {
-                    setActiveStudyPlanId(String(existingStudyPlan));
-                    router.push('/dashboard');
+            // Check if roadmap already has a study plan, redirect to dashboard instead of survey
+            if (hasExistingPlan && roadmapToStudyPlanMap) {
+                const existingStudyPlanId = roadmapToStudyPlanMap.get(Number(roadmap.id));
+                if (existingStudyPlanId) {
+                    console.log(`✅ User already has study plan #${existingStudyPlanId} for roadmap #${roadmap.id}. Redirecting to dashboard...`);
+                    setActiveStudyPlanId(String(existingStudyPlanId));
+                    router.push(`/dashboard/${existingStudyPlanId}`);
                     return;
                 }
             }
@@ -81,6 +81,7 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
                     const params = new URLSearchParams({
                         triggerReason: SurveyTriggerReason.RESURVEY,
                         returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                        roadmapId: roadmap.id.toString(),
                     });
                     router.push(`/surveys/${pending.surveyCode}?${params.toString()}`);
                     return;
@@ -121,7 +122,9 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
     const handleCloseOverlay = () => {
         // If error suggests plan already exists, redirect to dashboard on close
         if (error && error.toLowerCase().includes('already exists')) {
-            router.push('/dashboard');
+            // Try to get study plan ID from session storage
+            const studyPlanId = typeof window !== 'undefined' ? sessionStorage.getItem('activeStudyPlanId') : null;
+            router.push(studyPlanId ? `/dashboard/${studyPlanId}` : '/dashboard');
         }
         setShowOverlay(false);
         reset();

@@ -168,11 +168,11 @@ export function useStartLearning(options: UseStartLearningOptions = {}): UseStar
 
       setCurrentStep('success');
       console.log('✨ All Steps Completed Successfully!');
-      console.log('Redirecting to: /dashboard');
+      console.log(`Redirecting to: /dashboard/${studyPlan.id}`);
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       setActiveStudyPlanId(String(studyPlan.id));
-      router.push('/dashboard');
+      router.push(`/dashboard/${studyPlan.id}`);
       options.onSuccess?.(studyPlan.id);
 
     } catch (err) {

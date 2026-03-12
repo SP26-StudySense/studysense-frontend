@@ -3,7 +3,7 @@ import { SurveyTriggerReason } from '@/features/survey/types';
 
 interface SurveyCodePageProps {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ returnTo?: string; triggerReason?: string }>;
+  searchParams: Promise<{ returnTo?: string; triggerReason?: string; roadmapId?: string }>;
 }
 
 /**
@@ -18,7 +18,7 @@ interface SurveyCodePageProps {
  */
 export default async function SurveyCodePage({ params, searchParams }: SurveyCodePageProps) {
   const { code } = await params;
-  const { returnTo = '/home', triggerReason } = await searchParams;
+  const { returnTo = '/home', triggerReason, roadmapId } = await searchParams;
 
   const resolvedTriggerReason: SurveyTriggerReason =
     Object.values(SurveyTriggerReason).includes(triggerReason as SurveyTriggerReason)
@@ -30,6 +30,7 @@ export default async function SurveyCodePage({ params, searchParams }: SurveyCod
       surveyCode={code}
       triggerReason={resolvedTriggerReason}
       returnTo={returnTo}
+      roadmapId={roadmapId ? parseInt(roadmapId, 10) : undefined}
     />
   );
 }

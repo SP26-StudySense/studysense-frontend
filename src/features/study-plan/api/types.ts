@@ -8,6 +8,9 @@ export enum StudyPlanStatus {
   Draft = 'Draft',
   Active = 'Active',
   Archived = 'Archived',
+  GeneratingTasks = 'GeneratingTasks',
+  Ready = 'Ready',
+  Failed = 'Failed',
 }
 
 export enum StudyPlanStrategy {
