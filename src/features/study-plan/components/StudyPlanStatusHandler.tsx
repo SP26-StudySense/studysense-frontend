@@ -49,6 +49,17 @@ export function StudyPlanStatusHandler({ studyPlanId, children }: StudyPlanStatu
     }
   }, [status, studyPlanId, queryClient]);
 
+  // Update document title with roadmap name
+  useEffect(() => {
+    if (studyPlan?.roadmapName) {
+      document.title = `${studyPlan.roadmapName} - Dashboard | StudySense`;
+    }
+    // Cleanup: restore default title when component unmounts
+    return () => {
+      document.title = 'Dashboard | StudySense';
+    };
+  }, [studyPlan?.roadmapName]);
+
   // Debug log
   useEffect(() => {
     console.log('🎯 [StudyPlanStatusHandler] Status:', {

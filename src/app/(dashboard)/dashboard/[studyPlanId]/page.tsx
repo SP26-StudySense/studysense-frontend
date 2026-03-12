@@ -23,7 +23,7 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
     <StudyPlanStatusHandler studyPlanId={studyPlanId}>
       <div className="space-y-8 pb-8">
         {/* Welcome Section */}
-        <WelcomeBanner />
+        <WelcomeBanner studyPlanId={studyPlanId} />
 
         {/* Stats Grid */}
         <StatsOverview />

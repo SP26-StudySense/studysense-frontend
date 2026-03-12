@@ -64,6 +64,16 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
         });
     }, [planId, studyPlan?.status, studyPlan?.modules?.length, tasks.length, isLoadingTasks]);
 
+    // Update document title with roadmap name
+    useEffect(() => {
+        if (studyPlan?.roadmapName) {
+            document.title = `${studyPlan.roadmapName} - Schedule | StudySense`;
+        }
+        return () => {
+            document.title = 'Schedule | StudySense';
+        };
+    }, [studyPlan?.roadmapName]);
+
     // Enable polling if status is GeneratingTasks
     useEffect(() => {
         if (studyPlan?.status === StudyPlanStatus.GeneratingTasks) {

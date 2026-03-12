@@ -18,6 +18,7 @@ interface RoadmapCardProps {
     variant: 'template' | 'learning';
     onPreview?: (startFn: () => void) => void;
     existingRoadmapIds?: Set<number>; // Track existing study plans
+    roadmapToStudyPlanMap?: Map<number, number>; // Map roadmapId to studyPlanId
 }
 
 const difficultyColors = {
@@ -26,12 +27,11 @@ const difficultyColors = {
     advanced: 'bg-red-100 text-red-700 border-red-200',
 };
 
-export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }: RoadmapCardProps) {
+export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
     const router = useRouter();
     const [showOverlay, setShowOverlay] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
 
-    // Check if this roadmap already has a study plan
     // Check if this roadmap already has a study plan
     const hasExistingPlan = existingRoadmapIds?.has(Number(roadmap.id)) ?? false;
 
@@ -61,13 +61,13 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds }:
             setActiveStudyPlanId(roadmap.studyPlanId);
             router.push(`/dashboard/${roadmap.studyPlanId}`);
         } else {
-            // Check if roadmap already has a study plan, redirect instead of creating
-            if (hasExistingPlan) {
-                // Find the existing study plan
-                const existingStudyPlan = (roadmap as any).studyPlanId;
-                if (existingStudyPlan) {
-                    setActiveStudyPlanId(String(existingStudyPlan));
-                    router.push(`/dashboard/${existingStudyPlan}`);
+            // Check if roadmap already has a study plan, redirect to dashboard instead of survey
+            if (hasExistingPlan && roadmapToStudyPlanMap) {
+                const existingStudyPlanId = roadmapToStudyPlanMap.get(Number(roadmap.id));
+                if (existingStudyPlanId) {
+                    console.log(`✅ User already has study plan #${existingStudyPlanId} for roadmap #${roadmap.id}. Redirecting to dashboard...`);
+                    setActiveStudyPlanId(String(existingStudyPlanId));
+                    router.push(`/dashboard/${existingStudyPlanId}`);
                     return;
                 }
             }
