@@ -253,7 +253,7 @@ export function RoadmapListPage() {
   const deleteRoadmapMutation = useDeleteRoadmap();
   const roadmapsData = result?.roadmaps;
   const handleFilterChange = (newFilters: Partial<GetRoadmapsParams>) => {
-    setFilters((prev) => ({ ...prev, ...newFilters, pageIndex: 0 }));
+    setFilters((prev) => ({ ...prev, ...newFilters, pageIndex: 1 }));
   };
 
   const handlePageChange = (newPage: number) => {

@@ -6,6 +6,7 @@ import { toast } from "@/shared/lib";
 import {
   ArrowLeft,
   BookOpen,
+  Check,
   CircleDot,
   Clock,
   Edit2,
@@ -259,109 +260,69 @@ function NodeDetailSection({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CircleDot className="h-5 w-5 text-[#00bae2]" />
-          <h2 className="text-xl font-semibold text-neutral-900">
-            Node Details
-          </h2>
+          <h3 className="text-base font-bold text-neutral-900">
+            Node Detail
+          </h3>
+          <span className="text-sm text-neutral-500">— {node.title}</span>
         </div>
         <button
           onClick={onDeleteNode}
-          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors border border-red-200"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-3.5 w-3.5" />
           Delete Node
         </button>
       </div>
 
       {/* Basic Information */}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-neutral-900">
-            Basic Information
-          </h3>
-          {!isEditingBasicInfo ? (
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-semibold text-neutral-900">Basic Information</h4>
+          {!isEditingBasicInfo && (
             <button
               onClick={() => setIsEditingBasicInfo(true)}
-              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-[#00bae2] hover:bg-[#00bae2]/5"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
             >
               <Edit2 className="h-3.5 w-3.5" />
               Edit
             </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleCancelBasicInfo}
-                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
-              >
-                <X className="h-3.5 w-3.5" />
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveBasicInfo}
-                className="flex items-center gap-2 rounded-lg bg-[#00bae2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#00bae2]/90"
-              >
-                <Save className="h-3.5 w-3.5" />
-                Save
-              </button>
-            </div>
           )}
         </div>
 
-        {!isEditingBasicInfo ? (
-          <div className="space-y-3">
+        {isEditingBasicInfo ? (
+          <div className="space-y-4">
             <div>
-              <div className="text-xs font-medium text-neutral-500 mb-1">Title</div>
-              <div className="text-sm text-neutral-900">{node.title}</div>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-neutral-500 mb-1">Description</div>
-              <div className="text-sm text-neutral-700">{node.description || "No description"}</div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs font-medium text-neutral-500 mb-1">Difficulty</div>
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${DIFFICULTY_STYLES[node.difficulty]}`}>
-                  {node.difficulty}
-                </span>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-neutral-500 mb-1">Estimated Hours</div>
-                <div className="text-sm text-neutral-900">{node.estimatedHours}h</div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1">
-                Title *
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Title <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={basicInfoForm.title}
                 onChange={(e) => setBasicInfoForm({ ...basicInfoForm, title: e.target.value })}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2] focus:border-transparent"
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all"
+                placeholder="Node title"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1">
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                 Description
               </label>
               <textarea
                 value={basicInfoForm.description}
                 onChange={(e) => setBasicInfoForm({ ...basicInfoForm, description: e.target.value })}
-                rows={3}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2] focus:border-transparent"
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all min-h-[80px]"
+                placeholder="Describe what learners will achieve"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                  Difficulty *
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Difficulty
                 </label>
                 <select
                   value={basicInfoForm.difficulty}
                   onChange={(e) => setBasicInfoForm({ ...basicInfoForm, difficulty: e.target.value as NodeDifficulty })}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2] focus:border-transparent"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all"
                 >
                   {DIFFICULTY_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -369,37 +330,89 @@ function NodeDetailSection({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                  Estimated Hours *
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Estimated Hours
                 </label>
                 <input
                   type="number"
-                  min="1"
+                  min="0"
+                  step="0.5"
                   value={basicInfoForm.estimatedHours}
                   onChange={(e) => setBasicInfoForm({ ...basicInfoForm, estimatedHours: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2] focus:border-transparent"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all"
                 />
               </div>
             </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleCancelBasicInfo}
+                className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <X className="inline h-4 w-4 mr-1" />
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveBasicInfo}
+                className="flex-1 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+              >
+                <Check className="inline h-4 w-4 mr-1" />
+                Apply
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs font-medium text-neutral-500 mb-0.5">Title</p>
+                <p className="text-sm text-neutral-900 font-medium">{node.title}</p>
+              </div>
+              <div className="flex gap-3">
+                <div>
+                  <p className="text-xs font-medium text-neutral-500 mb-0.5">Difficulty</p>
+                  <span
+                    className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      DIFFICULTY_STYLES[node.difficulty] ??
+                      "bg-neutral-100 text-neutral-700"
+                    }`}
+                  >
+                    {node.difficulty}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-neutral-500 mb-0.5">Hours</p>
+                  <p className="text-sm text-neutral-900">{node.estimatedHours}h</p>
+                </div>
+              </div>
+            </div>
+            {node.description && (
+              <div>
+                <p className="text-xs font-medium text-neutral-500 mb-0.5">Description</p>
+                <p className="text-sm text-neutral-600 leading-relaxed">
+                  {node.description}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Learning Contents */}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-neutral-900">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-semibold text-neutral-900">
             Learning Contents
-          </h3>
-          {!isAddingContent && (
-            <button
-              onClick={() => setIsAddingContent(true)}
-              className="flex items-center gap-2 rounded-lg bg-[#00bae2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#00bae2]/90"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Content
-            </button>
-          )}
+            <span className="ml-2 text-xs font-normal text-neutral-500">
+              ({contents.length})
+            </span>
+          </h4>
+          <button
+            onClick={() => setIsAddingContent(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Content
+          </button>
         </div>
 
         {/* Add Content Form */}
@@ -413,7 +426,7 @@ function NodeDetailSection({
                 <select
                   value={contentForm.contentType}
                   onChange={(e) => setContentForm({ ...contentForm, contentType: e.target.value as ContentType })}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                 >
                   {CONTENT_TYPE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -429,7 +442,7 @@ function NodeDetailSection({
                   min="0"
                   value={contentForm.duration}
                   onChange={(e) => setContentForm({ ...contentForm, duration: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                 />
               </div>
             </div>
@@ -441,7 +454,7 @@ function NodeDetailSection({
                 type="text"
                 value={contentForm.title}
                 onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
               />
             </div>
             <div>
@@ -452,7 +465,7 @@ function NodeDetailSection({
                 value={contentForm.description}
                 onChange={(e) => setContentForm({ ...contentForm, description: e.target.value })}
                 rows={2}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
               />
             </div>
             <div>
@@ -464,7 +477,7 @@ function NodeDetailSection({
                 value={contentForm.url}
                 onChange={(e) => setContentForm({ ...contentForm, url: e.target.value })}
                 placeholder="https://..."
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -591,7 +604,7 @@ function NodeDetailSection({
                           <select
                             value={editContentForm.contentType}
                             onChange={(e) => setEditContentForm({ ...editContentForm, contentType: e.target.value as ContentType })}
-                            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                           >
                             {CONTENT_TYPE_OPTIONS.map((opt) => (
                               <option key={opt} value={opt}>{opt}</option>
@@ -607,7 +620,7 @@ function NodeDetailSection({
                             min="0"
                             value={editContentForm.duration}
                             onChange={(e) => setEditContentForm({ ...editContentForm, duration: Number(e.target.value) })}
-                            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                           />
                         </div>
                       </div>
@@ -619,7 +632,7 @@ function NodeDetailSection({
                           type="text"
                           value={editContentForm.title}
                           onChange={(e) => setEditContentForm({ ...editContentForm, title: e.target.value })}
-                          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                          className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                         />
                       </div>
                       <div>
@@ -630,7 +643,7 @@ function NodeDetailSection({
                           value={editContentForm.description}
                           onChange={(e) => setEditContentForm({ ...editContentForm, description: e.target.value })}
                           rows={2}
-                          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                          className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                         />
                       </div>
                       <div>
@@ -641,7 +654,7 @@ function NodeDetailSection({
                           type="url"
                           value={editContentForm.url}
                           onChange={(e) => setEditContentForm({ ...editContentForm, url: e.target.value })}
-                          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+                          className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -762,16 +775,24 @@ function ConnectorPanel({
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-neutral-100">
-        <h3 className="text-sm font-semibold text-neutral-900">Connections</h3>
-        {!isAdding && (
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-[#00bae2] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#00bae2]/90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add
-          </button>
-        )}
+        <div>
+          <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+            <LinkIcon className="h-4 w-4 text-[#00bae2]" />
+            Connectors
+          </h3>
+          <p className="text-xs text-neutral-500 mt-0.5">
+            {selectedKey
+              ? `Filtered: ${getNodeName(selectedKey)}`
+              : `All edges (${edges.length})`}
+          </p>
+        </div>
+        <button
+          onClick={() => setIsAdding(true)}
+          className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add
+        </button>
       </div>
 
       {/* Add Edge Form */}
@@ -779,72 +800,71 @@ function ConnectorPanel({
         <div className="p-4 border-b border-neutral-100 space-y-3 bg-neutral-50">
           <div>
             <label className="block text-xs font-medium text-neutral-700 mb-1">
-              From Node *
+              From Node
             </label>
             <select
               value={form.fromKey}
               onChange={(e) => setForm({ ...form, fromKey: e.target.value })}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
             >
-              <option value="">Select node...</option>
-              {nodes.map((n) => {
-                const key = getNodeKey(n);
-                return (
-                  <option key={key} value={key}>
-                    {n.title}
-                  </option>
-                );
-              })}
+              <option value="">Select...</option>
+              {nodes.map((n) => (
+                <option key={getNodeKey(n)} value={getNodeKey(n)}>
+                  {n.title}
+                </option>
+              ))}
             </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-neutral-700 mb-1">
-              To Node *
+              To Node
             </label>
             <select
               value={form.toKey}
               onChange={(e) => setForm({ ...form, toKey: e.target.value })}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
             >
-              <option value="">Select node...</option>
-              {nodes.map((n) => {
-                const key = getNodeKey(n);
-                return (
-                  <option key={key} value={key}>
+              <option value="">Select...</option>
+              {nodes
+                .filter((n) => getNodeKey(n) !== form.fromKey)
+                .map((n) => (
+                  <option key={getNodeKey(n)} value={getNodeKey(n)}>
                     {n.title}
                   </option>
-                );
-              })}
+                ))}
             </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-neutral-700 mb-1">
-              Edge Type *
+              Type
             </label>
             <select
               value={form.edgeType}
-              onChange={(e) => setForm({ ...form, edgeType: e.target.value as EdgeType })}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2]"
+              onChange={(e) =>
+                setForm({ ...form, edgeType: e.target.value as EdgeType })
+              }
+              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
             >
-              {EDGE_TYPE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+              {EDGE_TYPE_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2">
             <button
               onClick={() => setIsAdding(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+              className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
             >
-              <X className="h-3.5 w-3.5" />
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-2 rounded-lg bg-[#00bae2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#00bae2]/90"
+              disabled={!form.fromKey || !form.toKey}
+              className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="h-3.5 w-3.5" />
-              Add
+              Add Connector
             </button>
           </div>
         </div>
@@ -853,9 +873,11 @@ function ConnectorPanel({
       {/* Edge list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {displayedEdges.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <LinkIcon className="h-8 w-8 text-neutral-300 mb-2" />
-            <p className="text-xs text-neutral-500">No connections yet</p>
+          <div className="py-10 text-center">
+            <LinkIcon className="mx-auto h-8 w-8 text-neutral-300 mb-2" />
+            <p className="text-xs text-neutral-500">
+              {selectedKey ? "No connectors for this node" : "No connectors yet"}
+            </p>
           </div>
         ) : (
           displayedEdges.map((edge) => {
@@ -866,29 +888,33 @@ function ConnectorPanel({
             return (
               <div
                 key={edgeId}
-                className="rounded-lg border border-neutral-200 bg-white p-3"
+                className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-3 group hover:border-neutral-300 transition-colors"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${EDGE_TYPE_STYLES[edge.edgeType]}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-700 min-w-0">
+                    <span className="truncate max-w-[90px] font-medium">
+                      {getNodeName(fromKey)}
+                    </span>
+                    <span className="text-neutral-400 shrink-0">→</span>
+                    <span className="truncate max-w-[90px] font-medium">
+                      {getNodeName(toKey)}
+                    </span>
+                  </div>
+                  <span
+                    className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      EDGE_TYPE_STYLES[edge.edgeType] ??
+                      "bg-neutral-100 text-neutral-600"
+                    }`}
+                  >
                     {edge.edgeType}
                   </span>
-                  <button
-                    onClick={() => onDeleteEdge(edgeId)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
                 </div>
-                <div className="text-xs text-neutral-600 space-y-1">
-                  <div>
-                    <span className="text-neutral-500">From:</span>{" "}
-                    <span className="font-medium">{getNodeName(fromKey)}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500">To:</span>{" "}
-                    <span className="font-medium">{getNodeName(toKey)}</span>
-                  </div>
-                </div>
+                <button
+                  onClick={() => onDeleteEdge(edgeId)}
+                  className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-600 transition-all shrink-0"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             );
           })
@@ -915,8 +941,8 @@ function GeneratePopup({ onSubmit, onCancel }: GeneratePopupProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-neutral-900/60 via-neutral-900/50 to-neutral-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl rounded-3xl bg-white p-8 shadow-2xl border border-neutral-200 animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900/70 backdrop-blur-sm p-4 sm:p-6 md:p-8 animate-in fade-in duration-200">
+      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-neutral-200 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
         {/* Header with gradient icon */}
         <div className="flex items-center gap-4 mb-6">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg">
@@ -945,7 +971,7 @@ function GeneratePopup({ onSubmit, onCancel }: GeneratePopupProps) {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Example: Create a Python roadmap for beginners covering variables, data types, loops, functions, and object-oriented programming. Include practical exercises and real-world projects."
             rows={6}
-            className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2] focus:border-transparent placeholder:text-neutral-400 transition-all resize-none"
+            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 placeholder:text-neutral-400 transition-all resize-none"
             autoFocus
           />
           <div className="flex items-center justify-between mt-2">
@@ -1440,7 +1466,7 @@ export function RoadmapGeneratePage() {
                   type="text"
                   value={metadataForm.title}
                   onChange={(e) => setMetadataForm({ ...metadataForm, title: e.target.value })}
-                  className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2] focus:border-transparent transition-all"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all"
                   placeholder="Enter roadmap title..."
                 />
               </div>
@@ -1452,7 +1478,7 @@ export function RoadmapGeneratePage() {
                   value={metadataForm.description}
                   onChange={(e) => setMetadataForm({ ...metadataForm, description: e.target.value })}
                   rows={4}
-                  className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#00bae2] focus:border-transparent transition-all resize-none"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all resize-none"
                   placeholder="Describe what this roadmap covers..."
                 />
               </div>
@@ -1463,34 +1489,38 @@ export function RoadmapGeneratePage() {
 
       {/* ── Graph Editor ── */}
       <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-neutral-100 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-900">
-                Learning Path Graph
-              </h2>
-              <p className="text-xs text-neutral-500 mt-0.5">Visual representation of your roadmap structure</p>
-            </div>
-            <button
-              onClick={handleAddNode}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
-            >
-              <Plus className="h-4 w-4" />
-              Add Node
-            </button>
+        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+          <div>
+            <h2 className="text-base font-bold text-neutral-900">
+              Graph Editor
+            </h2>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              Visualize and manage nodes and connections
+            </p>
           </div>
+          <button
+            onClick={handleAddNode}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            Add Node
+          </button>
         </div>
 
-        <div ref={graphColRef} className="grid grid-cols-[1fr_300px] h-[600px]">
-          <div className="border-r border-neutral-100">
+        <div className="grid grid-cols-5 h-[520px]">
+          {/* Left: Graph */}
+          <div ref={graphColRef} className="col-span-3 p-4 border-r border-neutral-100 h-full">
             <CMSRoadmapGraph
               nodes={editedData.nodes}
               edges={editedData.edges}
               selectedNodeId={selectedNodeId}
               onNodeSelect={setSelectedNodeId}
+              className="h-full"
             />
           </div>
-          <div className="bg-neutral-50">
+
+          {/* Right: Connectors */}
+          <div className="col-span-2 h-full overflow-hidden">
             <ConnectorPanel
               nodes={editedData.nodes}
               edges={editedData.edges}
@@ -1506,7 +1536,7 @@ export function RoadmapGeneratePage() {
       {selectedNode && (
         <div
           key={getNodeKey(selectedNode)}
-          className="rounded-2xl border-2 border-[#00bae2]/30 bg-white shadow-lg p-6 animate-in fade-in slide-in-from-bottom-4 duration-300"
+          className="rounded-2xl border border-[#00bae2]/30 bg-white shadow-sm p-6 animate-in fade-in slide-in-from-bottom-2 duration-200"
         >
           <NodeDetailSection
             node={selectedNode}
@@ -1525,18 +1555,13 @@ export function RoadmapGeneratePage() {
 
       {/* ── Empty state hint ── */}
       {!selectedNode && (
-        <div className="rounded-2xl border-2 border-dashed border-neutral-300 bg-gradient-to-br from-neutral-50 to-white p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-            <CircleDot className="h-8 w-8 text-neutral-400" />
-          </div>
-          <h3 className="text-base font-semibold text-neutral-900 mb-2">
-            No Node Selected
-          </h3>
-          <p className="text-sm text-neutral-600 mb-1">
-            Click on a node in the graph above to view and edit its details
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+          <CircleDot className="mx-auto h-10 w-10 text-neutral-300 mb-3" />
+          <p className="text-sm font-medium text-neutral-500">
+            Click on a node in the graph to view and edit its details
           </p>
-          <p className="text-xs text-neutral-500">
-            You can edit node information, add learning contents, and more
+          <p className="text-xs text-neutral-400 mt-1">
+            Node contents, basic information, and more will appear here
           </p>
         </div>
       )}
