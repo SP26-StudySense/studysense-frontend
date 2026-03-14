@@ -54,7 +54,7 @@ export const routes = {
     // Surveys
     surveys: {
       list: '/surveys',
-      take: (code: string) => `/surveys/${code}`, // Changed to use code instead of id
+      take: (code: string) => `/surveys/${code}`, // Changed to use code instead of idnp
       
     },
 

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { TimerCard } from './components/TimerCard';
 import { TaskSelector, SessionTask } from './components/TaskSelector';
-import { SessionNotes } from './components/SessionNotes';
+import { SessionContent } from './components/SessionContent';
 import { FocusTips } from './components/FocusTips';
 import { SessionSummaryModal } from './components/SessionSummaryModal';
 import { SessionSuccessScreen } from './components/SessionSuccessScreen';
@@ -20,21 +20,22 @@ const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
         category: 'Study Plan',
         subcategory: task.description || '',
         duration: task.estimatedMinutes,
-        // In this UI, checked means task completed.
-        isSelected: task.isCompleted,
+        isActive: Boolean(task.isActive),
+        isCompleted: task.isCompleted,
     }));
 };
 
 export function SessionsPage() {
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const selectedNode = useSessionStore((state) => state.selectedNode);
-    const toggleTaskCompletion = useSessionStore((state) => state.toggleTaskCompletion);
+    const setActiveTask = useSessionStore((state) => state.setActiveTask);
+    const markTaskCompleted = useSessionStore((state) => state.markTaskCompleted);
+    const sessionStatus = useSessionStore((state) => state.sessionStatus);
     const showSummary = useSessionStore((state) => state.showSummary);
-    const setShowSummary = useSessionStore((state) => state.setShowSummary);
     const showSuccess = useSessionStore((state) => state.showSuccess);
     const sessionId = useSessionStore((state) => state.sessionId);
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
-    const { trackClick, trackInteraction } = useAnalytics();
+    const { trackInteraction } = useAnalytics();
 
     // Check for active session on mount (restore interrupted sessions)
     const { data: activeSession, isLoading: isCheckingActive } = useActiveSession({
@@ -52,9 +53,18 @@ export function SessionsPage() {
         ? convertToSessionTasks(selectedTasks)
         : [];
 
-    const handleToggleTask = (taskId: string) => {
-        trackInteraction('toggle_task', { taskId, page: 'sessions' });
-        toggleTaskCompletion(taskId);
+    const canInteractTasks = sessionStatus !== SessionStatus.NOT_STARTED;
+
+    const handleSetActiveTask = (taskId: string) => {
+        if (!canInteractTasks) return;
+        trackInteraction('set_active_task', { taskId, page: 'sessions' });
+        setActiveTask(taskId);
+    };
+
+    const handleCompleteTask = (taskId: string) => {
+        if (!canInteractTasks) return;
+        trackInteraction('complete_task', { taskId, page: 'sessions' });
+        markTaskCompleted(taskId);
     };
 
     // Show success screen (full page)
@@ -95,14 +105,16 @@ export function SessionsPage() {
                         {displayTasks.length > 0 && (
                             <TaskSelector
                                 tasks={displayTasks}
-                                onToggleTask={handleToggleTask}
+                                canInteract={canInteractTasks}
+                                onSetActiveTask={handleSetActiveTask}
+                                onCompleteTask={handleCompleteTask}
                             />
                         )}
                     </div>
 
-                    {/* Right Column - Notes & Tips */}
+                    {/* Right Column - Content & Tips */}
                     <div className="lg:col-span-5 space-y-6">
-                        <SessionNotes />
+                        <SessionContent />
                         <FocusTips />
                     </div>
                 </div>

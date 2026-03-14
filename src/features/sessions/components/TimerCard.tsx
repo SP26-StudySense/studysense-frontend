@@ -83,14 +83,15 @@ export function TimerCard({ className }: TimerCardProps) {
 
     const doStartSession = useCallback(() => {
         setStartError(null);
-
-        const firstTaskId = selectedTasks.length > 0 ? safeNumberId(selectedTasks[0].id) : undefined;
+        const taskIds = selectedTasks
+            .map((task) => safeNumberId(task.id))
+            .filter((id): id is number => typeof id === 'number');
 
         const payload = {
             studyPlanId: safeNumberId(activeStudyPlanId),
             nodeId: selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id),
             moduleId: safeNumberId(selectedNode?.id),
-            taskId: firstTaskId,
+            taskIds: taskIds.length > 0 ? taskIds : undefined,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         };
 
