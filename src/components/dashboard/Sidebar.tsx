@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -48,16 +49,19 @@ export function Sidebar() {
     const { data: studyPlans = [] } = useStudyPlans();
 
     const activeStudyPlanIdStore = useSessionStore((state) => state.activeStudyPlanId);
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
 
     const activeStudyPlanId = (() => {
-        // 1. If we have a stored active ID and we are on dashboard or some other page that doesn't specify ID, use it
-        if (activeStudyPlanIdStore && !pathname.match(/^\/(study-plans|my-roadmap)\/(\d+)/)) {
+        // 1. Extract ID from URL if present in dashboard, study-plans, or my-roadmap
+        const match = pathname.match(/^\/(dashboard|study-plans|my-roadmap)\/(\d+)/);
+        if (match) return match[2];
+        
+        // 2. Use stored active ID if available
+        if (activeStudyPlanIdStore) {
             return activeStudyPlanIdStore;
         }
-
-        const match = pathname.match(/^\/(study-plans|my-roadmap)\/(\d+)/);
-        if (match) return match[2];
-        // Sort by createdAt descending to get the most recent study plan
+        
+        // 3. Fallback: Sort by createdAt descending to get the most recent study plan
         if (studyPlans.length > 0) {
             const sortedPlans = [...studyPlans].sort((a, b) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -67,10 +71,25 @@ export function Sidebar() {
         return null;
     })();
 
+    // Sync pathname ID to store to maintain consistency
+    useEffect(() => {
+        const match = pathname.match(/^\/(dashboard|study-plans|my-roadmap)\/(\d+)/);
+        if (match) {
+            const idFromPath = match[2];
+            if (idFromPath !== activeStudyPlanIdStore) {
+                setActiveStudyPlanId(idFromPath);
+            }
+        }
+    }, [pathname, activeStudyPlanIdStore, setActiveStudyPlanId]);
+
     // Build sidebar items with dynamic study plan and roadmap links
     const sidebarItems = activeStudyPlanId
         ? [
-            baseSidebarItems[0], // Overview
+            {
+                title: 'Overview',
+                href: `/dashboard/${activeStudyPlanId}`,
+                icon: LayoutDashboard,
+            },
             {
                 title: 'Study Schedule',
                 href: `/study-plans/${activeStudyPlanId}`,
@@ -87,8 +106,9 @@ export function Sidebar() {
 
     // Check if a link is active
     const isActive = (href: string) => {
-        if (href === '/dashboard') {
-            return pathname === href;
+        // Exception: Highlight 'Overview' for any dashboard page
+        if (href.startsWith('/dashboard')) {
+            return pathname.startsWith('/dashboard');
         }
         // Specific exception: Don't highlight 'Sessions' when on 'History' page
         if (href === '/sessions' && pathname.startsWith('/sessions/history')) {

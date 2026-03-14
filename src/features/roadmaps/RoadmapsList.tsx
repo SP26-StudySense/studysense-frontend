@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useQueries } from '@tanstack/react-query';
 import { RoadmapCard } from './components/RoadmapCard';
@@ -76,11 +75,6 @@ function useRoadmapNodeCounts(roadmapIds: number[]) {
 }
 
 export function RoadmapsList() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const startRoadmapId = searchParams.get('startRoadmapId');
-    const autoStartTriggered = useRef(false);
-
     const [filters, setFilters] = useState<RoadmapFilters>({
         search: '',
         difficulty: 'all',
@@ -88,36 +82,7 @@ export function RoadmapsList() {
     });
 
     const [previewRoadmap, setPreviewRoadmap] = useState<RoadmapTemplate | null>(null);
-    const [showAutoStartOverlay, setShowAutoStartOverlay] = useState(false);
-    const [autoStartRoadmapTitle, setAutoStartRoadmapTitle] = useState('');
-
-    // useStartLearning instance dedicated to post-survey auto-start
-    const {
-        startLearning: autoStartLearning,
-        currentStep: autoStartStep,
-        error: autoStartError,
-        reset: autoStartReset,
-    } = useStartLearning({
-        onSuccess: () => {
-            setShowAutoStartOverlay(false);
-        },
-        onError: () => {
-            // keep overlay open to show error
-        },
-    });
-
-    const handleAutoStartClose = () => {
-        if (autoStartError && autoStartError.toLowerCase().includes('already exists')) {
-            router.push('/dashboard');
-        }
-        setShowAutoStartOverlay(false);
-        autoStartReset();
-    };
-
-    const handleAutoStartRetry = async () => {
-        autoStartReset();
-        await autoStartLearning(Number(startRoadmapId));
-    };
+    const [previewStartFn, setPreviewStartFn] = useState<(() => void) | null>(null);
 
     // Fetch user's study plans from API
     const { 
@@ -176,23 +141,11 @@ export function RoadmapsList() {
         [studyPlans]
     );
 
-    // Auto-start learning when returning from survey (?startRoadmapId=<id>)
-    useEffect(() => {
-        if (!startRoadmapId || autoStartTriggered.current) return;
-        if (isLoading) return; // wait for roadmaps data
-
-        autoStartTriggered.current = true;
-
-        const roadmapId = Number(startRoadmapId);
-        const roadmapItem = roadmapsData?.roadmaps?.items?.find((r) => r.id === roadmapId);
-        setAutoStartRoadmapTitle(roadmapItem?.title ?? 'Roadmap');
-        setShowAutoStartOverlay(true);
-
-        // Clean the URL so a page refresh doesn't re-trigger
-        router.replace('/roadmaps');
-
-        autoStartLearning(roadmapId);
-    }, [startRoadmapId, isLoading, roadmapsData, autoStartLearning, router]);
+    // Create map of roadmapId -> studyPlanId for existing plans
+    const roadmapToStudyPlanMap = useMemo(
+        () => new Map(studyPlans.map((plan) => [plan.roadmapId, plan.id])),
+        [studyPlans]
+    );
 
     const hasActiveFilters = Boolean(filters.search || filters.difficulty !== 'all' || filters.category !== 'all');
 
@@ -284,8 +237,9 @@ export function RoadmapsList() {
                                 key={roadmap.id}
                                 roadmap={roadmap}
                                 variant="template"
-                                onPreview={() => setPreviewRoadmap(roadmap)}
+                                onPreview={(startFn) => { setPreviewRoadmap(roadmap); setPreviewStartFn(() => startFn); }}
                                 existingRoadmapIds={existingRoadmapIds}
+                                roadmapToStudyPlanMap={roadmapToStudyPlanMap}
                             />
                         ))}
                     </div>
@@ -299,19 +253,10 @@ export function RoadmapsList() {
                 <RoadmapPreviewModal
                     roadmap={previewRoadmap}
                     isOpen={!!previewRoadmap}
-                    onClose={() => setPreviewRoadmap(null)}
+                    onClose={() => { setPreviewRoadmap(null); setPreviewStartFn(null); }}
+                    onStartLearning={previewStartFn ?? undefined}
                 />
             )}
-
-            {/* Auto-start overlay — triggered after returning from ON_START_ROADMAP survey */}
-            <StartLearningOverlay
-                isOpen={showAutoStartOverlay}
-                currentStep={autoStartStep}
-                roadmapTitle={autoStartRoadmapTitle}
-                error={autoStartError || undefined}
-                onRetry={handleAutoStartRetry}
-                onClose={handleAutoStartClose}
-            />
         </div>
     );
 }

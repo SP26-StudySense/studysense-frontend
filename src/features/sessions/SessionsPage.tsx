@@ -3,107 +3,85 @@
 import { useEffect } from 'react';
 import { TimerCard } from './components/TimerCard';
 import { TaskSelector, SessionTask } from './components/TaskSelector';
-import { SessionNotes } from './components/SessionNotes';
+import { SessionContent } from './components/SessionContent';
 import { FocusTips } from './components/FocusTips';
 import { SessionSummaryModal } from './components/SessionSummaryModal';
 import { SessionSuccessScreen } from './components/SessionSuccessScreen';
 import { useSessionStore, SelectedTask } from '@/store/session.store';
-
-// Mock tasks for demonstration (used when no tasks selected from roadmap)
-const MOCK_TASKS: SessionTask[] = [
-    {
-        id: '1',
-        title: 'useEffect for side effects',
-        category: 'React Fundamentals',
-        subcategory: 'State & Hooks',
-        duration: 45,
-        isSelected: true,
-    },
-    {
-        id: '2',
-        title: 'Custom hooks',
-        category: 'React Fundamentals',
-        subcategory: 'State & Hooks',
-        duration: 60,
-        isSelected: false,
-    },
-    {
-        id: '3',
-        title: 'Create pages and layouts',
-        category: 'Next.js Basics',
-        subcategory: 'File-based Routing',
-        duration: 45,
-        isSelected: false,
-    },
-    {
-        id: '4',
-        title: 'Dynamic routes',
-        category: 'Next.js Basics',
-        subcategory: 'File-based Routing',
-        duration: 60,
-        isSelected: false,
-    },
-    {
-        id: '5',
-        title: 'Server Components',
-        category: 'Next.js Basics',
-        subcategory: 'Data Fetching',
-        duration: 45,
-        isSelected: false,
-    },
-];
+import { useActiveSession } from './api/queries';
+import { SessionStatus } from '@/shared/types';
+import { useAnalytics } from '@/shared/hooks/use-analytics';
 
 // Helper to convert SelectedTask to SessionTask format
 const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
     return tasks.map(task => ({
         id: task.id,
         title: task.title,
-        category: 'From Roadmap',
+        category: 'Study Plan',
         subcategory: task.description || '',
         duration: task.estimatedMinutes,
-        isSelected: !task.isCompleted,
+        isActive: Boolean(task.isActive),
+        isCompleted: task.isCompleted,
     }));
 };
 
 export function SessionsPage() {
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const selectedNode = useSessionStore((state) => state.selectedNode);
-    const setSelectedTasks = useSessionStore((state) => state.setSelectedTasks);
-    const toggleTaskCompletion = useSessionStore((state) => state.toggleTaskCompletion);
+    const setActiveTask = useSessionStore((state) => state.setActiveTask);
+    const markTaskCompleted = useSessionStore((state) => state.markTaskCompleted);
+    const sessionStatus = useSessionStore((state) => state.sessionStatus);
     const showSummary = useSessionStore((state) => state.showSummary);
     const showSuccess = useSessionStore((state) => state.showSuccess);
-    const completeSession = useSessionStore((state) => state.completeSession);
+    const sessionId = useSessionStore((state) => state.sessionId);
+    const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
+    const { trackInteraction } = useAnalytics();
 
-    // Initialize with mock tasks if no tasks from roadmap
+    // Check for active session on mount (restore interrupted sessions)
+    const { data: activeSession, isLoading: isCheckingActive } = useActiveSession({
+        enabled: !sessionId, // Only check if we don't already have a session
+    });
+
     useEffect(() => {
-        if (selectedTasks.length === 0) {
-            const mockSelected: SelectedTask[] = MOCK_TASKS.filter(t => t.isSelected).map(t => ({
-                id: t.id,
-                title: t.title,
-                description: `${t.category} › ${t.subcategory}`,
-                estimatedMinutes: t.duration,
-                isCompleted: false,
-            }));
-            setSelectedTasks(mockSelected);
+        if (activeSession && !sessionId) {
+            setActiveSessionFromApi(activeSession);
         }
-    }, [selectedTasks.length, setSelectedTasks]);
+    }, [activeSession, sessionId, setActiveSessionFromApi]);
 
-    // Get display tasks - either from store or mock
+    // Get display tasks
     const displayTasks: SessionTask[] = selectedTasks.length > 0
         ? convertToSessionTasks(selectedTasks)
-        : MOCK_TASKS;
+        : [];
 
-    const handleToggleTask = (taskId: string) => {
-        toggleTaskCompletion(taskId);
+    const canInteractTasks = sessionStatus !== SessionStatus.NOT_STARTED;
+
+    const handleSetActiveTask = (taskId: string) => {
+        if (!canInteractTasks) return;
+        trackInteraction('set_active_task', { taskId, page: 'sessions' });
+        setActiveTask(taskId);
     };
 
-    const handleSaveAndContinue = () => {
-        completeSession();
+    const handleCompleteTask = (taskId: string) => {
+        if (!canInteractTasks) return;
+        trackInteraction('complete_task', { taskId, page: 'sessions' });
+        markTaskCompleted(taskId);
     };
 
     // Show success screen (full page)
     if (showSuccess) {
         return <SessionSuccessScreen isOpen={showSuccess} />;
+    }
+
+    // Loading state while checking for active session
+    if (isCheckingActive && !sessionId) {
+        return (
+            <div className="max-w-[1600px] mx-auto flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                    <p className="text-sm text-neutral-500">Checking for active session...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -124,26 +102,26 @@ export function SessionsPage() {
                     {/* Left Column - Timer & Tasks */}
                     <div className="lg:col-span-7 space-y-6">
                         <TimerCard />
-                        <TaskSelector
-                            tasks={displayTasks}
-                            onToggleTask={handleToggleTask}
-                        />
+                        {displayTasks.length > 0 && (
+                            <TaskSelector
+                                tasks={displayTasks}
+                                canInteract={canInteractTasks}
+                                onSetActiveTask={handleSetActiveTask}
+                                onCompleteTask={handleCompleteTask}
+                            />
+                        )}
                     </div>
 
-                    {/* Right Column - Notes & Tips */}
+                    {/* Right Column - Content & Tips */}
                     <div className="lg:col-span-5 space-y-6">
-                        <SessionNotes />
+                        <SessionContent />
                         <FocusTips />
                     </div>
                 </div>
             </div>
 
             {/* Session Summary Modal */}
-            <SessionSummaryModal
-                isOpen={showSummary}
-                onSaveAndContinue={handleSaveAndContinue}
-            />
+            <SessionSummaryModal isOpen={showSummary} />
         </>
     );
 }
-

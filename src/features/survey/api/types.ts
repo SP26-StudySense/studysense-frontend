@@ -68,6 +68,7 @@ export interface TakeSurveyPayload {
   submittedAt: string | null;
   triggerReason: string;
   answers: AnswerPayload[];
+  roadmapId?: number;
 }
 
 export interface AnswerPayload {

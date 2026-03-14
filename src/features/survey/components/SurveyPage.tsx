@@ -12,9 +12,11 @@ interface SurveyPageProps {
   triggerReason: SurveyTriggerReason;
   /** Path to redirect after submit. Defaults to '/dashboard'. */
   returnTo?: string;
+  /** Roadmap ID for roadmap target survey */
+  roadmapId?: number;
 }
 
-export function SurveyPage({ surveyCode, triggerReason, returnTo }: SurveyPageProps) {
+export function SurveyPage({ surveyCode, triggerReason, returnTo, roadmapId }: SurveyPageProps) {
   const {
     surveyTitle,
     currentQuestionWithOptions,
@@ -33,7 +35,7 @@ export function SurveyPage({ surveyCode, triggerReason, returnTo }: SurveyPagePr
     goToPrevious,
     goToStep,
     handleResponseChange,
-  } = useSurveyPage({ surveyCode, triggerReason, returnTo });
+  } = useSurveyPage({ surveyCode, triggerReason, returnTo, roadmapId });
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoading) {

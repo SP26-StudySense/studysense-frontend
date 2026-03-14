@@ -3,7 +3,7 @@
 import { Sparkles, Home, Map } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/shared/lib/utils';
-import { useSessionStore } from '@/store/session.store';
+import { useSessionStore, useActiveStudyPlanId } from '@/store/session.store';
 
 interface SessionSuccessScreenProps {
     isOpen: boolean;
@@ -13,12 +13,15 @@ interface SessionSuccessScreenProps {
 export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreenProps) {
     const router = useRouter();
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
+    const summaryData = useSessionStore((state) => state.summaryData);
+    const activeStudyPlanId = useActiveStudyPlanId();
 
     if (!isOpen) return null;
 
     const handleBackToDashboard = () => {
         resetSessionFlow();
-        router.push('/dashboard');
+        const dashboardPath = activeStudyPlanId ? `/dashboard/${activeStudyPlanId}` : '/dashboard';
+        router.push(dashboardPath);
     };
 
     const handleViewRoadmap = () => {
@@ -40,9 +43,29 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
 
                 {/* Text */}
                 <h1 className="text-3xl font-bold text-neutral-900 mb-2">Great work!</h1>
-                <p className="text-neutral-500 mb-8">
+                <p className="text-neutral-500 mb-4">
                     Your session has been saved. Keep up the momentum!
                 </p>
+
+                {/* Real stats from API */}
+                {summaryData && (
+                    <div className="flex items-center gap-6 mb-8 p-4 rounded-2xl bg-white/80 border border-neutral-100 shadow-sm">
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-neutral-900">{summaryData.timeStudiedMinutes}</p>
+                            <p className="text-xs text-neutral-500">minutes</p>
+                        </div>
+                        <div className="h-8 w-px bg-neutral-200" />
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-neutral-900">{summaryData.tasksCompleted}/{summaryData.totalTasks}</p>
+                            <p className="text-xs text-neutral-500">tasks</p>
+                        </div>
+                        <div className="h-8 w-px bg-neutral-200" />
+                        <div className="text-center">
+                            <p className="text-2xl font-bold text-amber-600">+{summaryData.xpEarned}</p>
+                            <p className="text-xs text-neutral-500">XP earned</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3">

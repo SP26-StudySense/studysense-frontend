@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play, Clock, Check, Plus, Pencil, Trash2, MoreVertical } from 'lucide-react';
+import { Play, Clock, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
 import { useCreateTask, useUpdateTask, useDeleteTask } from '../api/mutations';
-import { TaskItemInput, TaskStatus } from '../api/types';
+import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
 import { TaskFormModal } from './TaskFormModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 
@@ -17,10 +17,13 @@ export interface ModuleTask {
     estimatedMinutes: number;
     isCompleted: boolean;
     scheduledDate?: string;
+    moduleName?: string; // Added for cross-module date filtering
+    isFromLockedModule?: boolean; // Added to track locked module tasks
 }
 
 export interface ModuleData {
     id: string;
+    roadmapNodeId?: number;
     title: string;
     status: 'completed' | 'in_progress' | 'not_started' | 'locked';
     tasks: ModuleTask[];
@@ -31,15 +34,32 @@ interface ModuleTasksPanelProps {
     onClose: () => void;
     className?: string;
     studyPlanId?: string;
+    filterDate?: Date | null;
+    allTasks?: any[];
+    allModules?: any[];
+    onClearDateFilter?: () => void;
+    isLoadingTasks?: boolean;
 }
 
-export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: ModuleTasksPanelProps) {
+export function ModuleTasksPanel({ 
+    module, 
+    onClose, 
+    className, 
+    studyPlanId, 
+    filterDate, 
+    allTasks = [], 
+    allModules = [], 
+    onClearDateFilter,
+    isLoadingTasks = false
+}: ModuleTasksPanelProps) {
     const router = useRouter();
     const setSelectedNode = useSessionStore((state) => state.setSelectedNode);
     const setSelectedTasks = useSessionStore((state) => state.setSelectedTasks);
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
 
     const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+    const [viewFilter, setViewFilter] = useState<'module' | 'all-tasks' | 'date'>('module');
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
     // Modal states
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -52,6 +72,99 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
     const createTaskMutation = useCreateTask();
     const updateTaskMutation = useUpdateTask();
     const deleteTaskMutation = useDeleteTask();
+
+    // Helper function to get module name by task's studyPlanModuleId
+    const getModuleName = (studyPlanModuleId: number): string => {
+        const foundModule = allModules.find((m: any) => m.id === studyPlanModuleId);
+        return foundModule?.roadmapNodeName || 'Unknown Module';
+    };
+
+    // Helper function to check if a task belongs to a locked module
+    const isTaskFromLockedModule = (studyPlanModuleId: number): boolean => {
+        const foundModule = allModules.find((m: any) => m.id === studyPlanModuleId);
+        return foundModule?.status === 'Locked';
+    };
+
+    // Filter tasks by date if a date is selected
+    const filteredTasks = useMemo(() => {
+        if (!module) return [];
+        
+        // Mode 1: All tasks across all modules
+        if (viewFilter === 'all-tasks') {
+            return allTasks.map((task: TaskItemDto): ModuleTask => ({
+                id: String(task.id),
+                title: task.title,
+                description: task.description,
+                estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
+                isCompleted: task.status === TaskStatus.Completed,
+                scheduledDate: task.scheduledDate,
+                moduleName: getModuleName(task.studyPlanModuleId),
+                isFromLockedModule: isTaskFromLockedModule(task.studyPlanModuleId),
+            }));
+        }
+        
+        // Mode 2: Tasks filtered by selected date (cross-module)
+        if (filterDate && viewFilter === 'date') {
+            return allTasks
+                .filter((task: TaskItemDto) => {
+                    if (!task.scheduledDate) return false;
+                    const taskDate = new Date(task.scheduledDate);
+                    return taskDate.getDate() === filterDate.getDate() &&
+                           taskDate.getMonth() === filterDate.getMonth() &&
+                           taskDate.getFullYear() === filterDate.getFullYear();
+                })
+                .map((task: TaskItemDto): ModuleTask => ({
+                    id: String(task.id),
+                    title: task.title,
+                    description: task.description,
+                    estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
+                    isCompleted: task.status === TaskStatus.Completed,
+                    scheduledDate: task.scheduledDate,
+                    moduleName: getModuleName(task.studyPlanModuleId),
+                    isFromLockedModule: isTaskFromLockedModule(task.studyPlanModuleId),
+                }));
+        }
+
+        // Mode 3: Tasks from current module only (default)
+        // Add isFromLockedModule flag for consistency
+        return module.tasks.map(task => ({
+            ...task,
+            isFromLockedModule: module.status === 'locked',
+        }));
+    }, [module, filterDate, viewFilter, allTasks, allModules]);
+
+    // Total tasks count (all tasks in study plan)
+    const totalTasksCount = allTasks.length;
+
+    // Pre-calculate tasks count for selected date (for dropdown display)
+    const dateTasksCount = useMemo(() => {
+        if (!filterDate) return 0;
+        return allTasks.filter((task: TaskItemDto) => {
+            if (!task.scheduledDate) return false;
+            const taskDate = new Date(task.scheduledDate);
+            return taskDate.getDate() === filterDate.getDate() &&
+                   taskDate.getMonth() === filterDate.getMonth() &&
+                   taskDate.getFullYear() === filterDate.getFullYear();
+        }).length;
+    }, [allTasks, filterDate]);
+
+    // Auto-switch filter when date changes
+    useEffect(() => {
+        if (filterDate && viewFilter === 'module') {
+            setViewFilter('date');
+        } else if (!filterDate && viewFilter === 'date') {
+            setViewFilter('module');
+        }
+    }, [filterDate, viewFilter]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setShowFilterDropdown(false);
+        if (showFilterDropdown) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    }, [showFilterDropdown]);
 
     if (!module) return null;
 
@@ -68,11 +181,12 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
     };
 
     const handleSelectAll = () => {
-        const incompleteTasks = module.tasks.filter(t => !t.isCompleted);
-        if (selectedTaskIds.size === incompleteTasks.length) {
+        // Filter out completed tasks and locked module tasks
+        const selectableTasks = filteredTasks.filter(t => !t.isCompleted && !t.isFromLockedModule);
+        if (selectedTaskIds.size === selectableTasks.length) {
             setSelectedTaskIds(new Set());
         } else {
-            setSelectedTaskIds(new Set(incompleteTasks.map(t => t.id)));
+            setSelectedTaskIds(new Set(selectableTasks.map(t => t.id)));
         }
     };
 
@@ -83,6 +197,7 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
         // Set selected node info
         const nodeInfo: SelectedNodeInfo = {
             id: module.id,
+            roadmapNodeId: module.roadmapNodeId,
             title: module.title,
             planId: studyPlanId || '1',
             planTitle: 'Learning Path',
@@ -90,10 +205,20 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
         setSelectedNode(nodeInfo);
 
         // Get tasks to study - either selected or all incomplete
-        const tasksToStudy: SelectedTask[] = module.tasks
-            .filter(task => selectedTaskIds.size === 0
-                ? !task.isCompleted
-                : selectedTaskIds.has(task.id))
+        // Filter out locked module tasks when in date filter mode
+        const tasksToStudy: SelectedTask[] = filteredTasks
+            .filter(task => {
+                // Exclude tasks from locked modules
+                if (task.isFromLockedModule) return false;
+                
+                // If tasks are selected, only include selected ones
+                if (selectedTaskIds.size > 0) {
+                    return selectedTaskIds.has(task.id);
+                }
+                
+                // Otherwise, include all incomplete tasks
+                return !task.isCompleted;
+            })
             .map(task => ({
                 id: task.id,
                 title: task.title,
@@ -180,12 +305,16 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
     };
 
     const selectedCount = selectedTaskIds.size;
-    const incompleteTasks = module.tasks.filter(t => !t.isCompleted);
-    const totalEstimatedTime = module.tasks
-        .filter(t => selectedTaskIds.size === 0 ? !t.isCompleted : selectedTaskIds.has(t.id))
+    const incompleteTasks = filteredTasks.filter(t => !t.isCompleted && !t.isFromLockedModule);
+    const totalEstimatedTime = filteredTasks
+        .filter(t => {
+            if (t.isFromLockedModule) return false;
+            return selectedTaskIds.size === 0 ? !t.isCompleted : selectedTaskIds.has(t.id);
+        })
         .reduce((sum, t) => sum + t.estimatedMinutes, 0);
 
-    const isLocked = module.status === 'locked';
+    // Module is locked only when viewing current module tasks AND module status is locked
+    const isLocked = module.status === 'locked' && viewFilter === 'module';
     const isFormLoading = createTaskMutation.isPending || updateTaskMutation.isPending;
     const isDeleteLoading = deleteTaskMutation.isPending;
 
@@ -200,29 +329,132 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                             <h2 className="text-xl font-bold text-neutral-900 mb-2">
-                                {module.title}
+                                {viewFilter === 'date' && filterDate ? (
+                                    <>Tasks for {filterDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                                ) : viewFilter === 'all-tasks' ? (
+                                    <>All Tasks</>
+                                ) : (
+                                    <>{module.title}</>
+                                )}
                             </h2>
                             <div className="flex items-center gap-3">
-                                <span className={cn(
-                                    "inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold",
-                                    module.status === 'completed' && "bg-emerald-100 text-emerald-700",
-                                    module.status === 'in_progress' && "bg-violet-100 text-violet-700",
-                                    module.status === 'not_started' && "bg-neutral-100 text-neutral-600",
-                                    module.status === 'locked' && "bg-neutral-100 text-neutral-400"
-                                )}>
-                                    {module.status === 'completed' && 'Completed'}
-                                    {module.status === 'in_progress' && 'In Progress'}
-                                    {module.status === 'not_started' && 'Not Started'}
-                                    {module.status === 'locked' && 'Locked'}
-                                </span>
+                                {viewFilter === 'module' && (
+                                    <span className={cn(
+                                        "inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold",
+                                        module.status === 'completed' && "bg-emerald-100 text-emerald-700",
+                                        module.status === 'in_progress' && "bg-violet-100 text-violet-700",
+                                        module.status === 'not_started' && "bg-neutral-100 text-neutral-600",
+                                        module.status === 'locked' && "bg-neutral-100 text-neutral-400"
+                                    )}>
+                                        {module.status === 'completed' && 'Completed'}
+                                        {module.status === 'in_progress' && 'In Progress'}
+                                        {module.status === 'not_started' && 'Not Started'}
+                                        {module.status === 'locked' && 'Locked'}
+                                    </span>
+                                )}
                                 <span className="flex items-center gap-1 text-sm text-neutral-500">
                                     <Clock className="h-4 w-4" />
-                                    {module.tasks.reduce((sum, t) => sum + t.estimatedMinutes, 0)} min total
+                                    {filteredTasks.reduce((sum, t) => sum + t.estimatedMinutes, 0)} min
                                 </span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {!isLocked && (
+                            {/* Filter Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowFilterDropdown(!showFilterDropdown);
+                                    }}
+                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-neutral-200 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors max-w-xs"
+                                    title={
+                                        viewFilter === 'module' 
+                                            ? `${module.title} (${module.tasks.length})` 
+                                            : viewFilter === 'all-tasks'
+                                                ? `All Tasks (${totalTasksCount})`
+                                                : `Selected Date (${dateTasksCount})`
+                                    }
+                                >
+                                    <Filter className="h-4 w-4 shrink-0" />
+                                    <span className="truncate">
+                                        {viewFilter === 'module' 
+                                            ? module.title
+                                            : viewFilter === 'all-tasks'
+                                                ? 'All Tasks'
+                                                : `Selected Date`
+                                        }
+                                    </span>
+                                    <span className="shrink-0">
+                                        ({viewFilter === 'module' 
+                                            ? module.tasks.length
+                                            : viewFilter === 'all-tasks'
+                                                ? totalTasksCount
+                                                : dateTasksCount
+                                        })
+                                    </span>
+                                    <ChevronDown className="h-3 w-3 shrink-0" />
+                                </button>
+                                {showFilterDropdown && (
+                                    <div 
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-neutral-200 shadow-xl z-10"
+                                    >
+                                        {/* Module Tasks */}
+                                        <button
+                                            onClick={() => {
+                                                setViewFilter('module');
+                                                setShowFilterDropdown(false);
+                                                // Clear date selection when switching to module view
+                                                if (onClearDateFilter) {
+                                                    onClearDateFilter();
+                                                }
+                                            }}
+                                            className={cn(
+                                                "w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 first:rounded-t-xl transition-colors truncate",
+                                                viewFilter === 'module' && "bg-violet-50 text-violet-700 font-semibold"
+                                            )}
+                                            title={`${module.title} (${module.tasks.length})`}
+                                        >
+                                            <span className="truncate">{module.title}</span> ({module.tasks.length})
+                                        </button>
+                                        
+                                        {/* All Tasks */}
+                                        <button
+                                            onClick={() => {
+                                                setViewFilter('all-tasks');
+                                                setShowFilterDropdown(false);
+                                                // Clear date selection when switching to all tasks
+                                                if (onClearDateFilter) {
+                                                    onClearDateFilter();
+                                                }
+                                            }}
+                                            className={cn(
+                                                "w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 border-t border-neutral-100 transition-colors",
+                                                viewFilter === 'all-tasks' && "bg-violet-50 text-violet-700 font-semibold"
+                                            )}
+                                        >
+                                            All Tasks ({totalTasksCount})
+                                        </button>
+                                        
+                                        {/* Selected Date (conditional) */}
+                                        {filterDate && (
+                                            <button
+                                                onClick={() => {
+                                                    setViewFilter('date');
+                                                    setShowFilterDropdown(false);
+                                                }}
+                                                className={cn(
+                                                    "w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 last:rounded-b-xl border-t border-neutral-100 transition-colors",
+                                                    viewFilter === 'date' && "bg-violet-50 text-violet-700 font-semibold"
+                                                )}
+                                            >
+                                                {filterDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ({dateTasksCount})
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {viewFilter === 'module' && !isLocked && (
                                 <button
                                     onClick={handleAddTask}
                                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm font-medium hover:bg-emerald-100 transition-colors"
@@ -255,17 +487,38 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
                                 </div>
                             )}
 
+                            {/* Loading State */}
+                            {isLoadingTasks && filteredTasks.length === 0 && (
+                                <div className="text-center py-8">
+                                    <div className="inline-flex items-center gap-2 text-neutral-400">
+                                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        <span className="text-sm">Loading tasks...</span>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Empty State */}
-                            {module.tasks.length === 0 && (
+                            {!isLoadingTasks && filteredTasks.length === 0 && (
                                 <div className="text-center py-8 text-neutral-400">
-                                    <p className="text-sm">No tasks yet. Click "Add Task" to create one.</p>
+                                    <p className="text-sm">
+                                        {viewFilter === 'date' 
+                                            ? 'No tasks scheduled for this date.' 
+                                            : viewFilter === 'all-tasks'
+                                                ? 'No tasks in this study plan yet.'
+                                                : 'No tasks yet. Click "Add Task" to create one.'
+                                        }
+                                    </p>
                                 </div>
                             )}
 
                             {/* Tasks */}
                             <div className="space-y-2">
-                                {module.tasks.map(task => {
+                                {filteredTasks.map(task => {
                                     const isSelected = selectedTaskIds.has(task.id);
+                                    const isDisabled = task.isCompleted || (task.isFromLockedModule && viewFilter === 'date');
                                     return (
                                         <div
                                             key={task.id}
@@ -273,26 +526,31 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
                                                 "group w-full flex items-start gap-3 text-sm p-4 rounded-2xl transition-all text-left relative",
                                                 task.isCompleted
                                                     ? "bg-neutral-50 opacity-60"
-                                                    : isSelected
-                                                        ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400"
-                                                        : "bg-white/80 border border-neutral-100 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-md"
+                                                    : isDisabled
+                                                        ? "bg-neutral-50/50 opacity-70"
+                                                        : isSelected
+                                                            ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400"
+                                                            : "bg-white/80 border border-neutral-100 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-md"
                                             )}
                                         >
                                             {/* Checkbox Button */}
                                             <button
-                                                onClick={() => !task.isCompleted && handleTaskToggle(task.id)}
-                                                disabled={task.isCompleted}
+                                                onClick={() => !isDisabled && handleTaskToggle(task.id)}
+                                                disabled={isDisabled}
                                                 className="mt-0.5 cursor-pointer disabled:cursor-not-allowed"
+                                                title={task.isFromLockedModule ? "Task from locked module" : undefined}
                                             >
                                                 <div className={cn(
                                                     "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                                                    task.isCompleted
-                                                        ? "bg-emerald-500 border-emerald-500 text-white"
-                                                        : isSelected
+                                                    isDisabled
+                                                        ? "bg-neutral-200 border-neutral-300 text-neutral-400"
+                                                        : task.isCompleted
                                                             ? "bg-emerald-500 border-emerald-500 text-white"
-                                                            : "border-neutral-300"
+                                                            : isSelected
+                                                                ? "bg-emerald-500 border-emerald-500 text-white"
+                                                                : "border-neutral-300"
                                                 )}>
-                                                    {(task.isCompleted || isSelected) && (
+                                                    {(task.isCompleted || isSelected) && !task.isFromLockedModule && (
                                                         <Check className="h-3 w-3" />
                                                     )}
                                                 </div>
@@ -300,12 +558,25 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
 
                                             {/* Content */}
                                             <div className="flex-1 min-w-0">
-                                                <p className={cn(
-                                                    "font-medium",
-                                                    task.isCompleted ? "text-neutral-500" : "text-neutral-800"
-                                                )}>
-                                                    {task.title}
-                                                </p>
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <p className={cn(
+                                                        "font-medium",
+                                                        task.isCompleted ? "text-neutral-500" : "text-neutral-800"
+                                                    )}>
+                                                        {task.title}
+                                                    </p>
+                                                    {task.moduleName && (viewFilter === 'date' || viewFilter === 'all-tasks') && (
+                                                        <span className={cn(
+                                                            "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium",
+                                                            task.isFromLockedModule 
+                                                                ? "bg-neutral-200 text-neutral-500"
+                                                                : "bg-blue-100 text-blue-700"
+                                                        )}>
+                                                            {task.moduleName}
+                                                            {task.isFromLockedModule && " 🔒"}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 {task.description && (
                                                     <p className="text-xs text-neutral-500 mt-0.5">
                                                         {task.description}
@@ -325,7 +596,7 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
                                                 </span>
 
                                                 {/* Action Menu (3-dot dropdown) */}
-                                                {!task.isCompleted && (
+                                                {!task.isCompleted && !task.isFromLockedModule && viewFilter === 'module' && (
                                                     <div className="relative">
                                                         <button
                                                             onClick={(e) => {
@@ -404,15 +675,27 @@ export function ModuleTasksPanel({ module, onClose, className, studyPlanId }: Mo
                     </div>
                 )}
 
-                {/* All Completed Message */}
-                {!isLocked && incompleteTasks.length === 0 && module.tasks.length > 0 && (
+                {/* All Completed or All Locked Message */}
+                {!isLocked && incompleteTasks.length === 0 && filteredTasks.length > 0 && (
                     <div className="p-6 border-t border-neutral-100">
                         <div className="text-center py-4">
-                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 mb-3">
-                                <Check className="h-6 w-6 text-emerald-600" />
-                            </div>
-                            <p className="text-sm font-medium text-neutral-700">All tasks completed!</p>
-                            <p className="text-xs text-neutral-500 mt-1">Great job on finishing this module</p>
+                            {filteredTasks.every(t => t.isCompleted) ? (
+                                <>
+                                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 mb-3">
+                                        <Check className="h-6 w-6 text-emerald-600" />
+                                    </div>
+                                    <p className="text-sm font-medium text-neutral-700">All tasks completed!</p>
+                                    <p className="text-xs text-neutral-500 mt-1">Great job on finishing this module</p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-neutral-100 mb-3">
+                                        <span className="text-2xl">🔒</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-neutral-700">All tasks are from locked modules</p>
+                                    <p className="text-xs text-neutral-500 mt-1">Complete previous modules to unlock these tasks</p>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
