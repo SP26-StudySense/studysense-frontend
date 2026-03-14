@@ -102,7 +102,7 @@ export function useSurveyAutoSave(
   startedAt: Date,
   enabled: boolean = true
 ) {
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSaveRef = useRef<string>('');
 
   useEffect(() => {

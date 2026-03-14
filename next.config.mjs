@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const nextConfig = {
   // React 19 features enabled by default in Next.js 16
   reactStrictMode: true,
