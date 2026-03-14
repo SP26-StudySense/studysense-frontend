@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map, Loader2 } from 'lucide-react';
+import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { useSessionStore, SessionSummaryData } from '@/store/session.store';
+import { useSessionStore } from '@/store/session.store';
 import { useEndSession } from '../api/mutations';
-import { markTaskCompleted } from '../api/api';
 import { SessionEndedReason } from '@/shared/types';
 import { toast } from '@/shared/lib';
 
@@ -20,15 +19,11 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     const sessionId = useSessionStore((state) => state.sessionId);
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
-    const selectedNode = useSessionStore((state) => state.selectedNode);
     const completeSession = useSessionStore((state) => state.completeSession);
     const [hoveredStar, setHoveredStar] = useState(0);
     const [notes, setNotes] = useState('');
 
     const endMutation = useEndSession();
-
-    const { mutateAsync: endSessionApi, isPending } = useEndSession();
-    const endSessionStore = useSessionStore((state) => state.endSession);
 
     if (!isOpen || !summaryData) return null;
 
@@ -39,9 +34,20 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     const handleSaveAndContinue = () => {
         if (!sessionId) return;
 
-        const completedTaskIds = selectedTasks
-            .filter((t) => t.isCompleted)
-            .map((t) => Number(t.id));
+        const tasksPayload = selectedTasks
+            .map((task) => {
+                const taskId = Number(task.id);
+
+                if (!Number.isFinite(taskId) || taskId <= 0) {
+                    return null;
+                }
+
+                return {
+                    taskId,
+                    endTime: task.isCompleted ? task.completedAt || new Date().toISOString() : null,
+                };
+            })
+            .filter((task): task is { taskId: number; endTime: string | null } => task !== null);
 
         endMutation.mutate(
             {
@@ -52,26 +58,11 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                     notes: notes || undefined,
                     actualDurationSeconds: elapsedSeconds,
                     activeSeconds: elapsedSeconds,
-                    tasksCompleted: completedTaskIds.length > 0 ? completedTaskIds : undefined,
+                    tasks: tasksPayload,
                 },
             },
             {
                 onSuccess: async (data) => {
-                    // Update completed tasks to Completed status
-                    const moduleId = Number(selectedNode?.id);
-                    if (moduleId) {
-                        const completedTasks = selectedTasks.filter((t) => t.isCompleted);
-                        await Promise.allSettled(
-                            completedTasks.map((t) =>
-                                markTaskCompleted(Number(t.id), moduleId, {
-                                    title: t.title,
-                                    description: t.description,
-                                    estimatedMinutes: t.estimatedMinutes,
-                                })
-                            )
-                        );
-                    }
-
                     // Refresh task/session data immediately across pages (schedule/history)
                     await Promise.all([
                         queryClient.invalidateQueries({ queryKey: ['tasks'] }),
