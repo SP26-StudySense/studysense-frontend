@@ -11,6 +11,7 @@ interface ContentManagerLayoutProps {
 // Map routes to titles
 function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/content-roadmaps")) return "Roadmap Management";
+  if (pathname.startsWith("/content-quizzes")) return "Quiz Management";
   if (pathname.startsWith("/content-profile")) return "My Profile";
   return "Dashboard";
 }

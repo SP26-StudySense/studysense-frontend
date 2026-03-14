@@ -95,6 +95,11 @@ export const routes = {
       detail: (id: string) => `/content-roadmaps/${id}`,
       create: '/content-roadmaps/create',
     },
+    quizzes: {
+      list: '/content-quizzes',
+      detail: (id: string) => `/content-quizzes/${id}`,
+      create: '/content-quizzes/create',
+    },
     profile: '/content-profile',
   },
 
@@ -130,7 +135,7 @@ export const adminRoutes = ['/admin'];
 
 export const analystRoutes = ['/analyst-survey', '/analyst-triggermapping'];
 
-export const contentManagerRoutes = ['/content-dashboard', '/content-roadmaps', '/content-profile'];
+export const contentManagerRoutes = ['/content-dashboard', '/content-roadmaps', '/content-quizzes', '/content-profile'];
 
 // Helper to check route type
 export function isPublicRoute(pathname: string): boolean {

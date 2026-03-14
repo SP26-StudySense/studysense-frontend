@@ -8,6 +8,7 @@ import {
   UserCog,
   LogOut,
   GitFork,
+  FileQuestion,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -22,6 +23,11 @@ const sidebarItems = [
     title: "My Roadmaps",
     href: "/content-roadmaps",
     icon: Map,
+  },
+  {
+    title: "Quizzes",
+    href: "/content-quizzes",
+    icon: FileQuestion,
   },
   {
     title: "Profile",
