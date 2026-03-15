@@ -2,8 +2,7 @@
  * Content Manager API Types
  * Centralized types for roadmap management
  */
-
-// ==================== Enums ====================
+import type { PaginatedResponse } from "../../../shared/types/api";
 
 export enum NodeDifficulty {
   Beginner = 'Beginner',
@@ -32,6 +31,7 @@ export enum RoadmapStatus {
   Active = 'Active',
   Archived = 'Archived',
 }
+  
 
 // ==================== Core Entities ====================
 
@@ -50,8 +50,8 @@ export interface RoadmapMetadata {
   description: string;
   version: number;
   status: RoadmapStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  createdById: string;
   subject?: LearningSubject;
 }
 
@@ -96,12 +96,13 @@ export interface RoadmapEdge {
 export interface NodeContent {
   id?: number | null; // null for new content, number for existing
   clientId?: string; // Client-side temporary ID
-  nodeId?: number; // Optional, inferred from context
+  nodeId?: number; 
+  nodeClientId?: string; 
   contentType: ContentType;
   title: string;
   description: string;
-  contentUrl: string;
-  thumbnailUrl?: string;
+  url: string;
+  estimatedMinutes?: number;
   duration?: number;
   orderNo?: number;
   isRequired: boolean;
@@ -123,6 +124,9 @@ export interface RoadmapDetail {
     title: string;
     description?: string;
     status?: RoadmapStatus;
+    version?: number;
+    createdAt?: Date;
+    createdById?: string;
   };
   nodes: RoadmapNode[];
   edges: RoadmapEdge[];
@@ -155,6 +159,7 @@ export interface CreateRoadmapGraphRequest {
   };
   nodes: RoadmapNode[]; // Use id=null or omit id
   edges: RoadmapEdge[]; // Use id=null or omit id
+  contents: NodeContent[]; // Use id=null or omit id
 }
 
 /**
@@ -172,9 +177,11 @@ export interface SyncRoadmapGraphRequest {
     title?: string;
     description?: string;
     status?: RoadmapStatus;
+    version?: number;
   };
   nodes: RoadmapNode[]; // Include all nodes you want to keep
   edges: RoadmapEdge[]; // Include all edges you want to keep
+  contents: NodeContent[]; // Include all contents you want to keep
 }
 
 /**
@@ -236,12 +243,7 @@ export interface GenericSuccessResponse {
  * Get roadmaps list response (paginated)
  */
 export interface GetRoadmapsResponse {
-  success: boolean;
-  data: RoadmapMetadata[];
-  pageIndex: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
+  roadmaps: PaginatedResponse<RoadmapMetadata>;
 }
 
 /**
@@ -250,6 +252,7 @@ export interface GetRoadmapsResponse {
  */
 export interface GetRoadmapDetailResponse {
   success: boolean;
+  message?: string;
   data: RoadmapDetail;
 }
 
@@ -364,6 +367,64 @@ export type NewRoadmapEdge = Omit<RoadmapEdge, 'id' | 'roadmapId'> & {
 export type NewNodeContent = Omit<NodeContent, 'id' | 'nodeId'> & {
   clientId?: string;
 };
+
+// Request
+export interface GenerateRoadmapRequest {
+  message: string;
+}
+
+// Roadmap metadata
+export interface AIRoadmapMetadata {
+  subjectId: number;
+  title: string;
+  description?: string | null;
+}
+
+// Node
+export interface AIRoadmapNode {
+  clientId: string;
+  title: string;
+  description: string;
+  difficulty: NodeDifficulty;
+  orderNo?: number;
+}
+
+// Content
+export interface AIRoadmapContent {
+  clientId: string;
+  nodeClientId: string;
+  contentType: ContentType;
+  title: string;
+  description: string;
+  url?: string | null;
+  estimatedMinutes?: number | null;
+  difficulty?: NodeDifficulty;
+  orderNo?: number;
+  isRequired: boolean;
+}
+
+// Edge
+export interface AIRoadmapEdge {
+  fromNodeClientId: string;
+  toNodeClientId: string;
+  edgeType: EdgeType;
+  orderNo?: number | null;
+}
+
+// Raw roadmap from AI
+export interface AIRoadmapGraph {
+  roadmap: AIRoadmapMetadata;
+  nodes: AIRoadmapNode[];
+  contents: AIRoadmapContent[];
+  edges: AIRoadmapEdge[];
+}
+
+// Response
+export interface GenerateRoadmapResponse {
+  success: boolean;
+  message: string;
+  rawroadmap: AIRoadmapGraph;
+}
 
 // ==================== API Operation Types ====================
 
