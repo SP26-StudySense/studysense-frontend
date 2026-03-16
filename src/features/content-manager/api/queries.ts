@@ -13,6 +13,8 @@ import type {
   NodeContent,
   GenerateRoadmapResponse,
   GenerateRoadmapRequest,
+  GetQuizzesByNodeResponse,
+  GetQuizQuestionsByQuizIdResponse,
 } from './types';
 
 // ==================== Query Hooks ====================
@@ -127,6 +129,34 @@ export function useNodeContents(
     queryFn: () => api.generateRoadmapAI(request),
     enabled: !!request.message,
     staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+export function useQuizzesByNode(
+  nodeId: number,
+  pageIndex = 1,
+  pageSize = 10,
+  options?: Omit<UseQueryOptions<GetQuizzesByNodeResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: cmQueryKeys.quizzesByNode(nodeId),
+    queryFn: () => api.getQuizzesByNode({ roadmapNodeId: nodeId, pageIndex, pageSize }),
+    enabled: !!nodeId,
+    staleTime: 0,
+    ...options,
+  });
+}
+
+export function useQuizQuestionsByQuizId(
+  quizId: number,
+  options?: Omit<UseQueryOptions<GetQuizQuestionsByQuizIdResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: cmQueryKeys.quizQuestionsByQuiz(quizId),
+    queryFn: () => api.getQuizQuestionsByQuizId({ quizId }),
+    enabled: !!quizId,
+    staleTime: 0,
     ...options,
   });
 }
