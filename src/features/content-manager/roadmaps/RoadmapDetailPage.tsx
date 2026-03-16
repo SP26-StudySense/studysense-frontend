@@ -17,8 +17,8 @@ import {
   CircleDot,
 } from "lucide-react";
 import { CMSRoadmapGraph } from "../components/CMSRoadmapGraph";
-import { useRoadmapDetail, useNodeContents } from "../api/queries";
-import { useSyncRoadmapGraph } from "../api/mutations";
+import { useRoadmapDetail, useNodeContents, useQuizzesByNode } from "../api/queries";
+import { useCreateQuiz, useDeleteQuiz, useSyncRoadmapGraph } from "../api/mutations";
 import { toast } from "@/shared/lib";
 import type {
   RoadmapDetail,
@@ -81,7 +81,16 @@ function NodeDetailSection({
   onDeleteNode,
   onContentsLoaded,
 }: NodeDetailSectionProps) {
+  const router = useRouter();
   const nodeId = typeof node.id === "number" ? node.id : null;
+  const createQuizMutation = useCreateQuiz();
+  const deleteQuizMutation = useDeleteQuiz();
+
+  // Fetch quizzes for this node (only persisted nodes)
+  const {
+    data: quizzesData,
+    isLoading: isLoadingQuizzes,
+  } = useQuizzesByNode(nodeId ?? 0, 1, 10, { enabled: !!nodeId });
 
   // Fetch contents from API (only for persisted nodes)
   const { data: apiContents, isLoading: isLoadingContents } = useNodeContents(
@@ -112,6 +121,13 @@ function NodeDetailSection({
     difficulty: node.difficulty,
     estimatedHours: node.estimatedHours,
   });
+  const [isCreateQuizOpen, setIsCreateQuizOpen] = useState(false);
+  const [quizForm, setQuizForm] = useState({
+    title: `${node.title} Quiz`,
+    description: "",
+    totalScore: 10,
+  });
+  const [deletingQuizId, setDeletingQuizId] = useState<number | null>(null);
 
   // When the node changes (different node selected), reset form
   const prevNodeKeyRef = useRef(getNodeKey(node));
@@ -125,7 +141,72 @@ function NodeDetailSection({
       difficulty: node.difficulty,
       estimatedHours: node.estimatedHours,
     });
+    setIsCreateQuizOpen(false);
+    setQuizForm({
+      title: `${node.title} Quiz`,
+      description: "",
+      totalScore: 10,
+    });
   }
+
+  const handleOpenCreateQuiz = () => {
+    if (!nodeId) {
+      toast.warning("Please save roadmap first", {
+        description: "Create quiz is available for persisted nodes only.",
+      });
+      return;
+    }
+    setQuizForm({
+      title: `${node.title} Quiz`,
+      description: "",
+      totalScore: 10,
+    });
+    setIsCreateQuizOpen(true);
+  };
+
+  const handleSubmitCreateQuiz = async () => {
+    if (!nodeId) return;
+    try {
+      await createQuizMutation.mutateAsync({
+        createQuizNode: {
+          roadmapNodeId: nodeId,
+          title: quizForm.title.trim() || null,
+          description: quizForm.description.trim() || null,
+          totalScore:
+            Number.isFinite(quizForm.totalScore) && quizForm.totalScore > 0
+              ? quizForm.totalScore
+              : null,
+        },
+      });
+      toast.success("Quiz created successfully");
+      setIsCreateQuizOpen(false);
+    } catch {
+      toast.error("Failed to create quiz", {
+        description: "Please check input and try again.",
+      });
+    }
+  };
+
+  const handleDeleteQuiz = async (quizId: number) => {
+    if (!nodeId) return;
+    const confirmed = window.confirm("Are you sure you want to delete this quiz?");
+    if (!confirmed) return;
+
+    setDeletingQuizId(quizId);
+    try {
+      await deleteQuizMutation.mutateAsync({
+        quizId,
+        roadmapNodeId: nodeId,
+      });
+      toast.success("Quiz deleted successfully");
+    } catch {
+      toast.error("Failed to delete quiz", {
+        description: "Please try again.",
+      });
+    } finally {
+      setDeletingQuizId(null);
+    }
+  };
 
   const handleSaveBasicInfo = () => {
     onUpdate(basicInfoForm);
@@ -227,14 +308,100 @@ function NodeDetailSection({
           </h3>
           <span className="text-sm text-neutral-500">— {node.title}</span>
         </div>
-        <button
-          onClick={onDeleteNode}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors border border-red-200"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete Node
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenCreateQuiz}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+          >
+            {createQuizMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            Create Quiz
+          </button>
+          <button
+            onClick={onDeleteNode}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors border border-red-200"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete Node
+          </button>
+        </div>
       </div>
+
+      {isCreateQuizOpen && (
+        <div className="rounded-xl border border-[#00bae2]/20 bg-[#00bae2]/5 p-4 space-y-3">
+          <div>
+            <h4 className="text-sm font-semibold text-neutral-900">Create Quiz</h4>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              Create a quiz for this roadmap node.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Title
+              </label>
+              <input
+                type="text"
+                value={quizForm.title}
+                onChange={(e) =>
+                  setQuizForm((prev) => ({ ...prev, title: e.target.value }))
+                }
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                placeholder="Quiz title"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Description
+              </label>
+              <textarea
+                value={quizForm.description}
+                onChange={(e) =>
+                  setQuizForm((prev) => ({ ...prev, description: e.target.value }))
+                }
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10 min-h-[80px]"
+                placeholder="Quiz description"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Total Score
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="0.5"
+                value={quizForm.totalScore}
+                onChange={(e) =>
+                  setQuizForm((prev) => ({
+                    ...prev,
+                    totalScore: Number(e.target.value),
+                  }))
+                }
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsCreateQuizOpen(false)}
+              className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitCreateQuiz}
+              disabled={createQuizMutation.isPending}
+              className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+            >
+              {createQuizMutation.isPending ? "Creating..." : "Create Quiz"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Basic Information */}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
@@ -729,6 +896,92 @@ function NodeDetailSection({
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Quizzes */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-semibold text-neutral-900">
+            Quizzes
+            {quizzesData && (
+              <span className="ml-2 text-xs font-normal text-neutral-500">
+                ({quizzesData.totalCount})
+              </span>
+            )}
+          </h4>
+          <button
+            onClick={handleOpenCreateQuiz}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Quiz
+          </button>
+        </div>
+
+        {isLoadingQuizzes && nodeId && (
+          <div className="flex items-center gap-2 py-4 text-sm text-neutral-500">
+            <Loader2 className="h-4 w-4 animate-spin text-[#00bae2]" />
+            Loading quizzes...
+          </div>
+        )}
+
+        {!isLoadingQuizzes && (!quizzesData?.items?.length) ? (
+          <div className="rounded-xl border border-dashed border-neutral-300 p-6 text-center">
+            <p className="text-sm text-neutral-500">No quizzes yet</p>
+            <button
+              onClick={handleOpenCreateQuiz}
+              className="mt-1.5 text-sm text-[#00bae2] hover:underline"
+            >
+              Create the first quiz
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {quizzesData?.items.map((quiz) => (
+              <div
+                key={quiz.id}
+                className="rounded-xl border border-neutral-200 bg-white p-4 hover:border-neutral-300 transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="rounded-md bg-[#00bae2]/10 px-2 py-0.5 text-[10px] font-medium text-[#00bae2]">
+                    Quiz
+                  </span>
+                  {quiz.totalScore != null && (
+                    <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                      {quiz.totalScore} pts
+                    </span>
+                  )}
+                  <button
+                    onClick={() => router.push(`/content-roadmaps/quizzes/${quiz.id}`)}
+                    className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
+                  >
+                    View Detail
+                  </button>
+                  <button
+                    onClick={() => handleDeleteQuiz(quiz.id)}
+                    disabled={deletingQuizId === quiz.id || deleteQuizMutation.isPending}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingQuizId === quiz.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Delete
+                  </button>
+                </div>
+                <p className="text-sm font-semibold text-neutral-900">
+                  {quiz.title ?? "Untitled Quiz"}
+                </p>
+                {quiz.description && (
+                  <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                    {quiz.description}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

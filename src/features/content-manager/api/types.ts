@@ -229,6 +229,178 @@ export interface GetNodeContentsRequest {
   nodeId: number;
 }
 
+// ==================== Quiz Types ====================
+
+/**
+ * Single quiz item returned by the backend
+ */
+export interface QuizItem {
+  id: number;
+  roadmapNodeId: number;
+  title?: string | null;
+  description?: string | null;
+  totalScore?: number | null;
+}
+
+/**
+ * Get all quizzes by roadmap node id request
+ * GET /api/quizzes/roadmapnode/{roadmapNodeId}
+ */
+export interface GetQuizzesByNodeRequest {
+  roadmapNodeId: number;
+  pageIndex?: number;
+  pageSize?: number;
+}
+
+/**
+ * Get all quizzes by roadmap node id response
+ */
+export interface GetQuizzesByNodeResponse {
+  items: QuizItem[];
+  pageIndex: number;
+  pageSize: number;
+  totalPages: number;
+  totalCount: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+/**
+ * Raw backend response for get quizzes by node
+ * GET /api/quizzes/roadmapnode/{roadmapNodeId}
+ */
+export interface GetQuizzesByNodeApiResponse {
+  quizzes?: GetQuizzesByNodeResponse;
+}
+
+/**
+ * Create quiz request
+ * POST /api/quiz
+ */
+export interface CreateQuizRequest {
+  createQuizNode: {
+    roadmapNodeId: number;
+    title?: string | null;
+    description?: string | null;
+    totalScore?: number | null;
+  };
+}
+
+export enum QuizQuestionType {
+  SingleChoice = 0,
+  MultipleChoice = 1,
+  Scale = 2,
+  ShortAnswer = 3,
+}
+
+export interface CreateQuizQuestionOptionInputDto {
+  valueKey: string;
+  displayText: string;
+  isCorrect: boolean;
+  scoreValue?: number | null;
+  orderNo: number;
+}
+
+export interface CreateQuizQuestionWithOptionsDto {
+  quizId: number;
+  questionKey: string;
+  prompt: string;
+  type: QuizQuestionType;
+  scoreWeight: number;
+  orderNo: number;
+  isRequired: boolean;
+  options: CreateQuizQuestionOptionInputDto[];
+}
+
+/**
+ * Create quiz question request
+ * POST /api/quiz-questions
+ */
+export interface CreateQuizQuestionRequest {
+  createQuizQuestionDtos: CreateQuizQuestionWithOptionsDto[];
+}
+
+/**
+ * Get all quiz questions by quiz id request
+ * GET /api/quiz/{quizId}/questions
+ */
+export interface GetQuizQuestionsByQuizIdRequest {
+  quizId: number;
+}
+
+export interface QuizQuestionOptionItem {
+  id: number;
+  questionId: number;
+  valueKey: string;
+  displayText: string;
+  isCorrect: boolean;
+  scoreValue: number;
+  orderNo: number;
+}
+
+export interface QuizQuestionItem {
+  id: number;
+  quizId: number;
+  questionKey: string;
+  prompt: string;
+  type: QuizQuestionType | string;
+  scoreWeight: number;
+  orderNo: number;
+  isRequired: boolean;
+  options: QuizQuestionOptionItem[];
+}
+
+export interface GetQuizQuestionsByQuizIdResponse {
+  quizQuestionDtos: QuizQuestionItem[];
+}
+
+export interface UpdateQuizQuestionDto {
+  questionKey: string;
+  prompt: string;
+  type: QuizQuestionType;
+  scoreWeight: number;
+  orderNo: number;
+  isRequired: boolean;
+}
+
+export interface UpdateQuizQuestionRequest {
+  id: number;
+  quizId: number;
+  updateQuizQuestionDto: UpdateQuizQuestionDto;
+}
+
+export interface UpdateQuizQuestionOptionDto {
+  id: number;
+  valueKey: string;
+  displayText: string;
+  isCorrect: boolean;
+  scoreValue?: number | null;
+  orderNo: number;
+}
+
+export interface UpdateQuizQuestionOptionRequest {
+  id: number;
+  quizId: number;
+  updateQuizQuestionOptionDto: UpdateQuizQuestionOptionDto;
+}
+
+/**
+ * Delete quiz request
+ * DELETE /api/quiz/{quizId}
+ */
+export interface DeleteQuizRequest {
+  quizId: number;
+  roadmapNodeId?: number;
+}
+
+/**
+ * Delete quiz response
+ */
+export interface DeleteQuizResponse {
+  isDeleted?: boolean;
+  message?: string;
+}
+
 // ==================== Response Types ====================
 
 /**
@@ -329,6 +501,37 @@ export type DeleteEdgeResponse = void;
  * Returns 204 No Content (void)
  */
 export type DeleteContentResponse = void;
+
+/**
+ * Create quiz response
+ * POST /api/quiz
+ */
+export type CreateQuizResponse = {
+  id?: number;
+  roadmapNodeId?: number;
+  title?: string;
+  description?: string;
+  totalScore?: number;
+  success?: boolean;
+  message?: string;
+};
+
+/**
+ * Create quiz question response
+ * POST /api/quiz-question
+ */
+export type CreateQuizQuestionResponse = {
+  id?: number;
+  quizId?: number;
+  questionKey?: string;
+  prompt?: string;
+  type?: QuizQuestionType;
+  scoreWeight?: number;
+  orderNo?: number;
+  isRequired?: boolean;
+  success?: boolean;
+  message?: string;
+};
 
 // ==================== Helper Types ====================
 
@@ -439,7 +642,8 @@ export type ApiRequest =
   | DeleteRoadmapRequest
   | DeleteNodeRequest
   | DeleteEdgeRequest
-  | DeleteContentRequest;
+  | DeleteContentRequest
+  | CreateQuizQuestionRequest;
 
 /**
  * All API response types
@@ -454,4 +658,5 @@ export type ApiResponse =
   | DeleteRoadmapResponse
   | DeleteNodeResponse
   | DeleteEdgeResponse
-  | DeleteContentResponse;
+  | DeleteContentResponse
+  | CreateQuizQuestionResponse;
