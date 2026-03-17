@@ -14,16 +14,33 @@ import type {
   DeleteNodeRequest,
   DeleteEdgeRequest,
   DeleteContentRequest,
+  CreateQuizRequest,
+  CreateQuizQuestionRequest,
+  UpdateQuizQuestionRequest,
+  UpdateQuizQuestionOptionRequest,
+  DeleteQuizRequest,
+  GetQuizzesByNodeRequest,
+  GetQuizQuestionsByQuizIdRequest,
   // Response types
   GetRoadmapsResponse,
-  GetRoadmapDetailResponse,
-  GetNodeContentsResponse,
+  RoadmapDetail,
+  NodeContent,
   CreateRoadmapGraphResponse,
   SyncRoadmapGraphResponse,
   DeleteRoadmapResponse,
   DeleteNodeResponse,
   DeleteEdgeResponse,
   DeleteContentResponse,
+  CreateQuizResponse,
+  CreateQuizQuestionResponse,
+  UpdateQuizQuestionDto,
+  UpdateQuizQuestionOptionDto,
+  DeleteQuizResponse,
+  GetQuizzesByNodeApiResponse,
+  GetQuizzesByNodeResponse,
+  GetQuizQuestionsByQuizIdResponse,
+  GenerateRoadmapRequest,
+  GenerateRoadmapResponse,
 } from './types';
 
 // ==================== Utility Functions ====================
@@ -54,6 +71,12 @@ export const cmQueryKeys = {
     [...cmQueryKeys.roadmaps(), 'manager', params] as const,
   nodeContents: (roadmapId: number, nodeId: number) =>
     [...cmQueryKeys.all, 'contents', roadmapId, nodeId] as const,
+  quizzes: () => [...cmQueryKeys.all, 'quizzes'] as const,
+  quizQuestions: () => [...cmQueryKeys.all, 'quiz-questions'] as const,
+  quizzesByNode: (nodeId: number) =>
+    [...cmQueryKeys.all, 'quizzes', 'node', nodeId] as const,
+  quizQuestionsByQuiz: (quizId: number) =>
+    [...cmQueryKeys.all, 'quiz-questions', 'quiz', quizId] as const,
 };
 
 // ==================== API Functions ====================
@@ -68,8 +91,8 @@ export async function getRoadmaps(
 
 export async function getRoadmapDetail(
   roadmapId: number
-): Promise<GetRoadmapDetailResponse> {
-  return get<GetRoadmapDetailResponse>(`/roadmaps/${roadmapId}`);
+): Promise<RoadmapDetail> {
+  return get<RoadmapDetail>(`/roadmaps/${roadmapId}`);
 }
 
 export async function getManagerRoadmaps(
@@ -106,8 +129,8 @@ export async function deleteEdge(
 // Content APIs
 export async function getNodeContents(
   request: GetNodeContentsRequest
-): Promise<GetNodeContentsResponse> {
-  return get<GetNodeContentsResponse>(
+): Promise<NodeContent[]> {
+  return get<NodeContent[]>(
     `/roadmaps/${request.roadmapId}/nodes/${request.nodeId}/contents`
   );
 }
@@ -135,4 +158,75 @@ export async function syncRoadmapGraph(
     `/roadmaps/${roadmapId}/graph`,
     graphData
   );
+}
+
+/**
+ * Generate roadmap using AI
+ * POST /api/ai/create-road-map
+ */
+export async function generateRoadmapAI(
+  request: GenerateRoadmapRequest
+): Promise<GenerateRoadmapResponse> {
+  return post<GenerateRoadmapResponse>("/ai/create-road-map", request);
+}
+
+export async function createQuiz(
+  request: CreateQuizRequest
+): Promise<CreateQuizResponse> {
+  return post<CreateQuizResponse>('/quiz', request);
+}
+
+export async function createQuizQuestion(
+  request: CreateQuizQuestionRequest
+): Promise<CreateQuizQuestionResponse> {
+  return post<CreateQuizQuestionResponse>('/quiz-questions', request);
+}
+
+export async function updateQuizQuestion(
+  request: UpdateQuizQuestionRequest
+): Promise<UpdateQuizQuestionDto> {
+  return put<UpdateQuizQuestionDto>(`/quiz-question/${request.id}`, {
+    updateQuizQuestionDto: request.updateQuizQuestionDto,
+  });
+}
+
+export async function updateQuizQuestionOption(
+  request: UpdateQuizQuestionOptionRequest
+): Promise<UpdateQuizQuestionOptionDto> {
+  return put<UpdateQuizQuestionOptionDto>(`/quiz-question-options/${request.id}`, {
+    updateQuizQuestionOptionDto: request.updateQuizQuestionOptionDto,
+  });
+}
+
+export async function deleteQuiz(
+  request: DeleteQuizRequest
+): Promise<DeleteQuizResponse> {
+  return del<DeleteQuizResponse>(`/quiz/${request.quizId}`);
+}
+
+export async function getQuizzesByNode(
+  request: GetQuizzesByNodeRequest
+): Promise<GetQuizzesByNodeResponse> {
+  const { roadmapNodeId, pageIndex = 1, pageSize = 10 } = request;
+  const response = await get<GetQuizzesByNodeApiResponse>(
+    `/quizzes/roadmapnode/${roadmapNodeId}?pageIndex=${pageIndex}&pageSize=${pageSize}`
+  );
+
+  return (
+    response?.quizzes ?? {
+      items: [],
+      pageIndex,
+      pageSize,
+      totalPages: 0,
+      totalCount: 0,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    }
+  );
+}
+
+export async function getQuizQuestionsByQuizId(
+  request: GetQuizQuestionsByQuizIdRequest
+): Promise<GetQuizQuestionsByQuizIdResponse> {
+  return get<GetQuizQuestionsByQuizIdResponse>(`/quiz/${request.quizId}/questions`);
 }

@@ -9,8 +9,12 @@ import { cmQueryKeys } from './api';
 import type {
   GetRoadmapsParams,
   GetRoadmapsResponse,
-  GetRoadmapDetailResponse,
-  GetNodeContentsResponse,
+  RoadmapDetail,
+  NodeContent,
+  GenerateRoadmapResponse,
+  GenerateRoadmapRequest,
+  GetQuizzesByNodeResponse,
+  GetQuizQuestionsByQuizIdResponse,
 } from './types';
 
 // ==================== Query Hooks ====================
@@ -55,7 +59,7 @@ export function useRoadmaps(
  */
 export function useRoadmapDetail(
   roadmapId: number,
-  options?: Omit<UseQueryOptions<GetRoadmapDetailResponse>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<RoadmapDetail>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
     queryKey: cmQueryKeys.roadmapDetail(roadmapId),
@@ -105,13 +109,54 @@ export function useManagerRoadmaps(
 export function useNodeContents(
   roadmapId: number,
   nodeId: number,
-  options?: Omit<UseQueryOptions<GetNodeContentsResponse>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<NodeContent[]>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
     queryKey: cmQueryKeys.nodeContents(roadmapId, nodeId),
     queryFn: () => api.getNodeContents({ roadmapId, nodeId }),
     enabled: !!roadmapId && !!nodeId,
     staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+ export function useGenerateRoadmapAI(
+  request: GenerateRoadmapRequest,
+  options?: Omit<UseQueryOptions<GenerateRoadmapResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: ['generateRoadmapAI', request],
+    queryFn: () => api.generateRoadmapAI(request),
+    enabled: !!request.message,
+    staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+export function useQuizzesByNode(
+  nodeId: number,
+  pageIndex = 1,
+  pageSize = 10,
+  options?: Omit<UseQueryOptions<GetQuizzesByNodeResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: cmQueryKeys.quizzesByNode(nodeId),
+    queryFn: () => api.getQuizzesByNode({ roadmapNodeId: nodeId, pageIndex, pageSize }),
+    enabled: !!nodeId,
+    staleTime: 0,
+    ...options,
+  });
+}
+
+export function useQuizQuestionsByQuizId(
+  quizId: number,
+  options?: Omit<UseQueryOptions<GetQuizQuestionsByQuizIdResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: cmQueryKeys.quizQuestionsByQuiz(quizId),
+    queryFn: () => api.getQuizQuestionsByQuizId({ quizId }),
+    enabled: !!quizId,
+    staleTime: 0,
     ...options,
   });
 }

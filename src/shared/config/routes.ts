@@ -54,7 +54,8 @@ export const routes = {
     // Surveys
     surveys: {
       list: '/surveys',
-      take: (code: string) => `/surveys/${code}`, // Changed to use code instead of id
+      take: (code: string) => `/surveys/${code}`, // Changed to use code instead of idnp
+      
     },
 
     // Profile & Settings
@@ -93,6 +94,7 @@ export const routes = {
       list: '/content-roadmaps',
       detail: (id: string) => `/content-roadmaps/${id}`,
       create: '/content-roadmaps/create',
+      quizDetail: (quizId: string | number) => `/content-roadmaps/quizzes/${quizId}`,
     },
     profile: '/content-profile',
   },

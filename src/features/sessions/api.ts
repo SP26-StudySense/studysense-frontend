@@ -2,7 +2,7 @@ import { get, post, patch } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { PaginatedResponse, QueryParams } from '@/shared/types';
 import {
-    StudySession,
+    SessionDetailResponse,
     StartSessionRequest,
     StartSessionResponse,
     PauseSessionResponse,
@@ -53,7 +53,7 @@ export const logStudyEvent = (id: string, data: LogEventRequest) => {
 
 // Get full session details by ID
 export const getSessionById = (id: string) => {
-    return get<StudySession>(endpoints.studySessions.byId(id));
+    return get<SessionDetailResponse>(endpoints.studySessions.byId(id));
 };
 
 // Get paginated session history

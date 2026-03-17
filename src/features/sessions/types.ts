@@ -33,7 +33,7 @@ export interface StartSessionRequest {
   studyPlanId?: number;
   nodeId?: number;
   moduleId?: number;
-  taskId?: number;
+  taskIds?: number[];
   plannedDurationSeconds?: number;
   timezone?: string;
 }
@@ -65,6 +65,11 @@ export interface ResumeSessionResponse {
 
 // ─── End Session ────────────────────────────────────────────────────────────
 
+export interface EndSessionTaskInput {
+  taskId: number;
+  endTime: string | null;
+}
+
 export interface EndSessionRequest {
   endedReason?: SessionEndedReason;
   selfRating?: number;
@@ -72,7 +77,7 @@ export interface EndSessionRequest {
   actualDurationSeconds?: number;
   activeSeconds?: number;
   idleSeconds?: number;
-  tasksCompleted?: number[];
+  tasks?: EndSessionTaskInput[];
   focusScore?: number;
   fatigueScore?: number;
 }

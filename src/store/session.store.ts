@@ -11,6 +11,8 @@ export interface SelectedTask {
   description?: string;
   estimatedMinutes: number;
   isCompleted: boolean;
+  isActive?: boolean;
+  completedAt?: string | null;
 }
 
 // Node info from roadmap
@@ -39,7 +41,8 @@ interface SessionState {
   selectedTasks: SelectedTask[];
   setSelectedNode: (node: SelectedNodeInfo | null) => void;
   setSelectedTasks: (tasks: SelectedTask[]) => void;
-  toggleTaskCompletion: (taskId: string) => void;
+  setActiveTask: (taskId: string) => void;
+  markTaskCompleted: (taskId: string) => void;
 
   // Active Context
   activeStudyPlanId: string | null;
@@ -102,13 +105,62 @@ export const useSessionStore = create<SessionState>()(
       selectedNode: null,
       selectedTasks: [],
       setSelectedNode: (node) => set({ selectedNode: node }),
-      setSelectedTasks: (tasks) => set({ selectedTasks: tasks }),
-      toggleTaskCompletion: (taskId) => {
-        const { selectedTasks } = get();
+      setSelectedTasks: (tasks) => {
         set({
-          selectedTasks: selectedTasks.map((task) =>
-            task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task
-          ),
+          selectedTasks: tasks.map((task) => ({
+            ...task,
+            isCompleted: Boolean(task.isCompleted),
+            isActive: Boolean(task.isActive) && !task.isCompleted,
+            completedAt: task.isCompleted ? task.completedAt || new Date().toISOString() : null,
+          })),
+        });
+      },
+      setActiveTask: (taskId) => {
+        const { sessionStatus, selectedTasks } = get();
+
+        if (sessionStatus === SessionStatus.NOT_STARTED) {
+          return;
+        }
+
+        set({
+          selectedTasks: selectedTasks.map((task) => ({
+            ...task,
+            isActive: !task.isCompleted && task.id === taskId,
+          })),
+        });
+      },
+      markTaskCompleted: (taskId) => {
+        const { sessionStatus, selectedTasks } = get();
+
+        if (sessionStatus === SessionStatus.NOT_STARTED) {
+          return;
+        }
+
+        let nextActiveId: string | null = null;
+
+        const updatedTasks = selectedTasks.map((task) => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              isCompleted: true,
+              completedAt: task.completedAt || new Date().toISOString(),
+              isActive: false,
+            };
+          }
+
+          return task;
+        });
+
+        const firstIncomplete = updatedTasks.find((task) => !task.isCompleted);
+        if (firstIncomplete) {
+          nextActiveId = firstIncomplete.id;
+        }
+
+        set({
+          selectedTasks: updatedTasks.map((task) => ({
+            ...task,
+            isActive: nextActiveId !== null && task.id === nextActiveId,
+          })),
         });
       },
 
@@ -173,8 +225,16 @@ export const useSessionStore = create<SessionState>()(
                   description: t.description,
                   estimatedMinutes: t.estimatedMinutes,
                   isCompleted: t.isCompleted,
+                  isActive: false,
+                  completedAt: t.isCompleted ? new Date().toISOString() : null,
                 }))
               : [];
+
+        const hasActive = selectedTasks.some((task) => task.isActive && !task.isCompleted);
+        const firstIncomplete = selectedTasks.find((task) => !task.isCompleted);
+        const activeTaskId = hasActive
+          ? selectedTasks.find((task) => task.isActive && !task.isCompleted)?.id
+          : firstIncomplete?.id;
 
         set({
           sessionId,
@@ -183,7 +243,10 @@ export const useSessionStore = create<SessionState>()(
           elapsedSeconds: 0,
           pauseCount: 0,
           pauseSeconds: 0,
-          selectedTasks: selectedTasks,
+          selectedTasks: selectedTasks.map((task) => ({
+            ...task,
+            isActive: Boolean(activeTaskId) && task.id === activeTaskId,
+          })),
         });
       },
 
