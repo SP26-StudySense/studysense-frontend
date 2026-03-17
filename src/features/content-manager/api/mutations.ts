@@ -15,8 +15,11 @@ import type {
   SyncRoadmapGraphRequest,
   CreateQuizRequest,
   CreateQuizQuestionRequest,
+  CreateAiQuizQuestionsRequest,
   UpdateQuizQuestionRequest,
   UpdateQuizQuestionOptionRequest,
+  DeleteQuizQuestionRequest,
+  DeleteQuizQuestionOptionRequest,
   DeleteQuizRequest,
   DeleteRoadmapResponse,
   DeleteNodeResponse,
@@ -26,8 +29,11 @@ import type {
   SyncRoadmapGraphResponse,
   CreateQuizResponse,
   CreateQuizQuestionResponse,
+  CreateAiQuizQuestionsResponse,
   UpdateQuizQuestionDto,
   UpdateQuizQuestionOptionDto,
+  DeleteQuizQuestionResponse,
+  DeleteQuizQuestionOptionResponse,
   DeleteQuizResponse,
 } from './types';
 
@@ -340,6 +346,27 @@ export function useCreateQuizQuestion(
   });
 }
 
+export function useCreateAiQuizQuestions(
+  options?: UseMutationOptions<
+    CreateAiQuizQuestionsResponse,
+    Error,
+    CreateAiQuizQuestionsRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.createAiQuizQuestions,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizQuestions() });
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
 export function useUpdateQuizQuestion(
   options?: UseMutationOptions<
     UpdateQuizQuestionDto,
@@ -371,6 +398,46 @@ export function useUpdateQuizQuestionOption(
 
   return useMutation({
     mutationFn: api.updateQuizQuestionOption,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useDeleteQuizQuestion(
+  options?: UseMutationOptions<
+    DeleteQuizQuestionResponse,
+    Error,
+    DeleteQuizQuestionRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.deleteQuizQuestion,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useDeleteQuizQuestionOption(
+  options?: UseMutationOptions<
+    DeleteQuizQuestionOptionResponse,
+    Error,
+    DeleteQuizQuestionOptionRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.deleteQuizQuestionOption,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),

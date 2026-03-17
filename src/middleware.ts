@@ -35,6 +35,20 @@ const API_PROXY_PREFIX = '/api/proxy';
 // Backend API URL - HTTPS port 7243
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7243/api';
 
+function buildBackendTargetUrl(apiPath: string, search: string): string {
+    const trimmedApiBase = BACKEND_API_URL.replace(/\/$/, '');
+
+    if (apiPath.startsWith('/ai/')) {
+        const backendRoot = trimmedApiBase.endsWith('/api')
+            ? trimmedApiBase.slice(0, -4)
+            : trimmedApiBase;
+
+        return `${backendRoot}${apiPath}${search}`;
+    }
+
+    return `${trimmedApiBase}${apiPath}${search}`;
+}
+
 /**
  * Handle API proxy requests
  * Forward requests from /api/proxy/* to backend API
@@ -44,7 +58,7 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
     // Remove the /api/proxy prefix to get the actual API path
     const apiPath = pathname.replace(API_PROXY_PREFIX, '');
-    const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
+    const targetUrl = buildBackendTargetUrl(apiPath, search);
 
     console.log('[Proxy] Request:', {
         method: request.method,
