@@ -16,11 +16,15 @@ import type {
   DeleteContentRequest,
   CreateQuizRequest,
   CreateQuizQuestionRequest,
+  CreateAiQuizQuestionsRequest,
   UpdateQuizQuestionRequest,
   UpdateQuizQuestionOptionRequest,
+  DeleteQuizQuestionRequest,
+  DeleteQuizQuestionOptionRequest,
   DeleteQuizRequest,
   GetQuizzesByNodeRequest,
   GetQuizQuestionsByQuizIdRequest,
+  GetQuizByIdRequest,
   // Response types
   GetRoadmapsResponse,
   RoadmapDetail,
@@ -33,12 +37,16 @@ import type {
   DeleteContentResponse,
   CreateQuizResponse,
   CreateQuizQuestionResponse,
+  CreateAiQuizQuestionsResponse,
   UpdateQuizQuestionDto,
   UpdateQuizQuestionOptionDto,
+  DeleteQuizQuestionResponse,
+  DeleteQuizQuestionOptionResponse,
   DeleteQuizResponse,
   GetQuizzesByNodeApiResponse,
   GetQuizzesByNodeResponse,
   GetQuizQuestionsByQuizIdResponse,
+  GetQuizByIdResponse,
   GenerateRoadmapRequest,
   GenerateRoadmapResponse,
 } from './types';
@@ -77,6 +85,8 @@ export const cmQueryKeys = {
     [...cmQueryKeys.all, 'quizzes', 'node', nodeId] as const,
   quizQuestionsByQuiz: (quizId: number) =>
     [...cmQueryKeys.all, 'quiz-questions', 'quiz', quizId] as const,
+  quizById: (quizId: number) =>
+    [...cmQueryKeys.all, 'quizzes', 'detail', quizId] as const,
 };
 
 // ==================== API Functions ====================
@@ -182,6 +192,12 @@ export async function createQuizQuestion(
   return post<CreateQuizQuestionResponse>('/quiz-questions', request);
 }
 
+export async function createAiQuizQuestions(
+  request: CreateAiQuizQuestionsRequest
+): Promise<CreateAiQuizQuestionsResponse> {
+  return post<CreateAiQuizQuestionsResponse>('/ai/create-quiz-questions', request);
+}
+
 export async function updateQuizQuestion(
   request: UpdateQuizQuestionRequest
 ): Promise<UpdateQuizQuestionDto> {
@@ -196,6 +212,18 @@ export async function updateQuizQuestionOption(
   return put<UpdateQuizQuestionOptionDto>(`/quiz-question-options/${request.id}`, {
     updateQuizQuestionOptionDto: request.updateQuizQuestionOptionDto,
   });
+}
+
+export async function deleteQuizQuestion(
+  request: DeleteQuizQuestionRequest
+): Promise<DeleteQuizQuestionResponse> {
+  return del<DeleteQuizQuestionResponse>(`/quiz-question/${request.id}`);
+}
+
+export async function deleteQuizQuestionOption(
+  request: DeleteQuizQuestionOptionRequest
+): Promise<DeleteQuizQuestionOptionResponse> {
+  return del<DeleteQuizQuestionOptionResponse>(`/quiz-question-options/${request.id}`);
 }
 
 export async function deleteQuiz(
@@ -229,4 +257,10 @@ export async function getQuizQuestionsByQuizId(
   request: GetQuizQuestionsByQuizIdRequest
 ): Promise<GetQuizQuestionsByQuizIdResponse> {
   return get<GetQuizQuestionsByQuizIdResponse>(`/quiz/${request.quizId}/questions`);
+}
+
+export async function getQuizById(
+  request: GetQuizByIdRequest
+): Promise<GetQuizByIdResponse> {
+  return get<GetQuizByIdResponse>(`/quiz/${request.quizId}?id=${request.quizId}`);
 }

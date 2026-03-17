@@ -954,7 +954,11 @@ function NodeDetailSection({
                     </span>
                   )}
                   <button
-                    onClick={() => router.push(`/content-roadmaps/quizzes/${quiz.id}`)}
+                    onClick={() =>
+                      router.push(
+                        `/content-roadmaps/quizzes/${quiz.id}?roadmapId=${roadmapId}&roadmapNodeId=${quiz.roadmapNodeId}`
+                      )
+                    }
                     className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
                   >
                     View Detail
