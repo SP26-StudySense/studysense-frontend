@@ -55,7 +55,6 @@ export const routes = {
     surveys: {
       list: '/surveys',
       take: (code: string) => `/surveys/${code}`, // Changed to use code instead of id
-      initial: '/surveys/initial-survey',
     },
 
     // Profile & Settings
