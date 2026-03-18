@@ -10,6 +10,7 @@ interface RoadmapPreviewModalProps {
     roadmap: RoadmapTemplate;
     isOpen: boolean;
     onClose: () => void;
+    onStartLearning?: () => void;
 }
 
 const difficultyColors = {
@@ -20,7 +21,7 @@ const difficultyColors = {
 
 type TabType = 'overview' | 'roadmap';
 
-export function RoadmapPreviewModal({ roadmap, isOpen, onClose }: RoadmapPreviewModalProps) {
+export function RoadmapPreviewModal({ roadmap, isOpen, onClose, onStartLearning }: RoadmapPreviewModalProps) {
     const Icon = LucideIcons[roadmap.icon as keyof typeof LucideIcons] as React.ComponentType<{ className?: string }> || LucideIcons.Map;
     const [activeTab, setActiveTab] = useState<TabType>('overview');
 
@@ -158,7 +159,7 @@ export function RoadmapPreviewModal({ roadmap, isOpen, onClose }: RoadmapPreview
                     <button
                         onClick={() => {
                             onClose();
-                            window.location.href = `/surveys/second-survey`;
+                            onStartLearning?.();
                         }}
                         className="flex-1 px-6 py-3 rounded-2xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8d0] transition-colors shadow-lg shadow-[#00bae2]/20"
                     >

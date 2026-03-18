@@ -13,12 +13,28 @@ import type {
   DeleteContentRequest,
   CreateRoadmapGraphRequest,
   SyncRoadmapGraphRequest,
+  CreateQuizRequest,
+  CreateQuizQuestionRequest,
+  CreateAiQuizQuestionsRequest,
+  UpdateQuizQuestionRequest,
+  UpdateQuizQuestionOptionRequest,
+  DeleteQuizQuestionRequest,
+  DeleteQuizQuestionOptionRequest,
+  DeleteQuizRequest,
   DeleteRoadmapResponse,
   DeleteNodeResponse,
   DeleteEdgeResponse,
   DeleteContentResponse,
   CreateRoadmapGraphResponse,
   SyncRoadmapGraphResponse,
+  CreateQuizResponse,
+  CreateQuizQuestionResponse,
+  CreateAiQuizQuestionsResponse,
+  UpdateQuizQuestionDto,
+  UpdateQuizQuestionOptionDto,
+  DeleteQuizQuestionResponse,
+  DeleteQuizQuestionOptionResponse,
+  DeleteQuizResponse,
 } from './types';
 
 // ==================== Delete Mutations ====================
@@ -280,6 +296,171 @@ export function useSyncRoadmapGraph(
         queryKey: cmQueryKeys.roadmapDetail(variables.roadmapId),
       });
       queryClient.invalidateQueries({ queryKey: cmQueryKeys.roadmaps() });
+    },
+    ...options,
+  });
+}
+
+export function useCreateQuiz(
+  options?: UseMutationOptions<
+    CreateQuizResponse,
+    Error,
+    CreateQuizRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.createQuiz,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizzes() });
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizzesByNode(variables.createQuizNode.roadmapNodeId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useCreateQuizQuestion(
+  options?: UseMutationOptions<
+    CreateQuizQuestionResponse,
+    Error,
+    CreateQuizQuestionRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.createQuizQuestion,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizQuestions() });
+      const firstQuizId = variables.createQuizQuestionDtos[0]?.quizId;
+      if (firstQuizId != null) {
+        queryClient.invalidateQueries({
+          queryKey: cmQueryKeys.quizQuestionsByQuiz(firstQuizId),
+        });
+      }
+    },
+    ...options,
+  });
+}
+
+export function useCreateAiQuizQuestions(
+  options?: UseMutationOptions<
+    CreateAiQuizQuestionsResponse,
+    Error,
+    CreateAiQuizQuestionsRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.createAiQuizQuestions,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizQuestions() });
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useUpdateQuizQuestion(
+  options?: UseMutationOptions<
+    UpdateQuizQuestionDto,
+    Error,
+    UpdateQuizQuestionRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.updateQuizQuestion,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useUpdateQuizQuestionOption(
+  options?: UseMutationOptions<
+    UpdateQuizQuestionOptionDto,
+    Error,
+    UpdateQuizQuestionOptionRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.updateQuizQuestionOption,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useDeleteQuizQuestion(
+  options?: UseMutationOptions<
+    DeleteQuizQuestionResponse,
+    Error,
+    DeleteQuizQuestionRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.deleteQuizQuestion,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useDeleteQuizQuestionOption(
+  options?: UseMutationOptions<
+    DeleteQuizQuestionOptionResponse,
+    Error,
+    DeleteQuizQuestionOptionRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.deleteQuizQuestionOption,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizQuestionsByQuiz(variables.quizId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useDeleteQuiz(
+  options?: UseMutationOptions<DeleteQuizResponse, Error, DeleteQuizRequest>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.deleteQuiz,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizzes() });
+      if (variables.roadmapNodeId != null) {
+        queryClient.invalidateQueries({
+          queryKey: cmQueryKeys.quizzesByNode(variables.roadmapNodeId),
+        });
+      }
     },
     ...options,
   });

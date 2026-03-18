@@ -6,6 +6,8 @@ import { useQueries } from '@tanstack/react-query';
 import { RoadmapCard } from './components/RoadmapCard';
 import { SearchFilterBar } from './components/SearchFilterBar';
 import { RoadmapPreviewModal } from './components/RoadmapPreviewModal';
+import { StartLearningOverlay } from './components/StartLearningOverlay';
+import { useStartLearning } from './hooks/useStartLearning';
 import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
@@ -80,6 +82,7 @@ export function RoadmapsList() {
     });
 
     const [previewRoadmap, setPreviewRoadmap] = useState<RoadmapTemplate | null>(null);
+    const [previewStartFn, setPreviewStartFn] = useState<(() => void) | null>(null);
 
     // Fetch user's study plans from API
     const { 
@@ -135,6 +138,12 @@ export function RoadmapsList() {
     // Create set of roadmap IDs that already have study plans
     const existingRoadmapIds = useMemo(
         () => new Set(studyPlans.map((plan) => plan.roadmapId)),
+        [studyPlans]
+    );
+
+    // Create map of roadmapId -> studyPlanId for existing plans
+    const roadmapToStudyPlanMap = useMemo(
+        () => new Map(studyPlans.map((plan) => [plan.roadmapId, plan.id])),
         [studyPlans]
     );
 
@@ -228,8 +237,9 @@ export function RoadmapsList() {
                                 key={roadmap.id}
                                 roadmap={roadmap}
                                 variant="template"
-                                onPreview={() => setPreviewRoadmap(roadmap)}
+                                onPreview={(startFn) => { setPreviewRoadmap(roadmap); setPreviewStartFn(() => startFn); }}
                                 existingRoadmapIds={existingRoadmapIds}
+                                roadmapToStudyPlanMap={roadmapToStudyPlanMap}
                             />
                         ))}
                     </div>
@@ -243,7 +253,8 @@ export function RoadmapsList() {
                 <RoadmapPreviewModal
                     roadmap={previewRoadmap}
                     isOpen={!!previewRoadmap}
-                    onClose={() => setPreviewRoadmap(null)}
+                    onClose={() => { setPreviewRoadmap(null); setPreviewStartFn(null); }}
+                    onStartLearning={previewStartFn ?? undefined}
                 />
             )}
         </div>

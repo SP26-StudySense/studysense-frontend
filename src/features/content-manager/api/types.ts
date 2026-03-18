@@ -2,8 +2,7 @@
  * Content Manager API Types
  * Centralized types for roadmap management
  */
-
-// ==================== Enums ====================
+import type { PaginatedResponse } from "../../../shared/types/api";
 
 export enum NodeDifficulty {
   Beginner = 'Beginner',
@@ -32,6 +31,7 @@ export enum RoadmapStatus {
   Active = 'Active',
   Archived = 'Archived',
 }
+  
 
 // ==================== Core Entities ====================
 
@@ -50,8 +50,8 @@ export interface RoadmapMetadata {
   description: string;
   version: number;
   status: RoadmapStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  createdById: string;
   subject?: LearningSubject;
 }
 
@@ -96,12 +96,13 @@ export interface RoadmapEdge {
 export interface NodeContent {
   id?: number | null; // null for new content, number for existing
   clientId?: string; // Client-side temporary ID
-  nodeId?: number; // Optional, inferred from context
+  nodeId?: number; 
+  nodeClientId?: string; 
   contentType: ContentType;
   title: string;
   description: string;
-  contentUrl: string;
-  thumbnailUrl?: string;
+  url: string;
+  estimatedMinutes?: number;
   duration?: number;
   orderNo?: number;
   isRequired: boolean;
@@ -123,6 +124,9 @@ export interface RoadmapDetail {
     title: string;
     description?: string;
     status?: RoadmapStatus;
+    version?: number;
+    createdAt?: Date;
+    createdById?: string;
   };
   nodes: RoadmapNode[];
   edges: RoadmapEdge[];
@@ -155,6 +159,7 @@ export interface CreateRoadmapGraphRequest {
   };
   nodes: RoadmapNode[]; // Use id=null or omit id
   edges: RoadmapEdge[]; // Use id=null or omit id
+  contents: NodeContent[]; // Use id=null or omit id
 }
 
 /**
@@ -172,9 +177,11 @@ export interface SyncRoadmapGraphRequest {
     title?: string;
     description?: string;
     status?: RoadmapStatus;
+    version?: number;
   };
   nodes: RoadmapNode[]; // Include all nodes you want to keep
   edges: RoadmapEdge[]; // Include all edges you want to keep
+  contents: NodeContent[]; // Include all contents you want to keep
 }
 
 /**
@@ -222,6 +229,211 @@ export interface GetNodeContentsRequest {
   nodeId: number;
 }
 
+// ==================== Quiz Types ====================
+
+/**
+ * Single quiz item returned by the backend
+ */
+export interface QuizItem {
+  id: number;
+  roadmapNodeId: number;
+  title?: string | null;
+  description?: string | null;
+  totalScore?: number | null;
+}
+
+/**
+ * Get quiz by id request
+ * GET /api/quiz/{quizId}
+ */
+export interface GetQuizByIdRequest {
+  quizId: number;
+}
+
+/**
+ * Get quiz by id response
+ * Mirrors GetQuizByIdResult from the backend
+ */
+export interface GetQuizByIdResponse {
+  quizDto: QuizItem | null;
+}
+
+/**
+ * Get all quizzes by roadmap node id request
+ * GET /api/quizzes/roadmapnode/{roadmapNodeId}
+ */
+export interface GetQuizzesByNodeRequest {
+  roadmapNodeId: number;
+  pageIndex?: number;
+  pageSize?: number;
+}
+
+/**
+ * Get all quizzes by roadmap node id response
+ */
+export interface GetQuizzesByNodeResponse {
+  items: QuizItem[];
+  pageIndex: number;
+  pageSize: number;
+  totalPages: number;
+  totalCount: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+/**
+ * Raw backend response for get quizzes by node
+ * GET /api/quizzes/roadmapnode/{roadmapNodeId}
+ */
+export interface GetQuizzesByNodeApiResponse {
+  quizzes?: GetQuizzesByNodeResponse;
+}
+
+/**
+ * Create quiz request
+ * POST /api/quiz
+ */
+export interface CreateQuizRequest {
+  createQuizNode: {
+    roadmapNodeId: number;
+    title?: string | null;
+    description?: string | null;
+    totalScore?: number | null;
+  };
+}
+
+export enum QuizQuestionType {
+  SingleChoice = 0,
+  MultipleChoice = 1,
+  Scale = 2,
+  ShortAnswer = 3,
+}
+
+export interface CreateQuizQuestionOptionInputDto {
+  valueKey: string;
+  displayText: string;
+  isCorrect: boolean;
+  scoreValue?: number | null;
+  orderNo: number;
+}
+
+export interface CreateQuizQuestionWithOptionsDto {
+  quizId: number;
+  questionKey: string;
+  prompt: string;
+  type: QuizQuestionType;
+  scoreWeight: number;
+  orderNo: number;
+  isRequired: boolean;
+  options: CreateQuizQuestionOptionInputDto[];
+}
+
+/**
+ * Create quiz question request
+ * POST /api/quiz-questions
+ */
+export interface CreateQuizQuestionRequest {
+  createQuizQuestionDtos: CreateQuizQuestionWithOptionsDto[];
+}
+
+export interface CreateAiQuizQuestionsRequest {
+  quizId: number;
+  roadmapId: number;
+  roadmapNodeId: number;
+  questionCount?: number;
+}
+
+/**
+ * Get all quiz questions by quiz id request
+ * GET /api/quiz/{quizId}/questions
+ */
+export interface GetQuizQuestionsByQuizIdRequest {
+  quizId: number;
+}
+
+export interface QuizQuestionOptionItem {
+  id: number;
+  questionId: number;
+  valueKey: string;
+  displayText: string;
+  isCorrect: boolean;
+  scoreValue: number;
+  orderNo: number;
+}
+
+export interface QuizQuestionItem {
+  id: number;
+  quizId: number;
+  questionKey: string;
+  prompt: string;
+  type: QuizQuestionType | string;
+  scoreWeight: number;
+  orderNo: number;
+  isRequired: boolean;
+  options: QuizQuestionOptionItem[];
+}
+
+export interface GetQuizQuestionsByQuizIdResponse {
+  quizQuestionDtos: QuizQuestionItem[];
+}
+
+export interface UpdateQuizQuestionDto {
+  questionKey: string;
+  prompt: string;
+  type: QuizQuestionType;
+  scoreWeight: number;
+  orderNo: number;
+  isRequired: boolean;
+}
+
+export interface UpdateQuizQuestionRequest {
+  id: number;
+  quizId: number;
+  updateQuizQuestionDto: UpdateQuizQuestionDto;
+}
+
+export interface UpdateQuizQuestionOptionDto {
+  id: number;
+  valueKey: string;
+  displayText: string;
+  isCorrect: boolean;
+  scoreValue?: number | null;
+  orderNo: number;
+}
+
+export interface UpdateQuizQuestionOptionRequest {
+  id: number;
+  quizId: number;
+  updateQuizQuestionOptionDto: UpdateQuizQuestionOptionDto;
+}
+
+export interface DeleteQuizQuestionRequest {
+  id: number;
+  quizId: number;
+}
+
+export interface DeleteQuizQuestionOptionRequest {
+  id: number;
+  quizId: number;
+}
+
+/**
+ * Delete quiz request
+ * DELETE /api/quiz/{quizId}
+ */
+export interface DeleteQuizRequest {
+  quizId: number;
+  roadmapNodeId?: number;
+}
+
+/**
+ * Delete quiz response
+ */
+export interface DeleteQuizResponse {
+  isDeleted?: boolean;
+  message?: string;
+}
+
 // ==================== Response Types ====================
 
 /**
@@ -236,12 +448,7 @@ export interface GenericSuccessResponse {
  * Get roadmaps list response (paginated)
  */
 export interface GetRoadmapsResponse {
-  success: boolean;
-  data: RoadmapMetadata[];
-  pageIndex: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
+  roadmaps: PaginatedResponse<RoadmapMetadata>;
 }
 
 /**
@@ -250,6 +457,7 @@ export interface GetRoadmapsResponse {
  */
 export interface GetRoadmapDetailResponse {
   success: boolean;
+  message?: string;
   data: RoadmapDetail;
 }
 
@@ -326,6 +534,74 @@ export type DeleteEdgeResponse = void;
  * Returns 204 No Content (void)
  */
 export type DeleteContentResponse = void;
+export type DeleteQuizQuestionResponse = void;
+export type DeleteQuizQuestionOptionResponse = void;
+
+/**
+ * Create quiz response
+ * POST /api/quiz
+ */
+export type CreateQuizResponse = {
+  id?: number;
+  roadmapNodeId?: number;
+  title?: string;
+  description?: string;
+  totalScore?: number;
+  success?: boolean;
+  message?: string;
+};
+
+/**
+ * Create quiz question response
+ * POST /api/quiz-question
+ */
+export type CreateQuizQuestionResponse = {
+  id?: number;
+  quizId?: number;
+  questionKey?: string;
+  prompt?: string;
+  type?: QuizQuestionType;
+  scoreWeight?: number;
+  orderNo?: number;
+  isRequired?: boolean;
+  success?: boolean;
+  message?: string;
+};
+
+export interface AiQuizQuestionOptionItem {
+  id?: number;
+  questionId?: number;
+  valueKey?: string;
+  displayText?: string;
+  isCorrect?: boolean;
+  scoreValue?: number | null;
+  orderNo?: number;
+}
+
+export interface AiQuizQuestionItem {
+  id?: number;
+  quizId?: number;
+  questionKey?: string;
+  prompt?: string;
+  type?: QuizQuestionType | string | number;
+  scoreWeight?: number;
+  orderNo?: number;
+  isRequired?: boolean;
+  options?: AiQuizQuestionOptionItem[];
+}
+
+export interface CreateAiQuizQuestionsResponse {
+  success?: boolean;
+  message?: string;
+  questions?: AiQuizQuestionItem[];
+  quizQuestionDtos?: AiQuizQuestionItem[];
+  generatedQuestions?: AiQuizQuestionItem[];
+  quizQuestions?: AiQuizQuestionItem[];
+  items?: AiQuizQuestionItem[];
+  result?: Record<string, unknown> | null;
+  payload?: Record<string, unknown> | null;
+  [key: string]: unknown;
+}
 
 // ==================== Helper Types ====================
 
@@ -365,6 +641,64 @@ export type NewNodeContent = Omit<NodeContent, 'id' | 'nodeId'> & {
   clientId?: string;
 };
 
+// Request
+export interface GenerateRoadmapRequest {
+  message: string;
+}
+
+// Roadmap metadata
+export interface AIRoadmapMetadata {
+  subjectId: number;
+  title: string;
+  description?: string | null;
+}
+
+// Node
+export interface AIRoadmapNode {
+  clientId: string;
+  title: string;
+  description: string;
+  difficulty: NodeDifficulty;
+  orderNo?: number;
+}
+
+// Content
+export interface AIRoadmapContent {
+  clientId: string;
+  nodeClientId: string;
+  contentType: ContentType;
+  title: string;
+  description: string;
+  url?: string | null;
+  estimatedMinutes?: number | null;
+  difficulty?: NodeDifficulty;
+  orderNo?: number;
+  isRequired: boolean;
+}
+
+// Edge
+export interface AIRoadmapEdge {
+  fromNodeClientId: string;
+  toNodeClientId: string;
+  edgeType: EdgeType;
+  orderNo?: number | null;
+}
+
+// Raw roadmap from AI
+export interface AIRoadmapGraph {
+  roadmap: AIRoadmapMetadata;
+  nodes: AIRoadmapNode[];
+  contents: AIRoadmapContent[];
+  edges: AIRoadmapEdge[];
+}
+
+// Response
+export interface GenerateRoadmapResponse {
+  success: boolean;
+  message: string;
+  rawroadmap: AIRoadmapGraph;
+}
+
 // ==================== API Operation Types ====================
 
 /**
@@ -378,7 +712,11 @@ export type ApiRequest =
   | DeleteRoadmapRequest
   | DeleteNodeRequest
   | DeleteEdgeRequest
-  | DeleteContentRequest;
+  | DeleteContentRequest
+  | CreateQuizQuestionRequest
+  | CreateAiQuizQuestionsRequest
+  | DeleteQuizQuestionRequest
+  | DeleteQuizQuestionOptionRequest;
 
 /**
  * All API response types
@@ -393,4 +731,8 @@ export type ApiResponse =
   | DeleteRoadmapResponse
   | DeleteNodeResponse
   | DeleteEdgeResponse
-  | DeleteContentResponse;
+  | DeleteContentResponse
+  | DeleteQuizQuestionResponse
+  | DeleteQuizQuestionOptionResponse
+  | CreateQuizQuestionResponse
+  | CreateAiQuizQuestionsResponse;

@@ -36,6 +36,8 @@ interface UseSurveyPageOptions {
   triggerReason: SurveyTriggerReason;
   /** Path to redirect to after the survey is submitted. Defaults to '/dashboard'. */
   returnTo?: string;
+  /** Roadmap ID for roadmap target survey */
+  roadmapId?: number;
 }
 
 export interface UseSurveyPageReturn {
@@ -81,6 +83,7 @@ export function useSurveyPage({
   surveyCode,
   triggerReason,
   returnTo = '/dashboard',
+  roadmapId,
 }: UseSurveyPageOptions): UseSurveyPageReturn {
   const queryClient = useQueryClient();
 
@@ -146,7 +149,8 @@ export function useSurveyPage({
     questionTypes,
     startedAt,
     triggerReason,
-    returnTo
+    returnTo,
+    roadmapId
   );
 
   // ── Submission handler (API call only — validation lives in navigation) ───

@@ -5,8 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
 interface CalendarViewProps {
-    selectedDate: Date;
-    onDateSelect: (date: Date) => void;
+    selectedDate: Date | null;
+    onDateSelect: (date: Date | null) => void;
     taskDates?: Date[]; // Dates that have tasks
     className?: string;
 }
@@ -17,7 +17,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 
 export function CalendarView({ selectedDate, onDateSelect, taskDates = [], className }: CalendarViewProps) {
     const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly');
-    const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
+    const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate || new Date()));
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
@@ -50,6 +50,7 @@ export function CalendarView({ selectedDate, onDateSelect, taskDates = [], class
     };
 
     const isSelected = (date: Date) => {
+        if (!selectedDate) return false;
         return date.getDate() === selectedDate.getDate() &&
             date.getMonth() === selectedDate.getMonth() &&
             date.getFullYear() === selectedDate.getFullYear();
@@ -73,7 +74,12 @@ export function CalendarView({ selectedDate, onDateSelect, taskDates = [], class
     const jumpToToday = () => {
         const today = new Date();
         setCurrentMonth(today);
-        onDateSelect(today);
+        // If today is already selected, deselect it; otherwise select it
+        if (selectedDate && isSelected(today)) {
+            onDateSelect(null);
+        } else {
+            onDateSelect(today);
+        }
     };
 
     const days = getDaysInMonth(currentMonth);
@@ -154,7 +160,14 @@ export function CalendarView({ selectedDate, onDateSelect, taskDates = [], class
                     <div key={index} className="aspect-square p-1">
                         {date && (
                             <button
-                                onClick={() => onDateSelect(date)}
+                                onClick={() => {
+                                    // Toggle selection: if same date clicked, deselect (set to null)
+                                    if (isSelected(date)) {
+                                        onDateSelect(null);
+                                    } else {
+                                        onDateSelect(date);
+                                    }
+                                }}
                                 className={cn(
                                     "w-full h-full flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-all duration-300 relative",
                                     isSelected(date)

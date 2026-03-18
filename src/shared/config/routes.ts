@@ -100,6 +100,7 @@ export const routes = {
       list: '/content-roadmaps',
       detail: (id: string) => `/content-roadmaps/${id}`,
       create: '/content-roadmaps/create',
+      quizDetail: (quizId: string | number) => `/content-roadmaps/quizzes/${quizId}`,
     },
     profile: '/content-profile',
   },
