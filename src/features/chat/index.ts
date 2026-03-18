@@ -5,4 +5,6 @@ export { ChatToggleButton } from './components/ChatToggleButton';
 export { ChatMessageList } from './components/ChatMessageList';
 export { ChatInput } from './components/ChatInput';
 export { AttachmentPicker } from './components/AttachmentPicker';
+export { ChatWorkspace } from './components/ChatWorkspace';
+export * from './api';
 export * from './types';

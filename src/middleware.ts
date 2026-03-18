@@ -35,6 +35,16 @@ const API_PROXY_PREFIX = '/api/proxy';
 // Backend API URL - HTTPS port 7243
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7243/api';
 
+function getBackendRootUrl(apiUrl: string): string {
+    return apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
+}
+
+const BACKEND_ROOT_URL = getBackendRootUrl(BACKEND_API_URL);
+
+function isChatApiPath(apiPath: string): boolean {
+    return apiPath.startsWith('/ai/chat');
+}
+
 /**
  * Handle API proxy requests
  * Forward requests from /api/proxy/* to backend API
@@ -44,12 +54,15 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
     // Remove the /api/proxy prefix to get the actual API path
     const apiPath = pathname.replace(API_PROXY_PREFIX, '');
-    const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
+    const useRootBaseForChat = isChatApiPath(apiPath);
+    const targetBase = useRootBaseForChat ? BACKEND_ROOT_URL : BACKEND_API_URL;
+    const targetUrl = `${targetBase}${apiPath}${search}`;
 
     console.log('[Proxy] Request:', {
         method: request.method,
         pathname,
         apiPath,
+        targetBase,
         targetUrl,
     });
 
@@ -95,6 +108,33 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
             headers,
             body,
         });
+
+        if (isChatApiPath(apiPath)) {
+            console.log('[Proxy][Chat] Forwarded request:', {
+                method: request.method,
+                apiPath,
+                targetUrl,
+                status: response.status,
+                statusText: response.statusText,
+            });
+        }
+
+        if (!response.ok && isChatApiPath(apiPath)) {
+            let backendErrorBody = '';
+            try {
+                backendErrorBody = await response.clone().text();
+            } catch {
+                backendErrorBody = '[Proxy][Chat] Cannot read error body';
+            }
+
+            console.error('[Proxy][Chat] Backend non-2xx response:', {
+                method: request.method,
+                targetUrl,
+                status: response.status,
+                statusText: response.statusText,
+                body: backendErrorBody,
+            });
+        }
 
         // Handle 401 - Token expired, try to refresh
         if (response.status === 401 && refreshToken && !pathname.includes('/auth/refresh')) {

@@ -7,6 +7,7 @@ import {
     BookOpen,
     Map,
     Calendar,
+    MessageSquare,
     LogOut,
     GitFork,
     History
@@ -34,6 +35,11 @@ const baseSidebarItems = [
         title: 'Sessions',
         href: '/sessions',
         icon: Calendar,
+    },
+    {
+        title: 'Chat',
+        href: '/chat',
+        icon: MessageSquare,
     },
     {
         title: 'History',
@@ -81,7 +87,7 @@ export function Sidebar() {
                 href: `/my-roadmap/${activeStudyPlanId}`,
                 icon: Map,
             },
-            ...baseSidebarItems.slice(2), // Sessions, History
+            ...baseSidebarItems.slice(2), // Sessions, Chat, History
         ]
         : baseSidebarItems;
 

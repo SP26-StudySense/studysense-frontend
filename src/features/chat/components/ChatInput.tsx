@@ -101,7 +101,7 @@ export function ChatInput({
                         onChange={(e) => setMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
                         onInput={handleInput}
-                        placeholder="Nhập tin nhắn..."
+                        placeholder="Type your message..."
                         disabled={disabled}
                         rows={1}
                         className={cn(

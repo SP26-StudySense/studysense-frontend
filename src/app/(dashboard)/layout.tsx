@@ -17,6 +17,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/study-plans')) return 'Study Plans';
   if (pathname.startsWith('/my-roadmap')) return 'My Roadmap';
   if (pathname.startsWith('/roadmaps')) return 'Roadmaps';
+  if (pathname.startsWith('/chat')) return 'Chat';
   if (pathname === '/sessions/history') return 'Session History';
   if (pathname.startsWith('/sessions')) return 'Sessions';
   if (pathname.startsWith('/community')) return 'Community';
@@ -27,6 +28,7 @@ function getPageTitle(pathname: string): string {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
+  const showChatbot = pathname.startsWith('/study-plans');
 
   return (
     <AuthGuard>
@@ -95,9 +97,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </main>
 
-          {/* Chat AI Popup */}
-          <ChatToggleButton />
-          <ChatPopup />
+          {/* Chat AI Popup (only for Study Plans pages) */}
+          {showChatbot && (
+            <>
+              <ChatToggleButton />
+              <ChatPopup />
+            </>
+          )}
         </div>
       </ChatProvider>
     </AuthGuard>
