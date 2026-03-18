@@ -1,80 +1,84 @@
-/**
- * Chat AI Types
- * Types for the Chat AI popup feature
- */
-
-// Chat message role
 export type MessageRole = 'user' | 'assistant';
 
-// Attachment types for tasks and modules
 export type AttachmentType = 'task' | 'module';
 
-// Chat attachment - can be a task or module
 export interface ChatAttachment {
     id: string;
     type: AttachmentType;
     title: string;
-    moduleId?: string;
-    taskId?: string;
+    moduleId?: number;
+    taskId?: number;
 }
 
-// Single chat message
+export interface ChatContextPayload {
+    moduleIds: number[];
+    taskIds: number[];
+}
+
 export interface ChatMessage {
     id: string;
-    planId: string;
+    conversationId: string;
     role: MessageRole;
     content: string;
-    attachments?: ChatAttachment[];
     createdAt: string;
+    context?: ChatContextPayload | null;
+    attachments?: ChatAttachment[];
 }
 
-// Chat session for a plan
-export interface ChatSession {
-    planId: string;
-    messages: ChatMessage[];
-    lastUpdated: string;
+export interface ChatConversation {
+    id: string;
+    userId: string;
+    roadmapId: number;
+    title: string;
+    createdAt: string;
+    lastMessageAt: string;
+    isActive: boolean;
 }
 
-// Chat context state
+export interface AvailableModule {
+    id: number;
+    title: string;
+    taskCount?: number;
+    status?: string;
+}
+
+export interface AvailableTask {
+    id: number;
+    title: string;
+    moduleId?: number;
+    moduleTitle?: string;
+    isCompleted?: boolean;
+}
+
 export interface ChatState {
     isOpen: boolean;
-    currentPlanId: string;
+    roadmapId: number | null;
     messages: ChatMessage[];
+    conversations: ChatConversation[];
+    selectedConversationId: string | null;
     pendingAttachments: ChatAttachment[];
+    availableModules: AvailableModule[];
+    availableTasks: AvailableTask[];
     isLoading: boolean;
     isAttachmentPickerOpen: boolean;
+    isConversationLoading: boolean;
+    isHistoryLoading: boolean;
+    isCreatingConversation: boolean;
 }
 
-// Chat context actions
 export interface ChatActions {
     openChat: () => void;
     closeChat: () => void;
     toggleChat: () => void;
-    sendMessage: (content: string) => void;
+    sendMessage: (content: string) => Promise<void>;
     addAttachment: (attachment: ChatAttachment) => void;
     removeAttachment: (attachmentId: string) => void;
     clearAttachments: () => void;
     openAttachmentPicker: () => void;
     closeAttachmentPicker: () => void;
-    loadHistory: (planId: string) => void;
+    selectConversation: (conversationId: string) => void;
+    createConversation: () => Promise<void>;
     clearHistory: () => void;
 }
 
-// Combined context type
-export interface ChatContextType extends ChatState, ChatActions { }
-
-// Mock module data for attachment picker
-export interface MockModule {
-    id: string;
-    title: string;
-    status: 'completed' | 'in_progress' | 'not_started' | 'locked';
-    taskCount: number;
-}
-
-// Mock task data for attachment picker
-export interface MockTask {
-    id: string;
-    moduleId: string;
-    title: string;
-    isCompleted: boolean;
-}
+export interface ChatContextType extends ChatState, ChatActions {}

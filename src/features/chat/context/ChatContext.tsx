@@ -1,150 +1,373 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+
+import { toast } from '@/shared/lib/toast';
+import { queryKeys } from '@/shared/api/query-keys';
+import { useStudyPlan, useStudyPlans, useTasksByPlan } from '@/features/study-plan/api/queries';
+import { useRoadmapGraph } from '@/features/roadmaps/api/queries';
+import { useCurrentUser } from '@/features/auth/api/queries';
+import { useSessionStore } from '@/store/session.store';
+
 import {
-    ChatState,
-    ChatActions,
+    useChatConversations,
+    useChatHistory,
+    useCreateChatConversation,
+    useSendChatMessage,
+} from '../api';
+import { mapConversationDto, mapHistoryMessageDto } from '../utils/mappers';
+import { resolveChatRouteContext } from '../utils/route-context';
+import {
+    AvailableModule,
+    AvailableTask,
+    ChatAttachment,
     ChatContextType,
     ChatMessage,
-    ChatAttachment,
-    ChatSession
+    ChatState,
 } from '../types';
-import { generateMockAIResponse } from '../utils/mock-responses';
 
-// Local storage key prefix
-const CHAT_HISTORY_KEY_PREFIX = 'studysense_chat_history_';
-
-// Default plan ID for demo
-const DEFAULT_PLAN_ID = 'plan-1';
-
-// Initial state
 const initialState: ChatState = {
     isOpen: false,
-    currentPlanId: DEFAULT_PLAN_ID,
+    roadmapId: null,
     messages: [],
+    conversations: [],
+    selectedConversationId: null,
     pendingAttachments: [],
+    availableModules: [],
+    availableTasks: [],
     isLoading: false,
     isAttachmentPickerOpen: false,
+    isConversationLoading: false,
+    isHistoryLoading: false,
+    isCreatingConversation: false,
 };
 
-// Create context
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Generate unique ID
-const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const generateId = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-// Provider component
 export function ChatProvider({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+    const queryClient = useQueryClient();
     const [state, setState] = useState<ChatState>(initialState);
+    const { data: currentUser } = useCurrentUser({ enabled: true });
+    const activeStudyPlanId = useSessionStore((store) => store.activeStudyPlanId);
+    const selectedSessionTasks = useSessionStore((store) => store.selectedTasks);
 
-    // Load chat history from localStorage
-    const loadHistory = useCallback((planId: string) => {
-        try {
-            const key = `${CHAT_HISTORY_KEY_PREFIX}${planId}`;
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                const session: ChatSession = JSON.parse(stored);
-                setState(prev => ({
-                    ...prev,
-                    currentPlanId: planId,
-                    messages: session.messages,
-                }));
-            } else {
-                setState(prev => ({
-                    ...prev,
-                    currentPlanId: planId,
-                    messages: [],
-                }));
-            }
-        } catch (error) {
-            console.error('Failed to load chat history:', error);
+    const routeContext = useMemo(() => resolveChatRouteContext(pathname), [pathname]);
+    const studyPlanId = routeContext.studyPlanId ?? activeStudyPlanId;
+
+    const { data: studyPlans = [] } = useStudyPlans();
+    const { data: studyPlan } = useStudyPlan(studyPlanId ?? undefined);
+
+    const fallbackRoadmapId = studyPlans[0]?.roadmapId ?? null;
+    const fallbackRoadmapTitle = studyPlans[0]?.roadmapTitle;
+
+    const resolvedRoadmapId = routeContext.directRoadmapId ?? studyPlan?.roadmapId ?? null;
+
+    const { data: roadmapGraph } = useRoadmapGraph(resolvedRoadmapId);
+    const { data: tasksByPlan = [] } = useTasksByPlan(studyPlanId ?? undefined);
+
+    const availableModules = useMemo<AvailableModule[]>(() => {
+        if (!roadmapGraph?.nodes) {
+            return [];
         }
-    }, []);
 
-    // Save chat history to localStorage
-    const saveHistory = useCallback((planId: string, messages: ChatMessage[]) => {
-        try {
-            const key = `${CHAT_HISTORY_KEY_PREFIX}${planId}`;
-            const session: ChatSession = {
-                planId,
-                messages,
-                lastUpdated: new Date().toISOString(),
-            };
-            localStorage.setItem(key, JSON.stringify(session));
-        } catch (error) {
-            console.error('Failed to save chat history:', error);
+        const taskCountMap = new Map<number, number>();
+        if (studyPlan?.modules && tasksByPlan.length > 0) {
+            const studyPlanModuleMap = new Map(
+                studyPlan.modules.map((module) => [module.id, module.roadmapNodeId])
+            );
+
+            tasksByPlan.forEach((task) => {
+                const moduleId = studyPlanModuleMap.get(task.studyPlanModuleId);
+                if (moduleId == null) {
+                    return;
+                }
+                taskCountMap.set(moduleId, (taskCountMap.get(moduleId) ?? 0) + 1);
+            });
         }
-    }, []);
 
-    // Load history on mount
+        const statusByNode = new Map(
+            (studyPlan?.modules ?? []).map((module) => [module.roadmapNodeId, module.status])
+        );
+
+        return roadmapGraph.nodes.map((node) => ({
+            id: node.id,
+            title: node.title,
+            taskCount: taskCountMap.get(node.id) ?? 0,
+            status: statusByNode.get(node.id) ?? undefined,
+        }));
+    }, [roadmapGraph?.nodes, studyPlan?.modules, tasksByPlan]);
+
+    const availableTasks = useMemo<AvailableTask[]>(() => {
+        if (tasksByPlan.length > 0 && studyPlan?.modules) {
+            const moduleIdByStudyPlanModuleId = new Map(
+                studyPlan.modules.map((module) => [module.id, module.roadmapNodeId])
+            );
+            const moduleTitleById = new Map(availableModules.map((module) => [module.id, module.title]));
+
+            return tasksByPlan.map((task) => {
+                const moduleId = moduleIdByStudyPlanModuleId.get(task.studyPlanModuleId);
+                return {
+                    id: task.id,
+                    title: task.title,
+                    moduleId,
+                    moduleTitle: moduleId ? moduleTitleById.get(moduleId) : undefined,
+                    isCompleted: task.status === 'Completed',
+                };
+            });
+        }
+
+        return selectedSessionTasks.map((task) => ({
+            id: Number(task.id),
+            title: task.title,
+            isCompleted: task.isCompleted,
+        }));
+    }, [availableModules, selectedSessionTasks, studyPlan?.modules, tasksByPlan]);
+
+    const modulesMap = useMemo(
+        () => new Map(availableModules.map((module) => [module.id, module])),
+        [availableModules]
+    );
+    const tasksMap = useMemo(
+        () => new Map(availableTasks.map((task) => [task.id, task])),
+        [availableTasks]
+    );
+
+    const conversationsQuery = useChatConversations(resolvedRoadmapId, currentUser?.id);
+    const historyQuery = useChatHistory(state.selectedConversationId);
+    const sendMessageMutation = useSendChatMessage();
+    const createConversationMutation = useCreateChatConversation();
+
+    const selectedConversation = useMemo(
+        () => state.conversations.find((item) => item.id === state.selectedConversationId) ?? null,
+        [state.conversations, state.selectedConversationId]
+    );
+
     useEffect(() => {
-        loadHistory(DEFAULT_PLAN_ID);
-    }, [loadHistory]);
+        setState((prev) => ({
+            ...prev,
+            roadmapId: resolvedRoadmapId,
+            availableModules,
+            availableTasks,
+            isConversationLoading: conversationsQuery.isLoading,
+            isHistoryLoading: historyQuery.isLoading,
+            isCreatingConversation: createConversationMutation.isPending,
+        }));
+    }, [
+        availableModules,
+        availableTasks,
+        conversationsQuery.isLoading,
+        createConversationMutation.isPending,
+        historyQuery.isLoading,
+        resolvedRoadmapId,
+    ]);
 
-    // Actions
+    useEffect(() => {
+        if (!conversationsQuery.data) {
+            return;
+        }
+
+        const conversations = conversationsQuery.data.map(mapConversationDto);
+        setState((prev) => {
+            const selectedExists = conversations.some((item) => item.id === prev.selectedConversationId);
+            const nextSelectedId = selectedExists ? prev.selectedConversationId : conversations[0]?.id ?? null;
+
+            return {
+                ...prev,
+                conversations,
+                selectedConversationId: nextSelectedId,
+            };
+        });
+    }, [conversationsQuery.data]);
+
+    useEffect(() => {
+        if (!historyQuery.data) {
+            return;
+        }
+
+        const mappedMessages = historyQuery.data.map((item) =>
+            mapHistoryMessageDto(item, modulesMap, tasksMap)
+        );
+
+        setState((prev) => ({
+            ...prev,
+            messages: mappedMessages,
+        }));
+    }, [historyQuery.data, modulesMap, tasksMap]);
+
     const openChat = useCallback(() => {
-        setState(prev => ({ ...prev, isOpen: true }));
+        setState((prev) => ({ ...prev, isOpen: true }));
     }, []);
 
     const closeChat = useCallback(() => {
-        setState(prev => ({ ...prev, isOpen: false, isAttachmentPickerOpen: false }));
+        setState((prev) => ({ ...prev, isOpen: false, isAttachmentPickerOpen: false }));
     }, []);
 
     const toggleChat = useCallback(() => {
-        setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
+        setState((prev) => ({ ...prev, isOpen: !prev.isOpen }));
     }, []);
 
-    const sendMessage = useCallback(async (content: string) => {
-        if (!content.trim()) return;
+    const createConversation = useCallback(async () => {
+        const activeRoadmapId =
+            state.roadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
+        if (!activeRoadmapId) {
+            toast.error('Không xác định được roadmap để tạo conversation.');
+            return;
+        }
 
-        const userMessage: ChatMessage = {
-            id: generateId(),
-            planId: state.currentPlanId,
-            role: 'user',
-            content: content.trim(),
-            attachments: state.pendingAttachments.length > 0 ? [...state.pendingAttachments] : undefined,
-            createdAt: new Date().toISOString(),
-        };
+        try {
+            const response = await createConversationMutation.mutateAsync({
+                roadmapId: activeRoadmapId,
+                title: studyPlan?.roadmapName ?? fallbackRoadmapTitle,
+            });
 
-        // Add user message and set loading
-        setState(prev => ({
-            ...prev,
-            messages: [...prev.messages, userMessage],
-            pendingAttachments: [],
-            isLoading: true,
-        }));
+            setState((prev) => ({
+                ...prev,
+                selectedConversationId: response.conversationId,
+                messages: [],
+            }));
 
-        // Save after adding user message
-        saveHistory(state.currentPlanId, [...state.messages, userMessage]);
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: queryKeys.chat.all }),
+                queryClient.invalidateQueries({
+                    queryKey: queryKeys.chat.history(response.conversationId),
+                }),
+            ]);
+        } catch (error) {
+            toast.apiError(error, 'Tạo conversation thất bại');
+        }
+    }, [
+        createConversationMutation,
+        queryClient,
+        fallbackRoadmapId,
+        fallbackRoadmapTitle,
+        selectedConversation?.roadmapId,
+        state.roadmapId,
+        studyPlan?.roadmapName,
+    ]);
 
-        // Simulate AI response delay
-        setTimeout(() => {
-            const aiResponse: ChatMessage = {
+    const sendMessage = useCallback(
+        async (content: string) => {
+            const messageContent = content.trim();
+            if (!messageContent || state.isLoading) {
+                return;
+            }
+
+            const activeRoadmapId =
+                state.roadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
+            if (!activeRoadmapId) {
+                toast.error('Không xác định được roadmap từ URL hiện tại.');
+                return;
+            }
+
+            let activeConversationId = state.selectedConversationId;
+            if (!activeConversationId) {
+                try {
+                    const createdConversation = await createConversationMutation.mutateAsync({
+                        roadmapId: activeRoadmapId,
+                        title: studyPlan?.roadmapName ?? fallbackRoadmapTitle,
+                    });
+                    activeConversationId = createdConversation.conversationId;
+                    setState((prev) => ({
+                        ...prev,
+                        selectedConversationId: createdConversation.conversationId,
+                    }));
+                } catch (error) {
+                    toast.apiError(error, 'Không thể tạo conversation mới');
+                    return;
+                }
+            }
+
+            const moduleIds = state.pendingAttachments
+                .filter((item) => item.type === 'module' && item.moduleId != null)
+                .map((item) => item.moduleId as number);
+            const taskIds = state.pendingAttachments
+                .filter((item) => item.type === 'task' && item.taskId != null)
+                .map((item) => item.taskId as number);
+
+            const userMessage: ChatMessage = {
                 id: generateId(),
-                planId: state.currentPlanId,
-                role: 'assistant',
-                content: generateMockAIResponse(content, userMessage.attachments),
+                conversationId: activeConversationId,
+                role: 'user',
+                content: messageContent,
                 createdAt: new Date().toISOString(),
+                attachments: state.pendingAttachments.length > 0 ? [...state.pendingAttachments] : undefined,
+                context: {
+                    moduleIds,
+                    taskIds,
+                },
             };
 
-            setState(prev => {
-                const newMessages = [...prev.messages, aiResponse];
-                saveHistory(prev.currentPlanId, newMessages);
-                return {
-                    ...prev,
-                    messages: newMessages,
-                    isLoading: false,
+            setState((prev) => ({
+                ...prev,
+                messages: [...prev.messages, userMessage],
+                pendingAttachments: [],
+                isLoading: true,
+            }));
+
+            try {
+                const response = await sendMessageMutation.mutateAsync({
+                    userId: currentUser?.id,
+                    conversationId: activeConversationId,
+                    roadmapId: activeRoadmapId,
+                    messageContent,
+                    moduleIds,
+                    taskIds,
+                });
+
+                const aiMessage: ChatMessage = {
+                    id: response.messageId,
+                    conversationId: response.conversationId,
+                    role: 'assistant',
+                    content: response.aiResponse,
+                    createdAt: response.timestamp,
+                    context: null,
                 };
-            });
-        }, 1000 + Math.random() * 1000);
-    }, [state.currentPlanId, state.pendingAttachments, state.messages, saveHistory]);
+
+                setState((prev) => ({
+                    ...prev,
+                    selectedConversationId: response.conversationId,
+                    messages: [...prev.messages, aiMessage],
+                    isLoading: false,
+                }));
+
+                await Promise.all([
+                    queryClient.invalidateQueries({ queryKey: queryKeys.chat.all }),
+                    queryClient.invalidateQueries({
+                        queryKey: queryKeys.chat.history(response.conversationId),
+                    }),
+                ]);
+            } catch (error) {
+                setState((prev) => ({ ...prev, isLoading: false }));
+                toast.apiError(error, 'Gửi tin nhắn thất bại');
+            }
+        },
+        [
+            createConversationMutation,
+            currentUser?.id,
+            fallbackRoadmapId,
+            fallbackRoadmapTitle,
+            queryClient,
+            selectedConversation?.roadmapId,
+            sendMessageMutation,
+            state.isLoading,
+            state.pendingAttachments,
+            state.roadmapId,
+            state.selectedConversationId,
+            studyPlan?.roadmapName,
+        ]
+    );
 
     const addAttachment = useCallback((attachment: ChatAttachment) => {
-        setState(prev => {
-            // Check if already attached
-            if (prev.pendingAttachments.some(a => a.id === attachment.id)) {
+        setState((prev) => {
+            if (prev.pendingAttachments.some((item) => item.id === attachment.id)) {
                 return prev;
             }
+
             return {
                 ...prev,
                 pendingAttachments: [...prev.pendingAttachments, attachment],
@@ -153,29 +376,43 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const removeAttachment = useCallback((attachmentId: string) => {
-        setState(prev => ({
+        setState((prev) => ({
             ...prev,
-            pendingAttachments: prev.pendingAttachments.filter(a => a.id !== attachmentId),
+            pendingAttachments: prev.pendingAttachments.filter((item) => item.id !== attachmentId),
         }));
     }, []);
 
     const clearAttachments = useCallback(() => {
-        setState(prev => ({ ...prev, pendingAttachments: [] }));
+        setState((prev) => ({ ...prev, pendingAttachments: [] }));
     }, []);
 
     const openAttachmentPicker = useCallback(() => {
-        setState(prev => ({ ...prev, isAttachmentPickerOpen: true }));
+        setState((prev) => ({ ...prev, isAttachmentPickerOpen: true }));
     }, []);
 
     const closeAttachmentPicker = useCallback(() => {
-        setState(prev => ({ ...prev, isAttachmentPickerOpen: false }));
+        setState((prev) => ({ ...prev, isAttachmentPickerOpen: false }));
+    }, []);
+
+    const selectConversation = useCallback((conversationId: string) => {
+        setState((prev) => ({
+            ...prev,
+            selectedConversationId: conversationId,
+        }));
     }, []);
 
     const clearHistory = useCallback(() => {
-        setState(prev => ({ ...prev, messages: [] }));
-        const key = `${CHAT_HISTORY_KEY_PREFIX}${state.currentPlanId}`;
-        localStorage.removeItem(key);
-    }, [state.currentPlanId]);
+        if (state.selectedConversationId) {
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.chat.history(state.selectedConversationId),
+            });
+        }
+
+        setState((prev) => ({
+            ...prev,
+            messages: [],
+        }));
+    }, [queryClient, state.selectedConversationId]);
 
     const contextValue: ChatContextType = {
         ...state,
@@ -188,18 +425,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         clearAttachments,
         openAttachmentPicker,
         closeAttachmentPicker,
-        loadHistory,
+        selectConversation,
+        createConversation,
         clearHistory,
     };
 
-    return (
-        <ChatContext.Provider value={contextValue}>
-            {children}
-        </ChatContext.Provider>
-    );
+    return <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>;
 }
 
-// Custom hook to use chat context
 export function useChat(): ChatContextType {
     const context = useContext(ChatContext);
     if (context === undefined) {

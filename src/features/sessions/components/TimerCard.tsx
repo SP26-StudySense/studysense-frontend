@@ -87,10 +87,13 @@ export function TimerCard({ className }: TimerCardProps) {
             .map((task) => safeNumberId(task.id))
             .filter((id): id is number => typeof id === 'number');
 
+        const resolvedStudyPlanId = safeNumberId(activeStudyPlanId) ?? safeNumberId(selectedNode?.planId);
+        const resolvedModuleId = safeNumberId(selectedNode?.id);
+
         const payload = {
-            studyPlanId: safeNumberId(activeStudyPlanId),
+            studyPlanId: resolvedStudyPlanId,
             nodeId: selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id),
-            moduleId: safeNumberId(selectedNode?.id),
+            moduleId: resolvedModuleId,
             taskIds: taskIds.length > 0 ? taskIds : undefined,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         };
@@ -112,6 +115,7 @@ export function TimerCard({ className }: TimerCardProps) {
                         sessionId: data.sessionId,
                         nodeId: payload.nodeId,
                         studyPlanId: payload.studyPlanId,
+                        moduleId: payload.moduleId,
                         taskCount: selectedTasks.length,
                     });
                     toast.success('Session started!');
