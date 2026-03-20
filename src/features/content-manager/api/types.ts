@@ -243,6 +243,22 @@ export interface QuizItem {
 }
 
 /**
+ * Get quiz by id request
+ * GET /api/quiz/{quizId}
+ */
+export interface GetQuizByIdRequest {
+  quizId: number;
+}
+
+/**
+ * Get quiz by id response
+ * Mirrors GetQuizByIdResult from the backend
+ */
+export interface GetQuizByIdResponse {
+  quizDto: QuizItem | null;
+}
+
+/**
  * Get all quizzes by roadmap node id request
  * GET /api/quizzes/roadmapnode/{roadmapNodeId}
  */
@@ -320,6 +336,13 @@ export interface CreateQuizQuestionRequest {
   createQuizQuestionDtos: CreateQuizQuestionWithOptionsDto[];
 }
 
+export interface CreateAiQuizQuestionsRequest {
+  quizId: number;
+  roadmapId: number;
+  roadmapNodeId: number;
+  questionCount?: number;
+}
+
 /**
  * Get all quiz questions by quiz id request
  * GET /api/quiz/{quizId}/questions
@@ -382,6 +405,16 @@ export interface UpdateQuizQuestionOptionRequest {
   id: number;
   quizId: number;
   updateQuizQuestionOptionDto: UpdateQuizQuestionOptionDto;
+}
+
+export interface DeleteQuizQuestionRequest {
+  id: number;
+  quizId: number;
+}
+
+export interface DeleteQuizQuestionOptionRequest {
+  id: number;
+  quizId: number;
 }
 
 /**
@@ -501,6 +534,8 @@ export type DeleteEdgeResponse = void;
  * Returns 204 No Content (void)
  */
 export type DeleteContentResponse = void;
+export type DeleteQuizQuestionResponse = void;
+export type DeleteQuizQuestionOptionResponse = void;
 
 /**
  * Create quiz response
@@ -532,6 +567,41 @@ export type CreateQuizQuestionResponse = {
   success?: boolean;
   message?: string;
 };
+
+export interface AiQuizQuestionOptionItem {
+  id?: number;
+  questionId?: number;
+  valueKey?: string;
+  displayText?: string;
+  isCorrect?: boolean;
+  scoreValue?: number | null;
+  orderNo?: number;
+}
+
+export interface AiQuizQuestionItem {
+  id?: number;
+  quizId?: number;
+  questionKey?: string;
+  prompt?: string;
+  type?: QuizQuestionType | string | number;
+  scoreWeight?: number;
+  orderNo?: number;
+  isRequired?: boolean;
+  options?: AiQuizQuestionOptionItem[];
+}
+
+export interface CreateAiQuizQuestionsResponse {
+  success?: boolean;
+  message?: string;
+  questions?: AiQuizQuestionItem[];
+  quizQuestionDtos?: AiQuizQuestionItem[];
+  generatedQuestions?: AiQuizQuestionItem[];
+  quizQuestions?: AiQuizQuestionItem[];
+  items?: AiQuizQuestionItem[];
+  result?: Record<string, unknown> | null;
+  payload?: Record<string, unknown> | null;
+  [key: string]: unknown;
+}
 
 // ==================== Helper Types ====================
 
@@ -643,7 +713,10 @@ export type ApiRequest =
   | DeleteNodeRequest
   | DeleteEdgeRequest
   | DeleteContentRequest
-  | CreateQuizQuestionRequest;
+  | CreateQuizQuestionRequest
+  | CreateAiQuizQuestionsRequest
+  | DeleteQuizQuestionRequest
+  | DeleteQuizQuestionOptionRequest;
 
 /**
  * All API response types
@@ -659,4 +732,7 @@ export type ApiResponse =
   | DeleteNodeResponse
   | DeleteEdgeResponse
   | DeleteContentResponse
-  | CreateQuizQuestionResponse;
+  | DeleteQuizQuestionResponse
+  | DeleteQuizQuestionOptionResponse
+  | CreateQuizQuestionResponse
+  | CreateAiQuizQuestionsResponse;

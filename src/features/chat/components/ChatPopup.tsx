@@ -1,14 +1,17 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { X, Bot, Trash2, MoreVertical } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { X, Bot, Trash2, MoreVertical, Plus } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { useChat } from '../context/ChatContext';
+import { routes } from '@/shared/config/routes';
+import { useChat } from '@/features/chat/context/ChatContext';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { AttachmentPicker } from './AttachmentPicker';
 
 export function ChatPopup() {
+    const router = useRouter();
     const {
         isOpen,
         closeChat,
@@ -22,6 +25,14 @@ export function ChatPopup() {
         openAttachmentPicker,
         closeAttachmentPicker,
         clearHistory,
+        conversations,
+        selectedConversationId,
+        selectConversation,
+        availableModules,
+        availableTasks,
+        isConversationLoading,
+        isCreatingConversation,
+        createConversation,
     } = useChat();
 
     // Close on escape key
@@ -65,8 +76,17 @@ export function ChatPopup() {
                                 Study Assistant
                             </h3>
                             <p className="text-xs text-neutral-500">
-                                Luôn sẵn sàng hỗ trợ bạn
+                                Always here to help
                             </p>
+                            <button
+                                onClick={() => {
+                                    closeChat();
+                                    router.push(routes.dashboard.chat.list);
+                                }}
+                                className="text-[11px] font-medium text-violet-600 hover:text-violet-700"
+                            >
+                                Open full chat page
+                            </button>
                         </div>
                     </div>
 
@@ -87,7 +107,7 @@ export function ChatPopup() {
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                 >
                                     <Trash2 className="h-4 w-4" />
-                                    Xóa lịch sử chat
+                                    Clear conversation
                                 </button>
                             </div>
                         </div>
@@ -101,6 +121,36 @@ export function ChatPopup() {
                             <X className="h-4 w-4 text-neutral-500" />
                         </button>
                     </div>
+                </div>
+
+                <div className="px-4 py-2 border-b border-neutral-100 bg-neutral-50/60">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                        <label className="text-[11px] font-medium text-neutral-500">Conversation</label>
+                        <button
+                            onClick={createConversation}
+                            disabled={isCreatingConversation || isConversationLoading}
+                            className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-white px-2 py-1 text-[11px] font-medium text-violet-600 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Plus className="h-3 w-3" />
+                            {isCreatingConversation ? 'Creating...' : 'New'}
+                        </button>
+                    </div>
+
+                    <select
+                        className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-500/10"
+                        disabled={isConversationLoading || isCreatingConversation || conversations.length === 0}
+                        value={selectedConversationId ?? ''}
+                        onChange={(event) => selectConversation(event.target.value)}
+                    >
+                        {conversations.length === 0 && (
+                            <option value="">No conversations yet</option>
+                        )}
+                        {conversations.map((conversation) => (
+                            <option key={conversation.id} value={conversation.id}>
+                                {conversation.title}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Messages */}
@@ -122,6 +172,8 @@ export function ChatPopup() {
                 onClose={closeAttachmentPicker}
                 onSelect={addAttachment}
                 selectedIds={pendingAttachments.map(a => a.id)}
+                modules={availableModules}
+                tasks={availableTasks}
             />
         </>
     );

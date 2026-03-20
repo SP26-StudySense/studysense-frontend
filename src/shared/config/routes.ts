@@ -51,6 +51,12 @@ export const routes = {
       history: '/sessions/history',
     },
 
+    // Chat
+    chat: {
+      list: '/chat',
+      roadmap: (roadmapId: string) => `/chat/${roadmapId}`,
+    },
+
     // Surveys
     surveys: {
       list: '/surveys',

@@ -91,6 +91,17 @@ export const endpoints = {
     apply: (id: string) => `/recommendations/${id}/apply`,
   },
 
+  // AI Chat
+  chat: {
+    send: '/ai/chat/send',
+    createConversation: '/ai/chat/conversations',
+    conversations: (roadmapId?: number) =>
+      roadmapId != null
+        ? `/ai/chat/conversations/${roadmapId}`
+        : '/ai/chat/conversations',
+    history: (conversationId: string) => `/ai/chat/${conversationId}/history`,
+  },
+
   // Admin endpoints
   admin: {
     users: {

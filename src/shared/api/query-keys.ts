@@ -87,6 +87,15 @@ export const queryKeys = {
       ['recommendations', 'node', nodeId] as const,
   },
 
+  // Chat
+  chat: {
+    all: ['chat'] as const,
+    conversations: () => ['chat', 'conversations'] as const,
+    conversationsByRoadmap: (roadmapId: string) =>
+      ['chat', 'conversations', roadmapId] as const,
+    history: (conversationId: string) => ['chat', 'history', conversationId] as const,
+  },
+
   // Admin
   admin: {
     users: {

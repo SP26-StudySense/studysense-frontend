@@ -15,6 +15,7 @@ import type {
   GenerateRoadmapRequest,
   GetQuizzesByNodeResponse,
   GetQuizQuestionsByQuizIdResponse,
+  GetQuizByIdResponse,
 } from './types';
 
 // ==================== Query Hooks ====================
@@ -157,6 +158,19 @@ export function useQuizQuestionsByQuizId(
     queryFn: () => api.getQuizQuestionsByQuizId({ quizId }),
     enabled: !!quizId,
     staleTime: 0,
+    ...options,
+  });
+}
+
+export function useQuizById(
+  quizId: number,
+  options?: Omit<UseQueryOptions<GetQuizByIdResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: cmQueryKeys.quizById(quizId),
+    queryFn: () => api.getQuizById({ quizId }),
+    enabled: Number.isFinite(quizId) && quizId > 0,
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
