@@ -70,3 +70,17 @@ export interface EditTriggerMappingRequest {
   cooldownDays: number | null;
   isActive: boolean;
 }
+
+export interface CreateSurveyTriggerTypeRequest {
+  code: string;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+}
+
+export interface EditSurveyTriggerTypeRequest {
+  code: string;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+}

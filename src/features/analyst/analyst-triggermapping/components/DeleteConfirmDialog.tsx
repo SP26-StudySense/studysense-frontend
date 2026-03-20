@@ -7,8 +7,11 @@ interface DeleteConfirmDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   isDeleting: boolean;
+  title?: string;
   /** Descriptive label shown in the dialog body */
   itemLabel?: string;
+  /** Fallback noun when itemLabel is missing */
+  itemNoun?: string;
 }
 
 export function DeleteConfirmDialog({
@@ -16,7 +19,9 @@ export function DeleteConfirmDialog({
   onClose,
   onConfirm,
   isDeleting,
+  title = "Delete Mapping",
   itemLabel,
+  itemNoun = "item",
 }: DeleteConfirmDialogProps) {
   if (!isOpen) return null;
 
@@ -29,7 +34,7 @@ export function DeleteConfirmDialog({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
               <AlertTriangle className="h-5 w-5 text-red-600" />
             </div>
-            <h3 className="text-base font-semibold text-neutral-900">Delete Mapping</h3>
+            <h3 className="text-base font-semibold text-neutral-900">{title}</h3>
           </div>
           <button
             onClick={onClose}
@@ -45,7 +50,7 @@ export function DeleteConfirmDialog({
           {itemLabel ? (
             <span className="font-medium text-neutral-900">&ldquo;{itemLabel}&rdquo;</span>
           ) : (
-            "this trigger mapping"
+            `this ${itemNoun}`
           )}
           ? This action cannot be undone.
         </p>

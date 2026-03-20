@@ -13,3 +13,4 @@ export * from './components';
 
 // Page
 export * from './TriggerMappingPage';
+export * from './SurveyTriggerTypePage';

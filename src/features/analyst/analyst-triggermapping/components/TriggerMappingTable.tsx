@@ -1,7 +1,8 @@
 "use client";
 
-import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { SurveyTriggerMappingDto, SurveyTriggerTypeDto } from "../api/types";
+import { RowActionButtons } from "./RowActionButtons";
 
 interface TriggerMappingTableProps {
   mappings: SurveyTriggerMappingDto[];
@@ -115,22 +116,7 @@ export function TriggerMappingTable({
 
                 {/* Actions */}
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => onEdit(m)}
-                      title="Edit"
-                      className="rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(m.id)}
-                      title="Delete"
-                      className="rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <RowActionButtons onEdit={() => onEdit(m)} onDelete={() => onDelete(m.id)} />
                 </td>
               </tr>
             ))}

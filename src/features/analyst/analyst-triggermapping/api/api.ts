@@ -3,11 +3,13 @@
  * Pure API calls – no React hooks
  */
 
-import { get, post, del, patch } from '@/shared/api/client';
+import { get, post, del, patch, put } from '@/shared/api/client';
 import type {
   GetAllTriggerMappingsParams,
   CreateTriggerMappingRequest,
   EditTriggerMappingRequest,
+  CreateSurveyTriggerTypeRequest,
+  EditSurveyTriggerTypeRequest,
   PaginatedResponse,
   SurveyTriggerMappingDto,
   SurveyTriggerTypeDto,
@@ -25,7 +27,9 @@ export const triggerMappingQueryKeys = {
 
 export const surveyTriggerTypeQueryKeys = {
   all: ['survey-trigger-types'] as const,
-  list: () => [...surveyTriggerTypeQueryKeys.all, 'list'] as const,
+  lists: () => [...surveyTriggerTypeQueryKeys.all, 'list'] as const,
+  list: () => [...surveyTriggerTypeQueryKeys.lists()] as const,
+  detail: (code: string) => [...surveyTriggerTypeQueryKeys.all, 'detail', code] as const,
 };
 
 // ==================== API Functions ====================
@@ -101,4 +105,47 @@ export async function getAllSurveyTriggerTypes(): Promise<SurveyTriggerTypeDto[]
     '/surveys/surveytriggertype/all'
   );
   return result.surveyTriggerTypes;
+}
+
+/**
+ * GET /api/surveys/surveytriggertype/{code}
+ */
+export async function getSurveyTriggerTypeByCode(code: string): Promise<SurveyTriggerTypeDto> {
+  const result = await get<SurveyTriggerTypeDto>(
+    `/surveys/surveytriggertype/${encodeURIComponent(code)}`
+  );
+  return result;
+}
+
+/**
+ * POST /api/surveys/surveytriggertype
+ */
+export async function createSurveyTriggerType(
+  data: CreateSurveyTriggerTypeRequest
+): Promise<SurveyTriggerTypeDto> {
+  const result = await post<SurveyTriggerTypeDto>(
+    '/surveys/surveytriggertype',
+    data
+  );
+  return result;
+}
+
+/**
+ * PUT /api/surveys/surveytriggertype/edit
+ */
+export async function editSurveyTriggerType(
+  data: EditSurveyTriggerTypeRequest
+): Promise<SurveyTriggerTypeDto> {
+  const result = await put<SurveyTriggerTypeDto>(
+    '/surveys/surveytriggertype/edit',
+    data
+  );
+  return result;
+}
+
+/**
+ * DELETE /api/surveys/surveytriggertype/{code}
+ */
+export async function deleteSurveyTriggerType(code: string): Promise<void> {
+  await del(`/surveys/surveytriggertype/${encodeURIComponent(code)}`);
 }
