@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { useTriggerMappingManager } from "./hooks";
 import { TriggerMappingTable, TriggerMappingFormModal, DeleteConfirmDialog } from "./components";
@@ -50,13 +51,21 @@ export function TriggerMappingPage() {
             Manage which surveys are automatically triggered by system events.
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-5 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
-        >
-          <Plus className="h-4 w-4" />
-          Add Mapping
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/analyst-triggermapping/survey-trigger-types"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#7dd3fc] to-[#2563eb] px-5 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
+          >
+            SurveyTriggerType
+          </Link>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-5 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md"
+          >
+            <Plus className="h-4 w-4" />
+            Add Mapping
+          </button>
+        </div>
       </div>
 
       {/* ── Table ──────────────────────────────────────────── */}

@@ -46,3 +46,15 @@ export function useAllSurveyTriggerTypes() {
     refetchOnWindowFocus: false,
   });
 }
+
+/**
+ * Fetch one SurveyTriggerType by code
+ */
+export function useSurveyTriggerType(code: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: surveyTriggerTypeQueryKeys.detail(code),
+    queryFn: () => api.getSurveyTriggerTypeByCode(code),
+    staleTime: 5 * 60 * 1000,
+    enabled: options?.enabled !== undefined ? options.enabled : !!code,
+  });
+}
