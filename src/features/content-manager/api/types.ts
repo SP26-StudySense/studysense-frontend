@@ -240,6 +240,8 @@ export interface QuizItem {
   title?: string | null;
   description?: string | null;
   totalScore?: number | null;
+  level?: string | null;
+  passingScore?: number | null;
 }
 
 /**
@@ -299,6 +301,8 @@ export interface CreateQuizRequest {
     title?: string | null;
     description?: string | null;
     totalScore?: number | null;
+    level: string;
+    passingScore: number;
   };
 }
 
@@ -321,6 +325,7 @@ export interface CreateQuizQuestionWithOptionsDto {
   quizId: number;
   questionKey: string;
   prompt: string;
+  level: string;
   type: QuizQuestionType;
   scoreWeight: number;
   orderNo: number;
@@ -341,6 +346,7 @@ export interface CreateAiQuizQuestionsRequest {
   roadmapId: number;
   roadmapNodeId: number;
   questionCount?: number;
+  level?: string;
 }
 
 /**
@@ -366,6 +372,7 @@ export interface QuizQuestionItem {
   quizId: number;
   questionKey: string;
   prompt: string;
+  level?: string | null;
   type: QuizQuestionType | string;
   scoreWeight: number;
   orderNo: number;
@@ -380,6 +387,7 @@ export interface GetQuizQuestionsByQuizIdResponse {
 export interface UpdateQuizQuestionDto {
   questionKey: string;
   prompt: string;
+  level: string;
   type: QuizQuestionType;
   scoreWeight: number;
   orderNo: number;
@@ -547,6 +555,8 @@ export type CreateQuizResponse = {
   title?: string;
   description?: string;
   totalScore?: number;
+  level?: string;
+  passingScore?: number;
   success?: boolean;
   message?: string;
 };
@@ -583,6 +593,7 @@ export interface AiQuizQuestionItem {
   quizId?: number;
   questionKey?: string;
   prompt?: string;
+  level?: string;
   type?: QuizQuestionType | string | number;
   scoreWeight?: number;
   orderNo?: number;
