@@ -35,6 +35,7 @@ interface QuestionDraft {
   _qid: string;
   questionKey: string;
   prompt: string;
+  level: string;
   type: QuizQuestionType;
   scoreWeight: number;
   orderNo: number;
@@ -54,6 +55,8 @@ const QUESTION_TYPES: Array<{ label: string; value: QuizQuestionType }> = [
   { label: "Short Answer", value: QuizQuestionTypeEnum.ShortAnswer },
 ];
 
+const QUESTION_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
+
 const HAS_OPTIONS = (type: QuizQuestionType) =>
   type === QuizQuestionTypeEnum.SingleChoice ||
   type === QuizQuestionTypeEnum.MultipleChoice;
@@ -71,6 +74,7 @@ const newQuestion = (orderNo: number): QuestionDraft => ({
   _qid: `q-${Date.now()}-${Math.random()}`,
   questionKey: "",
   prompt: "",
+  level: "Beginner",
   type: QuizQuestionTypeEnum.SingleChoice,
   scoreWeight: 1,
   orderNo,
@@ -96,6 +100,7 @@ const getQuestionTypeLabel = (value: QuizQuestionType | string) => {
 const toQuestionDraft = (question: QuizQuestionItem): ExistingQuestionDraft => ({
   questionKey: question.questionKey,
   prompt: question.prompt,
+  level: question.level?.trim() || "Beginner",
   type: parseQuestionType(question.type),
   scoreWeight: Number(question.scoreWeight ?? 1),
   orderNo: Number(question.orderNo ?? 1),
@@ -168,6 +173,7 @@ const toAiQuestionDraft = (question: AiQuizQuestionItem, orderNo: number): Quest
     _qid: `ai-q-${Date.now()}-${Math.random()}`,
     questionKey: question.questionKey?.trim() || `ai_q_${orderNo}`,
     prompt: question.prompt?.trim() || "",
+    level: question.level?.trim() || "Beginner",
     type,
     scoreWeight: Number(question.scoreWeight ?? 1),
     orderNo: Number(question.orderNo ?? orderNo),
@@ -206,6 +212,7 @@ export function QuizDetailPage() {
   const [optionEdits, setOptionEdits] = useState<Record<number, ExistingOptionDraft>>({});
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiQuestionCount, setAiQuestionCount] = useState(10);
+  const [aiLevel, setAiLevel] = useState<string>("Beginner");
   const [aiResponse, setAiResponse] = useState<CreateAiQuizQuestionsResponse | null>(null);
   const [aiDraftQuestions, setAiDraftQuestions] = useState<QuestionDraft[]>([]);
   const [deletingQuestionId, setDeletingQuestionId] = useState<number | null>(null);
@@ -317,6 +324,7 @@ export function QuizDetailPage() {
       quizId,
       questionKey: q.questionKey.trim(),
       prompt: q.prompt.trim(),
+      level: q.level || "Beginner",
       type: q.type,
       scoreWeight: q.scoreWeight > 0 ? q.scoreWeight : 1,
       orderNo: Math.max(1, Math.trunc(q.orderNo)),
@@ -348,6 +356,7 @@ export function QuizDetailPage() {
     setAiResponse(null);
     setAiDraftQuestions([]);
     setAiQuestionCount(5);
+    setAiLevel(quizDetailQuery.data?.quizDto?.level || "Beginner");
     setIsAiModalOpen(true);
   };
 
@@ -382,6 +391,7 @@ export function QuizDetailPage() {
         roadmapId,
         roadmapNodeId,
         questionCount: Math.min(20, Math.max(1, Math.trunc(aiQuestionCount || 1))),
+        level: aiLevel || "Beginner",
       });
 
       setAiResponse(response);
@@ -484,6 +494,7 @@ export function QuizDetailPage() {
       quizId,
       questionKey: q.questionKey.trim(),
       prompt: q.prompt.trim(),
+      level: q.level || "Beginner",
       type: q.type,
       scoreWeight: q.scoreWeight > 0 ? q.scoreWeight : 1,
       orderNo: Math.max(1, Math.trunc(q.orderNo || index + 1)),
@@ -499,10 +510,10 @@ export function QuizDetailPage() {
     try {
       await createQuestionMutation.mutateAsync({ createQuizQuestionDtos: dtos });
       toast.success(`Saved ${dtos.length} AI question${dtos.length > 1 ? "s" : ""} to database`);
-      await quizQuestionsQuery.refetch();
       setIsAiModalOpen(false);
       setAiResponse(null);
       setAiDraftQuestions([]);
+      void quizQuestionsQuery.refetch();
     } catch {
       toast.error("Failed to save AI questions to database");
     }
@@ -531,6 +542,7 @@ export function QuizDetailPage() {
         ...(prev[questionId] ?? {
           questionKey: "",
           prompt: "",
+          level: "Beginner",
           type: QuizQuestionTypeEnum.SingleChoice,
           scoreWeight: 1,
           orderNo: 1,
@@ -556,6 +568,7 @@ export function QuizDetailPage() {
         updateQuizQuestionDto: {
           questionKey: edit.questionKey.trim(),
           prompt: edit.prompt.trim(),
+          level: edit.level || "Beginner",
           type: edit.type,
           scoreWeight: Number(edit.scoreWeight) > 0 ? Number(edit.scoreWeight) : 1,
           orderNo: Number(edit.orderNo) > 0 ? Math.trunc(Number(edit.orderNo)) : 1,
@@ -729,6 +742,16 @@ export function QuizDetailPage() {
                 Total score: {quizDetailQuery.data.quizDto.totalScore}
               </p>
             )}
+            {quizDetailQuery.data?.quizDto?.passingScore != null && (
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Passing score: {quizDetailQuery.data.quizDto.passingScore}
+              </p>
+            )}
+            {quizDetailQuery.data?.quizDto?.level && (
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Level: {quizDetailQuery.data.quizDto.level}
+              </p>
+            )}
           </div>
         </div>
 
@@ -790,6 +813,11 @@ export function QuizDetailPage() {
                       Q{qIndex + 1}. {question.prompt}
                     </p>
                     <div className="flex items-center gap-2">
+                      {question.level && (
+                        <span className="text-[11px] rounded bg-blue-50 px-2 py-1 text-blue-700 border border-blue-200">
+                          {question.level}
+                        </span>
+                      )}
                       <span className="text-[11px] rounded bg-white px-2 py-1 text-neutral-600 border border-neutral-200">
                         {getQuestionTypeLabel(question.type)}
                       </span>
@@ -840,6 +868,17 @@ export function QuizDetailPage() {
                         className="rounded border border-neutral-300 px-2 py-1.5"
                         placeholder="Question key"
                       />
+                      <select
+                        value={(questionEdits[question.id] ?? toQuestionDraft(question)).level}
+                        onChange={(e) => handleEditQuestionChange(question.id, "level", e.target.value)}
+                        className="rounded border border-neutral-300 px-2 py-1.5"
+                      >
+                        {QUESTION_LEVELS.map((level) => (
+                          <option key={level} value={level}>
+                            {level}
+                          </option>
+                        ))}
+                      </select>
                       <select
                         value={(questionEdits[question.id] ?? toQuestionDraft(question)).type}
                         onChange={(e) =>
@@ -892,7 +931,7 @@ export function QuizDetailPage() {
                     </div>
                   ) : (
                     <div className="text-xs text-neutral-600">
-                      Key: <span className="font-medium">{question.questionKey}</span> · Order: {question.orderNo}
+                      Key: <span className="font-medium">{question.questionKey}</span> · Level: {question.level ?? "Beginner"} · Order: {question.orderNo}
                     </div>
                   )}
 
@@ -1059,8 +1098,8 @@ export function QuizDetailPage() {
                 )}
               </div>
 
-              {/* Key + Type */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Key + Level + Type */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                     Question Key <span className="text-red-500">*</span>
@@ -1072,6 +1111,20 @@ export function QuizDetailPage() {
                     className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                     placeholder="ex: q_angular_1"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">Level</label>
+                  <select
+                    value={q.level}
+                    onChange={(e) => updateQuestion(q._qid, { level: e.target.value })}
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  >
+                    {QUESTION_LEVELS.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 mb-1.5">Type</label>
@@ -1320,7 +1373,7 @@ export function QuizDetailPage() {
             </div>
 
             <div className="space-y-5 overflow-y-auto px-6 py-5">
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px_220px]">
                 <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <span>
@@ -1347,6 +1400,23 @@ export function QuizDetailPage() {
                     onChange={(e) => setAiQuestionCount(Number(e.target.value))}
                     className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                   />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-neutral-700">
+                    Level
+                  </label>
+                  <select
+                    value={aiLevel}
+                    onChange={(e) => setAiLevel(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  >
+                    {QUESTION_LEVELS.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -1400,6 +1470,17 @@ export function QuizDetailPage() {
                               className="rounded border border-neutral-300 px-2 py-1.5"
                               placeholder="Question key"
                             />
+                            <select
+                              value={question.level}
+                              onChange={(e) => updateAiQuestion(question._qid, { level: e.target.value })}
+                              className="rounded border border-neutral-300 px-2 py-1.5"
+                            >
+                              {QUESTION_LEVELS.map((level) => (
+                                <option key={level} value={level}>
+                                  {level}
+                                </option>
+                              ))}
+                            </select>
                             <select
                               value={question.type}
                               onChange={(e) => changeAiQuestionType(question._qid, Number(e.target.value) as QuizQuestionType)}

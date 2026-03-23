@@ -126,6 +126,8 @@ function NodeDetailSection({
     title: `${node.title} Quiz`,
     description: "",
     totalScore: 10,
+    level: "Beginner",
+    passingScore: 5,
   });
   const [deletingQuizId, setDeletingQuizId] = useState<number | null>(null);
 
@@ -146,6 +148,8 @@ function NodeDetailSection({
       title: `${node.title} Quiz`,
       description: "",
       totalScore: 10,
+      level: "Beginner",
+      passingScore: 5,
     });
   }
 
@@ -160,6 +164,8 @@ function NodeDetailSection({
       title: `${node.title} Quiz`,
       description: "",
       totalScore: 10,
+      level: "Beginner",
+      passingScore: 5,
     });
     setIsCreateQuizOpen(true);
   };
@@ -176,6 +182,11 @@ function NodeDetailSection({
             Number.isFinite(quizForm.totalScore) && quizForm.totalScore > 0
               ? quizForm.totalScore
               : null,
+          level: quizForm.level || "Beginner",
+          passingScore:
+            Number.isFinite(quizForm.passingScore) && quizForm.passingScore > 0
+              ? quizForm.passingScore
+              : 1,
         },
       });
       toast.success("Quiz created successfully");
@@ -379,6 +390,43 @@ function NodeDetailSection({
                   setQuizForm((prev) => ({
                     ...prev,
                     totalScore: Number(e.target.value),
+                  }))
+                }
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Level
+              </label>
+              <select
+                value={quizForm.level}
+                onChange={(e) =>
+                  setQuizForm((prev) => ({
+                    ...prev,
+                    level: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+              >
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Passing Score
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="0.5"
+                value={quizForm.passingScore}
+                onChange={(e) =>
+                  setQuizForm((prev) => ({
+                    ...prev,
+                    passingScore: Number(e.target.value),
                   }))
                 }
                 className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
@@ -948,9 +996,19 @@ function NodeDetailSection({
                   <span className="rounded-md bg-[#00bae2]/10 px-2 py-0.5 text-[10px] font-medium text-[#00bae2]">
                     Quiz
                   </span>
+                  {quiz.level && (
+                    <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                      {quiz.level}
+                    </span>
+                  )}
                   {quiz.totalScore != null && (
                     <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
                       {quiz.totalScore} pts
+                    </span>
+                  )}
+                  {quiz.passingScore != null && (
+                    <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                      Pass: {quiz.passingScore}
                     </span>
                   )}
                   <button
