@@ -5,13 +5,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  Map,
   CreditCard,
   FolderTree,
-  UserCog,
   LogOut,
   Shield,
-  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -31,26 +28,11 @@ const sidebarItems = [
     title: "Categories",
     href: "/admin-categories",
     icon: FolderTree,
-  },
-  {
-    title: "Surveys",
-    href: "/admin-surveys",
-    icon: ClipboardList,
-  },
-  {
-    title: "Roadmaps",
-    href: "/admin-roadmaps",
-    icon: Map,
-  },
+  }, 
   {
     title: "Transactions",
     href: "/admin-transactions",
     icon: CreditCard,
-  },
-  {
-    title: "Profile",
-    href: "/admin-profile",
-    icon: UserCog,
   },
 ];
 

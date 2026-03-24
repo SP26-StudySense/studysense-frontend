@@ -14,9 +14,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/admin/admin-courses")) return "Course Management";
   if (pathname.startsWith("/admin/admin-transactions"))
     return "Transaction Management";
-  if (pathname.startsWith("/admin/admin-roadmaps")) return "Roadmap Management";
   if (pathname.startsWith("/admin/admin-categories")) return "Category Management";
-  if (pathname.startsWith("/admin/admin-profile")) return "Admin Profile";
   if (pathname.startsWith("/admin/settings")) return "Settings";
   return "Admin Dashboard";
 }

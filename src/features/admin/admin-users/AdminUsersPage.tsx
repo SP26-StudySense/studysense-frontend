@@ -92,7 +92,7 @@ export function AdminUsersPage({
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-green-600 transition-all hover:bg-green-50"
         >
           <Unlock className="h-4 w-4" />
-          Unlock
+          Unblock
         </button>
       );
     }
@@ -103,7 +103,7 @@ export function AdminUsersPage({
         className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-amber-600 transition-all hover:bg-amber-50"
       >
         <Lock className="h-4 w-4" />
-        Lock
+        Block
       </button>
     );
   };
@@ -115,11 +115,11 @@ export function AdminUsersPage({
     const { name, email } = confirmModal.user;
 
     return {
-      title: isLock ? "Lock User Account" : "Unlock User Account",
+      title: isLock ? "Block User Account" : "Unblock User Account",
       description: (
         <div>
           <p className="mb-3">
-            Are you sure you want to {isLock ? "lock" : "unlock"} the account
+            Are you sure you want to {isLock ? "block" : "unblock"} the account
             for:
           </p>
           <div className="rounded-lg bg-neutral-100 p-3">
@@ -128,12 +128,12 @@ export function AdminUsersPage({
           </div>
           <p className="mt-3 text-xs text-neutral-500">
             {isLock
-              ? "The user will not be able to access their account until unlocked."
+              ? "The user will not be able to access their account until unblocked."
               : "The user will regain access to their account."}
           </p>
         </div>
       ),
-      confirmText: isLock ? "Lock Account" : "Unlock Account",
+      confirmText: isLock ? "Block Account" : "Unblock Account",
       variant: isLock ? ("default" as const) : ("default" as const),
     };
   };
