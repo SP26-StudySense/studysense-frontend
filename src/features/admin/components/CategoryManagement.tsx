@@ -8,23 +8,43 @@ interface Subject {
   id: string;
   name: string;
   description: string;
+  isActive: boolean;
 }
 
 interface Category {
   id: string;
   name: string;
   description: string;
+  isActive: boolean;
   subjects: Subject[];
+}
+
+interface CategoryFormData {
+  name: string;
+  description: string;
+  isActive: boolean;
+}
+
+interface SubjectFormData {
+  name: string;
+  description: string;
+  isActive: boolean;
 }
 
 interface CategoryManagementProps {
   categories: Category[];
-  onAddCategory?: () => void;
-  onEditCategory?: (category: Category) => void;
-  onDeleteCategory?: (categoryId: string) => void;
-  onAddSubject?: (categoryId: string) => void;
-  onEditSubject?: (categoryId: string, subject: Subject) => void;
-  onDeleteSubject?: (categoryId: string, subjectId: string) => void;
+  isLoading?: boolean;
+  serverError?: string | null;
+  onAddCategory?: (data: CategoryFormData) => Promise<void> | void;
+  onEditCategory?: (categoryId: string, data: CategoryFormData) => Promise<void> | void;
+  onDeleteCategory?: (categoryId: string) => Promise<void> | void;
+  onAddSubject?: (categoryId: string, data: SubjectFormData) => Promise<void> | void;
+  onEditSubject?: (
+    categoryId: string,
+    subjectId: string,
+    data: SubjectFormData
+  ) => Promise<void> | void;
+  onDeleteSubject?: (categoryId: string, subjectId: string) => Promise<void> | void;
 }
 
 type FormModalType = 
@@ -41,6 +61,8 @@ type DeleteConfirmType =
 
 export function CategoryManagement({
   categories,
+  isLoading = false,
+  serverError = null,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
@@ -53,6 +75,10 @@ export function CategoryManagement({
   );
   const [formModal, setFormModal] = useState<FormModalType>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmType>(null);
+  const [nameInput, setNameInput] = useState("");
+  const [descriptionInput, setDescriptionInput] = useState("");
+  const [isActiveInput, setIsActiveInput] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -65,10 +91,16 @@ export function CategoryManagement({
   };
 
   const handleAddCategoryClick = () => {
+    setNameInput("");
+    setDescriptionInput("");
+    setIsActiveInput(true);
     setFormModal({ type: 'category-create' });
   };
 
   const handleEditCategoryClick = (category: Category) => {
+    setNameInput(category.name);
+    setDescriptionInput(category.description);
+    setIsActiveInput(category.isActive);
     setFormModal({ type: 'category-edit', category });
   };
 
@@ -77,10 +109,16 @@ export function CategoryManagement({
   };
 
   const handleAddSubjectClick = (categoryId: string) => {
+    setNameInput("");
+    setDescriptionInput("");
+    setIsActiveInput(true);
     setFormModal({ type: 'subject-create', categoryId });
   };
 
   const handleEditSubjectClick = (categoryId: string, subject: Subject) => {
+    setNameInput(subject.name);
+    setDescriptionInput(subject.description);
+    setIsActiveInput(subject.isActive);
     setFormModal({ type: 'subject-edit', categoryId, subject });
   };
 
@@ -93,34 +131,69 @@ export function CategoryManagement({
     });
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formModal) return;
 
-    if (formModal.type === 'category-create') {
-      onAddCategory?.();
-    } else if (formModal.type === 'category-edit') {
-      onEditCategory?.(formModal.category);
-    } else if (formModal.type === 'subject-create') {
-      onAddSubject?.(formModal.categoryId);
-    } else if (formModal.type === 'subject-edit') {
-      onEditSubject?.(formModal.categoryId, formModal.subject);
+    setIsSubmitting(true);
+
+    const trimmedName = nameInput.trim();
+    const trimmedDescription = descriptionInput.trim();
+
+    if (!trimmedName) {
+      setIsSubmitting(false);
+      return;
     }
 
-    setFormModal(null);
+    try {
+      if (formModal.type === 'category-create') {
+        await onAddCategory?.({
+          name: trimmedName,
+          description: trimmedDescription,
+          isActive: isActiveInput,
+        });
+      } else if (formModal.type === 'category-edit') {
+        await onEditCategory?.(formModal.category.id, {
+          name: trimmedName,
+          description: trimmedDescription,
+          isActive: isActiveInput,
+        });
+      } else if (formModal.type === 'subject-create') {
+        await onAddSubject?.(formModal.categoryId, {
+          name: trimmedName,
+          description: trimmedDescription,
+          isActive: isActiveInput,
+        });
+      } else if (formModal.type === 'subject-edit') {
+        await onEditSubject?.(formModal.categoryId, formModal.subject.id, {
+          name: trimmedName,
+          description: trimmedDescription,
+          isActive: isActiveInput,
+        });
+      }
+
+      setFormModal(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
 
-    if (deleteConfirm.type === 'category') {
-      onDeleteCategory?.(deleteConfirm.id);
-    } else {
-      onDeleteSubject?.(deleteConfirm.categoryId, deleteConfirm.id);
-    }
+    setIsSubmitting(true);
 
-    setDeleteConfirm(null);
+    try {
+      if (deleteConfirm.type === 'category') {
+        await onDeleteCategory?.(deleteConfirm.id);
+      } else {
+        await onDeleteSubject?.(deleteConfirm.categoryId, deleteConfirm.id);
+      }
+    } finally {
+      setIsSubmitting(false);
+      setDeleteConfirm(null);
+    }
   };
 
   const getFormModalContent = () => {
@@ -129,9 +202,6 @@ export function CategoryManagement({
     let title = '';
     let isCategory = false;
     let isEdit = false;
-    let initialName = '';
-    let initialDescription = '';
-
     if (formModal.type === 'category-create') {
       title = 'Create New Category';
       isCategory = true;
@@ -139,18 +209,14 @@ export function CategoryManagement({
       title = 'Edit Category';
       isCategory = true;
       isEdit = true;
-      initialName = formModal.category.name;
-      initialDescription = formModal.category.description;
     } else if (formModal.type === 'subject-create') {
       title = 'Create New Subject';
     } else if (formModal.type === 'subject-edit') {
       title = 'Edit Subject';
       isEdit = true;
-      initialName = formModal.subject.name;
-      initialDescription = formModal.subject.description;
     }
 
-    return { title, isCategory, isEdit, initialName, initialDescription };
+    return { title, isCategory, isEdit };
   };
 
   const formModalContent = getFormModalContent();
@@ -176,6 +242,18 @@ export function CategoryManagement({
 
         {/* Categories List */}
         <div className="space-y-4">
+          {serverError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {serverError}
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="rounded-2xl border border-neutral-200/60 bg-white/80 p-8 text-center text-sm text-neutral-500 shadow-sm backdrop-blur-xl">
+              Loading categories...
+            </div>
+          )}
+
           {categories.map((category) => {
             const isExpanded = expandedCategories.has(category.id);
 
@@ -210,6 +288,11 @@ export function CategoryManagement({
                     <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700">
                       {category.subjects.length} subjects
                     </span>
+                    {!category.isActive && (
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                        Inactive
+                      </span>
+                    )}
                     <button
                       onClick={() => handleAddSubjectClick(category.id)}
                       className="rounded-lg p-2 text-[#00bae2] transition-all hover:bg-[#00bae2]/10"
@@ -251,6 +334,11 @@ export function CategoryManagement({
                             <p className="text-sm text-neutral-600">
                               {subject.description}
                             </p>
+                            {!subject.isActive && (
+                              <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                Inactive
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <button
@@ -279,7 +367,7 @@ export function CategoryManagement({
             );
           })}
 
-          {categories.length === 0 && (
+          {!isLoading && categories.length === 0 && (
             <div className="rounded-2xl border border-neutral-200/60 bg-white/80 p-12 text-center shadow-sm backdrop-blur-xl">
               <p className="text-sm text-neutral-500">
                 No categories yet. Click &quot;Add Category&quot; to get started.
@@ -321,7 +409,8 @@ export function CategoryManagement({
                 </label>
                 <input
                   type="text"
-                  defaultValue={formModalContent.initialName}
+                  value={nameInput}
+                  onChange={(event) => setNameInput(event.target.value)}
                   placeholder={`Enter ${formModalContent.isCategory ? 'category' : 'subject'} name`}
                   className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
                   required
@@ -333,7 +422,8 @@ export function CategoryManagement({
                   Description
                 </label>
                 <textarea
-                  defaultValue={formModalContent.initialDescription}
+                  value={descriptionInput}
+                  onChange={(event) => setDescriptionInput(event.target.value)}
                   placeholder="Enter description"
                   rows={3}
                   className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
@@ -341,20 +431,36 @@ export function CategoryManagement({
                 />
               </div>
 
+              <label className="flex items-center gap-2 text-sm text-neutral-700">
+                <input
+                  type="checkbox"
+                  checked={isActiveInput}
+                  onChange={(event) => setIsActiveInput(event.target.checked)}
+                  className="h-4 w-4 rounded border-neutral-300"
+                />
+                Active {formModalContent.isCategory ? "category" : "subject"}
+              </label>
+
               {/* Actions */}
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setFormModal(null)}
+                  disabled={isSubmitting}
                   className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="flex-1 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2.5 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md"
                 >
-                  {formModalContent.isEdit ? 'Save Changes' : 'Create'}
+                  {isSubmitting
+                    ? 'Saving...'
+                    : formModalContent.isEdit
+                      ? 'Save Changes'
+                      : 'Create'}
                 </button>
               </div>
             </form>
@@ -384,7 +490,7 @@ export function CategoryManagement({
               </div>
             </div>
           }
-          confirmText="Delete"
+          confirmText={isSubmitting ? "Deleting..." : "Delete"}
           variant="danger"
         />
       )}
