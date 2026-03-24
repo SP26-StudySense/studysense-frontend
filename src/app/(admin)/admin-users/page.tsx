@@ -4,11 +4,16 @@ import { useState } from "react";
 import { AdminUsersPage, User } from "@/features/admin/admin-users";
 import {
   useActivateAdminUserMutation,
+  useAdminAssignableSubjectsQuery,
   useAdminUserRolesQuery,
   useAdminUsersQuery,
+  useAssignSubjectToContentManagerMutation,
+  useUnassignSubjectFromContentManagerMutation,
   useDeactivateAdminUserMutation,
 } from "@/features/admin/admin-users/api";
+import { useCurrentUser } from "@/features/auth/api/queries";
 import { toast } from "@/shared/lib";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 
 export default function UsersPage() {
   const [searchInput, setSearchInput] = useState("");
@@ -17,8 +22,13 @@ export default function UsersPage() {
   const pageSize = 20;
 
   const { data: roleOptions = [], isLoading: isRolesLoading } = useAdminUserRolesQuery();
+  const { data: subjectOptions = [], isLoading: isSubjectsLoading } =
+    useAdminAssignableSubjectsQuery();
+  const { data: currentUser } = useCurrentUser({ enabled: true });
   const deactivateUserMutation = useDeactivateAdminUserMutation();
   const activateUserMutation = useActivateAdminUserMutation();
+  const assignSubjectMutation = useAssignSubjectToContentManagerMutation();
+  const unassignSubjectMutation = useUnassignSubjectFromContentManagerMutation();
 
   const { data, isLoading, error } = useAdminUsersQuery({
     pageIndex,
@@ -30,11 +40,24 @@ export default function UsersPage() {
   const users = data?.items ?? [];
 
   const handleLockUser = async (user: User) => {
+    if (currentUser?.id && user.id === currentUser.id) {
+      toast.warning("You cannot block your own account.");
+      return;
+    }
+
     await deactivateUserMutation.mutateAsync(user.id);
   };
 
   const handleUnlockUser = async (user: User) => {
     await activateUserMutation.mutateAsync(user.id);
+  };
+
+  const handleAssignSubject = async (user: User, subjectId: number) => {
+    await assignSubjectMutation.mutateAsync({ userId: user.id, subjectId });
+  };
+
+  const handleUnassignSubject = async (user: User) => {
+    await unassignSubjectMutation.mutateAsync(user.id);
   };
 
   const onRoleFilterChange = (value: string) => {
@@ -57,35 +80,53 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(event) => onSearchInputChange(event.target.value)}
-            placeholder="Search by name or email"
-            className="rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-[#00bae2]"
-          />
-          <select
-            value={roleFilter}
-            onChange={(event) => onRoleFilterChange(event.target.value)}
-            disabled={isRolesLoading}
-            className="rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-[#00bae2]"
-          >
-            <option value="">All roles</option>
-            {isRolesLoading && <option value="">Loading roles...</option>}
-            {roleOptions.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-2">
+      <div className="rounded-2xl border border-cyan-100 bg-gradient-to-r from-cyan-50 via-white to-sky-50 p-4 shadow-sm">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-cyan-800">
+          <SlidersHorizontal className="h-4 w-4" />
+          Filters
+        </div>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-6">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
+              Search
+            </label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(event) => onSearchInputChange(event.target.value)}
+                placeholder="Name or email"
+                className="w-full rounded-xl border border-cyan-100 bg-white py-2.5 pl-9 pr-3 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
+              />
+            </div>
+          </div>
+          <div className="lg:col-span-4">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
+              Role
+            </label>
+            <select
+              value={roleFilter}
+              onChange={(event) => onRoleFilterChange(event.target.value)}
+              disabled={isRolesLoading}
+              className="w-full rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
+            >
+              <option value="">All roles</option>
+              {isRolesLoading && <option value="">Loading roles...</option>}
+              {roleOptions.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="lg:col-span-2">
             <button
               onClick={clearFilters}
               disabled={deactivateUserMutation.isPending || activateUserMutation.isPending}
-              className="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-200 bg-white px-4 py-2.5 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
+              <X className="h-4 w-4" />
               Clear
             </button>
           </div>
@@ -101,7 +142,16 @@ export default function UsersPage() {
           Loading users...
         </div>
       ) : (
-        <AdminUsersPage users={users} onLockUser={handleLockUser} onUnlockUser={handleUnlockUser} />
+        <AdminUsersPage
+          users={users}
+          currentUserId={currentUser?.id}
+          subjectOptions={subjectOptions}
+          isSubjectOptionsLoading={isSubjectsLoading}
+          onLockUser={handleLockUser}
+          onUnlockUser={handleUnlockUser}
+          onAssignSubject={handleAssignSubject}
+          onUnassignSubject={handleUnassignSubject}
+        />
       )}
 
       <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700">

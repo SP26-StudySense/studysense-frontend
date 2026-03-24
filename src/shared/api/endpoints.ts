@@ -110,6 +110,8 @@ export const endpoints = {
       byId: (id: string) => `/admin/users/${id}`,
       activate: (id: string) => `/admin/users/${id}/activate`,
       deactivate: (id: string) => `/admin/users/${id}/deactivate`,
+      assignSubject: (id: string) => `/admin/users/${id}/subject`,
+      unassignSubject: (id: string) => `/admin/users/${id}/subject`,
     },
     roadmaps: {
       base: '/admin/roadmaps',

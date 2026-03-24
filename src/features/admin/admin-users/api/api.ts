@@ -1,4 +1,4 @@
-import { get, put } from "@/shared/api/client";
+import { del, get, put } from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
 
 import type { User } from "../types";
@@ -10,6 +10,10 @@ type GetAllUsersApiResponse = {
 
 type GetAllUserRolesApiResponse = {
   roles: string[];
+};
+
+type GetAllLearningSubjectsApiResponse = {
+  subjects: PaginatedResponse<LearningSubjectDto>;
 };
 
 export type GetAdminUsersParams = {
@@ -29,6 +33,11 @@ export type AdminUsersList = {
   items: User[];
 };
 
+export type LearningSubjectOption = {
+  id: number;
+  name: string;
+};
+
 type UserManagementUserDto = {
   id: string;
   userName: string | null;
@@ -38,6 +47,14 @@ type UserManagementUserDto = {
   phoneNumber: string | null;
   isActive: boolean;
   roleNames: string[];
+  assignedSubjectId?: number | null;
+  assignedSubjectName?: string | null;
+};
+
+type LearningSubjectDto = {
+  id: number;
+  name: string;
+  isActive: boolean;
 };
 
 function toUiUser(user: UserManagementUserDto): User {
@@ -49,6 +66,8 @@ function toUiUser(user: UserManagementUserDto): User {
     name: fullName || user.userName || user.email || "Unknown User",
     email: user.email || "-",
     role,
+    assignedSubjectId: user.assignedSubjectId ?? undefined,
+    assignedSubjectName: user.assignedSubjectName ?? undefined,
     status: user.isActive ? "Active" : "Inactive",
     joinDate: "-",
     isLocked: !user.isActive,
@@ -81,10 +100,48 @@ export async function getAdminUserRoles(): Promise<string[]> {
   return response.roles;
 }
 
+export async function getAssignableSubjects(): Promise<LearningSubjectOption[]> {
+  const pageSize = 100;
+  let pageIndex = 1;
+  let hasNextPage = true;
+  const allSubjects: LearningSubjectDto[] = [];
+
+  while (hasNextPage) {
+    const response = await get<GetAllLearningSubjectsApiResponse>("/learning-subjects", {
+      params: {
+        pageIndex,
+        pageSize,
+      },
+    });
+
+    allSubjects.push(...response.subjects.items);
+    hasNextPage = response.subjects.hasNextPage;
+    pageIndex += 1;
+  }
+
+  return allSubjects
+    .filter((subject) => subject.isActive)
+    .map((subject) => ({ id: subject.id, name: subject.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export async function deactivateAdminUser(userId: string): Promise<void> {
   await put<void, { id: string }>(endpoints.admin.users.deactivate(userId), { id: userId });
 }
 
 export async function activateAdminUser(userId: string): Promise<void> {
   await put<void, { id: string }>(endpoints.admin.users.activate(userId), { id: userId });
+}
+
+export async function assignSubjectToContentManager(
+  userId: string,
+  subjectId: number
+): Promise<void> {
+  await put<void, { subjectId: number }>(endpoints.admin.users.assignSubject(userId), {
+    subjectId,
+  });
+}
+
+export async function unassignSubjectFromContentManager(userId: string): Promise<void> {
+  await del<void>(endpoints.admin.users.unassignSubject(userId));
 }

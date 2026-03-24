@@ -2,7 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/shared/api/query-keys";
 
-import { getAdminUserRoles, getAdminUsers, type GetAdminUsersParams } from "./api";
+import {
+  getAdminUserRoles,
+  getAdminUsers,
+  getAssignableSubjects,
+  type GetAdminUsersParams,
+} from "./api";
 
 export function useAdminUsersQuery(params: GetAdminUsersParams) {
   return useQuery({
@@ -25,6 +30,17 @@ export function useAdminUserRolesQuery() {
   return useQuery({
     queryKey: [...queryKeys.admin.users.all, "roles"],
     queryFn: getAdminUserRoles,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    retry: 2,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useAdminAssignableSubjectsQuery() {
+  return useQuery({
+    queryKey: [...queryKeys.admin.users.all, "subjects"],
+    queryFn: getAssignableSubjects,
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     retry: 2,

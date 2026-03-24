@@ -52,7 +52,7 @@ export function AdminTable<T extends Record<string, any>>({
                 </th>
               ))}
               {hasActions && (
-                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-neutral-600">
+                <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-neutral-600">
                   Actions
                 </th>
               )}
@@ -83,11 +83,11 @@ export function AdminTable<T extends Record<string, any>>({
                     </td>
                   ))}
                   {hasActions && (
-                    <td className="space-x-3 whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <td className="whitespace-nowrap px-6 py-4 text-center text-sm font-medium">
                       {renderActions ? (
-                        renderActions(item)
+                        <div className="flex justify-center">{renderActions(item)}</div>
                       ) : (
-                        <>
+                        <div className="flex justify-center gap-3">
                           {onEdit && (
                             <button
                               onClick={() => handleEdit(item)}
@@ -104,7 +104,7 @@ export function AdminTable<T extends Record<string, any>>({
                               Delete
                             </button>
                           )}
-                        </>
+                        </div>
                       )}
                     </td>
                   )}

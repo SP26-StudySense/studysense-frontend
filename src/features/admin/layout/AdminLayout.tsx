@@ -10,12 +10,10 @@ interface AdminLayoutProps {
 
 // Map routes to titles
 function getPageTitle(pathname: string): string {
-  if (pathname.startsWith("/admin/admin-users")) return "User Management";
-  if (pathname.startsWith("/admin/admin-courses")) return "Course Management";
-  if (pathname.startsWith("/admin/admin-transactions"))
+  if (pathname.startsWith("/admin-users")) return "User Management";
+  if (pathname.startsWith("/admin-transactions"))
     return "Transaction Management";
-  if (pathname.startsWith("/admin/admin-categories")) return "Category Management";
-  if (pathname.startsWith("/admin/settings")) return "Settings";
+  if (pathname.startsWith("/admin-categories")) return "Category Management";
   return "Admin Dashboard";
 }
 

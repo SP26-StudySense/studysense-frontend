@@ -8,7 +8,7 @@ import {
   CreditCard,
   FolderTree,
   LogOut,
-  Shield,
+  GitFork,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -50,11 +50,11 @@ export function AdminSidebar() {
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-72 flex-col border-r border-neutral-200/60 bg-white/80 backdrop-blur-xl">
       {/* Logo */}
       <div className="flex h-20 shrink-0 items-center px-6">
-        <Link href="/admin-dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-[#c1ff72] shadow-lg shadow-neutral-900/10">
-            <Shield className="h-[22px] w-[22px]" strokeWidth={2.5} />
+        <Link href="/admin-dashboard" className="group flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-white transition-transform duration-300 group-hover:scale-105">
+            <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
           </div>
-          <span className="text-xl font-bold tracking-tight text-neutral-900">
+          <span className="text-xl font-semibold tracking-tight text-neutral-900">
             Study<span className="text-neutral-500">Sense</span>
           </span>
         </Link>
