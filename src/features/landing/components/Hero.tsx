@@ -18,10 +18,10 @@ export const Hero = () => {
 
     // Text content constants for scramble animation
     const HERO_TEXT = {
-        badge: 'New: DevOps 2024 Roadmap Updated',
-        titleLine1: "Don't just learn code.",
-        titleLine2: 'Engineer your path.',
-        description: 'Step-by-step guides and curated learning paths for developers. Track your progress, verify your skills, and master the modern stack without the noise.',
+        badge: 'New: Multidiscipline Learning Paths',
+        titleLine1: "Don't just collect courses.",
+        titleLine2: 'Learn with direction.',
+        description: 'Structured learning paths for languages, business, design, test prep, and technology. Track progress, stay focused, and build real skills without the noise.',
     };
 
     useEffect(() => {
@@ -180,7 +180,7 @@ export const Hero = () => {
                         className="gap-2"
                     >
                         <Search className="w-[18px]" />
-                        Browse Roles
+                        Browse Learning Paths
                     </Button>
                 </div>
             </div>
@@ -201,8 +201,8 @@ export const Hero = () => {
                                 <Atom width="22" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-semibold text-neutral-900">React Ecosystem</h3>
-                                <p className="text-xs text-neutral-500">Frontend Path • Module 4</p>
+                                <h3 className="text-sm font-semibold text-neutral-900">Public Speaking</h3>
+                                <p className="text-xs text-neutral-500">Communication Path • Module 4</p>
                             </div>
                             <div className="ml-auto">
                                 <div
@@ -216,11 +216,11 @@ export const Hero = () => {
                         <div className="space-y-2">
                             <div className="flex items-center gap-3 rounded border border-neutral-100 bg-neutral-50 p-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-100">
                                 <CheckCircle2 className="text-emerald-500" />
-                                <span>Hooks &amp; Context API</span>
+                                <span>Audience analysis basics</span>
                             </div>
                             <div className="flex items-center gap-3 rounded border border-neutral-100 bg-neutral-50 p-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-100">
                                 <Circle className="text-neutral-300" />
-                                <span>State Management (Redux/Zustand)</span>
+                                <span>Story structure and delivery</span>
                             </div>
                         </div>
                     </div>
@@ -236,15 +236,15 @@ export const Hero = () => {
                             <div className="h-2.5 w-2.5 rounded-full bg-green-500/80"></div>
                         </div>
                         <p className="mb-2">
-                            <span className="text-emerald-400">user@devpath</span>:
-                            <span className="text-blue-400">~</span>$ git commit -m &quot;mastered backend&quot;
+                            <span className="text-emerald-400">learner@studysense</span>:
+                            <span className="text-blue-400">~</span>$ update progress &quot;module complete&quot;
                         </p>
-                        <p className="mb-2 text-neutral-500">Accessing roadmap database...</p>
+                        <p className="mb-2 text-neutral-500">Updating your learning map...</p>
                         <div className="flex items-center gap-2 text-white">
                             <span>
                                 <Trophy className="text-[#00bae2]" />
                             </span>
-                            <span>Badge Unlocked: API Architect</span>
+                            <span>Milestone unlocked: Clear Communication</span>
                         </div>
                     </div>
                 </div>

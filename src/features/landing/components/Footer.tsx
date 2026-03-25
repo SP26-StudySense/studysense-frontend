@@ -103,17 +103,17 @@ export const Footer = () => {
                                 <span className="font-semibold text-neutral-900">StudySense</span>
                             </Link>
                             <p className="text-sm text-neutral-700">
-                                Community-driven learning roadmap platform.
+                                Structured learning paths for every discipline.
                             </p>
                         </div>
 
                         <div className="flex flex-wrap gap-8 md:gap-16">
                             <div className="space-y-2">
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-600">Roadmaps</h4>
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-600">Learning Paths</h4>
                                 <ul className="space-y-1 text-sm text-neutral-700">
-                                    <li><Link href="#" className="hover:text-neutral-900">Frontend</Link></li>
-                                    <li><Link href="#" className="hover:text-neutral-900">Backend</Link></li>
-                                    <li><Link href="#" className="hover:text-neutral-900">DevOps</Link></li>
+                                    <li><Link href="#" className="hover:text-neutral-900">Communication</Link></li>
+                                    <li><Link href="#" className="hover:text-neutral-900">Languages</Link></li>
+                                    <li><Link href="#" className="hover:text-neutral-900">Study Skills</Link></li>
                                 </ul>
                             </div>
                             <div className="space-y-2">

@@ -59,14 +59,14 @@ export const SkillGraph = () => {
                 <div className="relative z-10 grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
                     <div data-skill-content className="space-y-8">
                         <div className="inline-block rounded-full border border-neutral-700 bg-neutral-800/50 px-3 py-1 font-mono text-xs text-[#00bae2] glow-cyan">
-                            git checkout -b new-career
+                            learner profile initialized
                         </div>
                         <h2 className="text-4xl font-medium tracking-tight text-white leading-[1.1] lg:text-5xl">
                             Visualize your knowledge gap.
                         </h2>
                         <p className="max-w-md text-lg text-neutral-400">
-                            Create a personal account to track what you know, what you&apos;re learning, and
-                            showcase your skill graph to potential employers.
+                            Create a personal account to track what you know, what you are learning, and where
+                            to focus next.
                         </p>
                         <button
                             onClick={() => navigateWithTransition('/register')}
@@ -102,7 +102,7 @@ export const SkillGraph = () => {
                             <div className="flex">
                                 <span className="w-6 text-neutral-600">2</span>
                                 <span className="pl-4 text-purple-300">role</span>:{' '}
-                                <span className="text-green-300">&quot;Full Stack Developer&quot;</span>,
+                                <span className="text-green-300">&quot;Communication Learner&quot;</span>,
                             </div>
                             <div className="flex">
                                 <span className="w-6 text-neutral-600">3</span>
@@ -119,7 +119,7 @@ export const SkillGraph = () => {
                                 <span className="w-6 text-neutral-600">5</span>
                                 <span className="pl-8 text-neutral-300">{`{`}</span>{' '}
                                 <span className="text-purple-300">name</span>:{' '}
-                                <span className="text-green-300">&quot;React&quot;</span>,{' '}
+                                <span className="text-green-300">&quot;Public Speaking&quot;</span>,{' '}
                                 <span className="text-purple-300">mastery</span>:{' '}
                                 <span className="text-[#00bae2] transition-all group-hover:text-shadow-glow">90%</span>{' '}
                                 <span className="text-neutral-300">{`}`}</span>,
@@ -129,7 +129,7 @@ export const SkillGraph = () => {
                                 <span className="w-6 text-neutral-600">6</span>
                                 <span className="pl-8 text-neutral-300">{`{`}</span>{' '}
                                 <span className="text-purple-300">name</span>:{' '}
-                                <span className="text-green-300">&quot;TypeScript&quot;</span>,{' '}
+                                <span className="text-green-300">&quot;Academic Writing&quot;</span>,{' '}
                                 <span className="text-purple-300">mastery</span>:{' '}
                                 <span className="text-[#00bae2] transition-all group-hover:text-shadow-glow">85%</span>{' '}
                                 <span className="text-neutral-300">{`}`}</span>,

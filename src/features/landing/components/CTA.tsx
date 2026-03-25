@@ -60,7 +60,7 @@ export const CTA = () => {
                         Ready to start your journey?
                     </h2>
                     <p className="mb-8 text-lg font-medium text-neutral-800">
-                        Join 500,000+ developers learning together.
+                        Join thousands of learners building real skills every day.
                     </p>
                     <div className="flex flex-col justify-center gap-4 sm:flex-row">
                         <Button
