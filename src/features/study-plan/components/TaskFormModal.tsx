@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useState as _useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2, Clock, Calendar } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { TaskItemInput, TaskStatus } from '../api/types';
@@ -44,6 +45,11 @@ export function TaskFormModal({
         scheduledDate: new Date().toISOString().split('T')[0],
     });
     const [errors, setErrors] = useState<Partial<Record<keyof TaskFormData, string>>>({});
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Reset form when modal opens or initialData changes
     useEffect(() => {
@@ -103,10 +109,10 @@ export function TaskFormModal({
         await onSubmit(taskInput);
     };
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -142,7 +148,7 @@ export function TaskFormModal({
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             className={cn(
                                 "w-full px-4 py-3 rounded-xl border bg-white/80 text-neutral-900 placeholder:text-neutral-400 transition-all",
-                                "focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500",
+                                "focus:outline-none focus:ring-2 focus:ring-[#00bae2]/30 focus:border-[#00bae2]",
                                 errors.title ? "border-red-300" : "border-neutral-200"
                             )}
                             placeholder="Enter task title..."
@@ -162,7 +168,7 @@ export function TaskFormModal({
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             rows={3}
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-white/80 text-neutral-900 placeholder:text-neutral-400 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 resize-none"
+                            className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-white/80 text-neutral-900 placeholder:text-neutral-400 transition-all focus:outline-none focus:ring-2 focus:ring-[#00bae2]/30 focus:border-[#00bae2] resize-none"
                             placeholder="Add a description (optional)..."
                             disabled={isLoading}
                         />
@@ -183,7 +189,7 @@ export function TaskFormModal({
                                 onChange={(e) => setFormData({ ...formData, estimatedMinutes: parseInt(e.target.value) || 0 })}
                                 className={cn(
                                     "w-full px-4 py-3 rounded-xl border bg-white/80 text-neutral-900 transition-all",
-                                    "focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500",
+                                    "focus:outline-none focus:ring-2 focus:ring-[#00bae2]/30 focus:border-[#00bae2]",
                                     errors.estimatedMinutes ? "border-red-300" : "border-neutral-200"
                                 )}
                                 disabled={isLoading}
@@ -205,7 +211,7 @@ export function TaskFormModal({
                                 onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
                                 className={cn(
                                     "w-full px-4 py-3 rounded-xl border bg-white/80 text-neutral-900 transition-all",
-                                    "focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500",
+                                    "focus:outline-none focus:ring-2 focus:ring-[#00bae2]/30 focus:border-[#00bae2]",
                                     errors.scheduledDate ? "border-red-300" : "border-neutral-200"
                                 )}
                                 disabled={isLoading}
@@ -229,7 +235,7 @@ export function TaskFormModal({
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-[#00bae2] to-[#009ce2] text-white font-semibold shadow-lg shadow-[#00bae2]/25 hover:shadow-xl hover:shadow-[#00bae2]/30 transition-all disabled:opacity-50"
                         >
                             {isLoading ? (
                                 <>
@@ -243,6 +249,7 @@ export function TaskFormModal({
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

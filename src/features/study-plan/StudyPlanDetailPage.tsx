@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { cn } from '@/shared/lib/utils';
 import { StatsCard } from './components/StatsCard';
 import { RoadmapTimeline, RoadmapModule } from './components/RoadmapTimeline';
 import { ModuleTasksPanel, ModuleData, ModuleTask } from './components/ModuleTasksPanel';
@@ -43,9 +44,10 @@ function isTaskCompleted(status?: TaskStatus): boolean {
 export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [activeTab, setActiveTab] = useState<'tasks' | 'calendar'>('tasks');
     const [shouldPoll, setShouldPoll] = useState(false);
     const queryClient = useQueryClient();
-    const prevStatusRef = useRef<StudyPlanStatus | undefined>();
+    const prevStatusRef = useRef<StudyPlanStatus | undefined>(undefined);
 
     // Fetch study plan with conditional polling
     const { data: studyPlan, isLoading: isLoadingPlan, error: planError } = useStudyPlan(planId, {
@@ -294,35 +296,79 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                         <RoadmapTimeline
                             modules={roadmapModules}
                             selectedModuleId={selectedModuleId}
-                            onModuleClick={setSelectedModuleId}
+                            onModuleClick={(id) => {
+                                setSelectedModuleId(id);
+                                setSelectedDate(null);
+                            }}
                         />
                     </div>
 
                     {/* Right Content */}
-                    <div className="lg:col-span-8 space-y-6">
-                        {/* Calendar */}
-                        <CalendarView
-                            selectedDate={selectedDate}
-                            onDateSelect={setSelectedDate}
-                            taskDates={taskDates}
-                        />
-
-                        {/* Tasks Panel */}
+                    <div className="lg:col-span-8 flex flex-col gap-5">
                         {selectedModule ? (
-                            <ModuleTasksPanel
-                                module={selectedModule}
-                                onClose={() => setSelectedModuleId(null)}
-                                className="h-[calc(100vh-450px)] min-h-[400px]"
-                                studyPlanId={planId}
-                                filterDate={selectedDate}
-                                allTasks={tasks}
-                                allModules={studyPlan?.modules}
-                                onClearDateFilter={() => setSelectedDate(null)}
-                                isLoadingTasks={isLoadingTasks}
-                            />
+                            <div className="bg-white/80 backdrop-blur-xl border border-neutral-200/60 shadow-lg shadow-neutral-900/5 rounded-3xl overflow-hidden flex flex-col">
+                                {/* Tabs Header */}
+                                <div className="flex items-center gap-6 px-8 pt-6 pb-0 border-b border-neutral-200/80 bg-white/50">
+                                    <button
+                                        onClick={() => setActiveTab('tasks')}
+                                        className={cn(
+                                            "pb-4 text-base font-semibold transition-all relative outline-none",
+                                            activeTab === 'tasks' 
+                                                ? "text-violet-600" 
+                                                : "text-neutral-500 hover:text-neutral-800"
+                                        )}
+                                    >
+                                        Tasks List
+                                        {activeTab === 'tasks' && (
+                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 rounded-t-full shadow-[0_-2px_8px_rgba(124,58,237,0.5)]" />
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('calendar')}
+                                        className={cn(
+                                            "pb-4 text-base font-semibold transition-all relative outline-none",
+                                            activeTab === 'calendar' 
+                                                ? "text-violet-600" 
+                                                : "text-neutral-500 hover:text-neutral-800"
+                                        )}
+                                    >
+                                        Calendar View
+                                        {activeTab === 'calendar' && (
+                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 rounded-t-full shadow-[0_-2px_8px_rgba(124,58,237,0.5)]" />
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Tab Content */}
+                                <div className="flex-1">
+                                    {activeTab === 'tasks' && (
+                                        <ModuleTasksPanel
+                                            module={selectedModule}
+                                            onClose={() => setSelectedModuleId(null)}
+                                            className="min-h-[500px] border-none shadow-none bg-transparent rounded-none"
+                                            studyPlanId={planId}
+                                            filterDate={selectedDate}
+                                            allTasks={tasks}
+                                            allModules={studyPlan?.modules}
+                                            onClearDateFilter={() => setSelectedDate(null)}
+                                            isLoadingTasks={isLoadingTasks}
+                                        />
+                                    )}
+                                    {activeTab === 'calendar' && (
+                                        <div className="p-6">
+                                            <CalendarView
+                                                selectedDate={selectedDate}
+                                                onDateSelect={setSelectedDate}
+                                                taskDates={taskDates}
+                                                className="w-full text-sm"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         ) : (
-                            <div className="h-[calc(100vh-450px)] min-h-[400px] flex items-center justify-center rounded-3xl bg-white/50 border border-neutral-200/60 p-6 text-neutral-400">
-                                <p>Select a module from the timeline to view tasks</p>
+                            <div className="h-[500px] flex items-center justify-center rounded-3xl bg-white/50 border border-neutral-200/60 p-6 text-neutral-400">
+                                <p>Select a module from the timeline to view</p>
                             </div>
                         )}
                     </div>

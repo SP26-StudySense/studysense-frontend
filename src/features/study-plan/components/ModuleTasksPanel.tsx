@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play, Clock, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown } from 'lucide-react';
+import { Play, Clock, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, Sparkles, FastForward } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
 import { useCreateTask, useUpdateTask, useDeleteTask } from '../api/mutations';
@@ -156,6 +156,16 @@ export function ModuleTasksPanel({
             setViewFilter('module');
         }
     }, [filterDate, viewFilter]);
+
+    const prevModuleIdRef = useRef(module?.id);
+
+    // Force switch to 'module' filter only when a new module is selected
+    useEffect(() => {
+        if (module?.id && module.id !== prevModuleIdRef.current) {
+            setViewFilter('module');
+            prevModuleIdRef.current = module.id;
+        }
+    }, [module?.id]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -321,14 +331,15 @@ export function ModuleTasksPanel({
     return (
         <>
             <div className={cn(
-                "rounded-3xl bg-white/90 backdrop-blur-xl border border-neutral-200/60 shadow-2xl shadow-neutral-900/10 flex flex-col",
+                "bg-white flex flex-col",
                 className
             )}>
                 {/* Header */}
-                <div className="p-6 border-b border-neutral-100">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                            <h2 className="text-xl font-bold text-neutral-900 mb-2">
+                <div className="p-6 border-b border-neutral-100 flex flex-col gap-4">
+                    {/* Top Row: Title + Filter Dropdown */}
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                            <h2 className="text-lg font-semibold text-neutral-900 mb-1 break-words">
                                 {viewFilter === 'date' && filterDate ? (
                                     <>Tasks for {filterDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
                                 ) : viewFilter === 'all-tasks' ? (
@@ -337,13 +348,13 @@ export function ModuleTasksPanel({
                                     <>{module.title}</>
                                 )}
                             </h2>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2 md:gap-3">
                                 {viewFilter === 'module' && (
                                     <span className={cn(
-                                        "inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold",
-                                        module.status === 'completed' && "bg-emerald-100 text-emerald-700",
-                                        module.status === 'in_progress' && "bg-violet-100 text-violet-700",
-                                        module.status === 'not_started' && "bg-neutral-100 text-neutral-600",
+                                        "inline-flex items-center rounded text-[11px] font-semibold tracking-wide uppercase px-1.5 py-0.5",
+                                        module.status === 'completed' && "bg-emerald-50 text-emerald-600",
+                                        module.status === 'in_progress' && "bg-violet-50 text-violet-600",
+                                        module.status === 'not_started' && "bg-neutral-100 text-neutral-500",
                                         module.status === 'locked' && "bg-neutral-100 text-neutral-400"
                                     )}>
                                         {module.status === 'completed' && 'Completed'}
@@ -352,21 +363,21 @@ export function ModuleTasksPanel({
                                         {module.status === 'locked' && 'Locked'}
                                     </span>
                                 )}
-                                <span className="flex items-center gap-1 text-sm text-neutral-500">
-                                    <Clock className="h-4 w-4" />
-                                    {filteredTasks.reduce((sum, t) => sum + t.estimatedMinutes, 0)} min
+                                <span className="text-xs text-neutral-400 whitespace-nowrap">
+                                    {filteredTasks.reduce((sum, t) => sum + t.estimatedMinutes, 0)} min total
                                 </span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {/* Filter Dropdown */}
+
+                        {/* Filter Dropdown Only */}
+                        <div className="flex-shrink-0 mt-2 md:mt-0">
                             <div className="relative">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setShowFilterDropdown(!showFilterDropdown);
                                     }}
-                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-neutral-200 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors max-w-xs"
+                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-neutral-200 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors w-full md:w-auto md:max-w-xs justify-between md:justify-start"
                                     title={
                                         viewFilter === 'module' 
                                             ? `${module.title} (${module.tasks.length})` 
@@ -375,39 +386,38 @@ export function ModuleTasksPanel({
                                                 : `Selected Date (${dateTasksCount})`
                                     }
                                 >
-                                    <Filter className="h-4 w-4 shrink-0" />
-                                    <span className="truncate">
-                                        {viewFilter === 'module' 
-                                            ? module.title
-                                            : viewFilter === 'all-tasks'
-                                                ? 'All Tasks'
-                                                : `Selected Date`
-                                        }
-                                    </span>
-                                    <span className="shrink-0">
-                                        ({viewFilter === 'module' 
-                                            ? module.tasks.length
-                                            : viewFilter === 'all-tasks'
-                                                ? totalTasksCount
-                                                : dateTasksCount
-                                        })
-                                    </span>
-                                    <ChevronDown className="h-3 w-3 shrink-0" />
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                        <Filter className="h-4 w-4 shrink-0" />
+                                        <span className="truncate">
+                                            {viewFilter === 'module' 
+                                                ? module.title
+                                                : viewFilter === 'all-tasks'
+                                                    ? 'All Tasks'
+                                                    : `Selected Date`
+                                            }
+                                        </span>
+                                        <span className="shrink-0">
+                                            ({viewFilter === 'module' 
+                                                ? module.tasks.length
+                                                : viewFilter === 'all-tasks'
+                                                    ? totalTasksCount
+                                                    : dateTasksCount
+                                            })
+                                        </span>
+                                    </div>
+                                    <ChevronDown className="h-3 w-3 shrink-0 ml-2" />
                                 </button>
                                 {showFilterDropdown && (
                                     <div 
                                         onClick={(e) => e.stopPropagation()}
-                                        className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-neutral-200 shadow-xl z-10"
+                                        className="absolute right-0 top-full mt-2 w-full md:w-56 min-w-[200px] rounded-xl bg-white border border-neutral-200 shadow-xl z-20"
                                     >
                                         {/* Module Tasks */}
                                         <button
                                             onClick={() => {
                                                 setViewFilter('module');
                                                 setShowFilterDropdown(false);
-                                                // Clear date selection when switching to module view
-                                                if (onClearDateFilter) {
-                                                    onClearDateFilter();
-                                                }
+                                                if (onClearDateFilter) onClearDateFilter();
                                             }}
                                             className={cn(
                                                 "w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 first:rounded-t-xl transition-colors truncate",
@@ -423,10 +433,7 @@ export function ModuleTasksPanel({
                                             onClick={() => {
                                                 setViewFilter('all-tasks');
                                                 setShowFilterDropdown(false);
-                                                // Clear date selection when switching to all tasks
-                                                if (onClearDateFilter) {
-                                                    onClearDateFilter();
-                                                }
+                                                if (onClearDateFilter) onClearDateFilter();
                                             }}
                                             className={cn(
                                                 "w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 border-t border-neutral-100 transition-colors",
@@ -436,7 +443,7 @@ export function ModuleTasksPanel({
                                             All Tasks ({totalTasksCount})
                                         </button>
                                         
-                                        {/* Selected Date (conditional) */}
+                                        {/* Selected Date */}
                                         {filterDate && (
                                             <button
                                                 onClick={() => {
@@ -454,24 +461,43 @@ export function ModuleTasksPanel({
                                     </div>
                                 )}
                             </div>
-                            {viewFilter === 'module' && !isLocked && (
-                                <button
-                                    onClick={handleAddTask}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm font-medium hover:bg-emerald-100 transition-colors"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Add Task
-                                </button>
-                            )}
                         </div>
                     </div>
+
+                    {/* Bottom Row: Actions */}
+                    {viewFilter === 'module' && !isLocked && (
+                        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-50">
+                            <button
+                                className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-600 hover:to-purple-700 shadow-sm transition-all"
+                                title="Generate tasks with AI"
+                            >
+                                <Sparkles className="h-4 w-4 text-yellow-300" />
+                                <span>Generate task AI</span>
+                            </button>
+                            <button
+                                onClick={handleAddTask}
+                                className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f0fffe] text-[#00bae2] border border-[#baf0fa] text-sm font-medium hover:bg-[#d8f9ff] transition-colors"
+                            >
+                                <Plus className="h-4 w-4" />
+                                <span>Create task</span>
+                            </button>
+                            <button
+                                onClick={() => {}}
+                                className="w-full sm:w-auto sm:ml-auto inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-600 border border-neutral-200 text-sm font-medium hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                            >
+                                <FastForward className="h-4 w-4" />
+                                <span>Skip module</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Tasks List */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
                     {isLocked ? (
-                        <div className="text-center py-8 text-neutral-400">
-                            <p className="text-sm">Complete previous modules to unlock this one</p>
+                        <div className="text-center py-12 text-neutral-400">
+                            <span className="text-3xl mb-3 block">🔒</span>
+                            <p className="text-sm font-medium">Complete previous modules to unlock this one</p>
                         </div>
                     ) : (
                         <>
@@ -489,69 +515,82 @@ export function ModuleTasksPanel({
 
                             {/* Loading State */}
                             {isLoadingTasks && filteredTasks.length === 0 && (
-                                <div className="text-center py-8">
-                                    <div className="inline-flex items-center gap-2 text-neutral-400">
-                                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                <div className="text-center py-12">
+                                    <div className="inline-flex flex-col items-center gap-3 text-neutral-400">
+                                        <svg className="animate-spin h-6 w-6 text-[#00bae2]" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        <span className="text-sm">Loading tasks...</span>
+                                        <span className="text-sm font-medium">Loading tasks...</span>
                                     </div>
                                 </div>
                             )}
 
                             {/* Empty State */}
                             {!isLoadingTasks && filteredTasks.length === 0 && (
-                                <div className="text-center py-8 text-neutral-400">
-                                    <p className="text-sm">
-                                        {viewFilter === 'date' 
-                                            ? 'No tasks scheduled for this date.' 
+                                <div className="text-center py-16 flex flex-col items-center justify-center">
+                                    <div className="w-16 h-16 bg-gradient-to-br from-[#e6f9fd] to-[#baf0fa] rounded-full flex items-center justify-center mb-4">
+                                        <Sparkles className="h-8 w-8 text-[#00bae2]" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-neutral-900 mb-2">No tasks yet for this module</h3>
+                                    <p className="text-sm text-neutral-500 mb-8 max-w-[260px] mx-auto leading-relaxed">
+                                        {viewFilter === 'date'
+                                            ? 'No tasks scheduled for this date.'
                                             : viewFilter === 'all-tasks'
                                                 ? 'No tasks in this study plan yet.'
-                                                : 'No tasks yet. Click "Add Task" to create one.'
+                                                : 'Start by generating an AI-curated list of tasks based on your learning goals.'
                                         }
                                     </p>
+
+                                        {viewFilter === 'module' && !isLocked && (
+                                            <button
+                                                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-violet-500 hover:from-violet-600 to-purple-600 hover:to-purple-700 text-white font-semibold shadow-xl shadow-violet-500/30 transition-all hover:-translate-y-0.5"
+                                            >
+                                                <Sparkles className="h-5 w-5 text-yellow-300" />
+                                                Generate Tasks for {viewFilter === 'module' ? module.title : 'this module'}
+                                            </button>
+                                        )}
                                 </div>
                             )}
 
                             {/* Tasks */}
-                            <div className="space-y-2">
-                                {filteredTasks.map(task => {
+                            <div className="space-y-0 relative">
+                                {filteredTasks.map((task, index) => {
                                     const isSelected = selectedTaskIds.has(task.id);
                                     const isDisabled = task.isCompleted || (task.isFromLockedModule && viewFilter === 'date');
                                     return (
                                         <div
                                             key={task.id}
                                             className={cn(
-                                                "group w-full flex items-start gap-3 text-sm p-4 rounded-2xl transition-all text-left relative",
+                                                "group w-full flex items-start gap-4 text-sm py-4 px-2 border-b border-neutral-100 last:border-0 transition-colors relative",
                                                 task.isCompleted
-                                                    ? "bg-neutral-50 opacity-60"
+                                                    ? "opacity-50"
                                                     : isDisabled
-                                                        ? "bg-neutral-50/50 opacity-70"
+                                                        ? "opacity-60"
                                                         : isSelected
-                                                            ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400"
-                                                            : "bg-white/80 border border-neutral-100 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-md"
+                                                            ? "bg-violet-50/50"
+                                                            : "hover:bg-neutral-50/50"
                                             )}
                                         >
                                             {/* Checkbox Button */}
                                             <button
                                                 onClick={() => !isDisabled && handleTaskToggle(task.id)}
                                                 disabled={isDisabled}
-                                                className="mt-0.5 cursor-pointer disabled:cursor-not-allowed"
+                                                className="mt-0.5 cursor-pointer disabled:cursor-not-allowed shrink-0"
                                                 title={task.isFromLockedModule ? "Task from locked module" : undefined}
                                             >
                                                 <div className={cn(
-                                                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                                                    "flex h-4 w-4 items-center justify-center rounded-sm border transition-all",
                                                     isDisabled
-                                                        ? "bg-neutral-200 border-neutral-300 text-neutral-400"
+                                                        ? "bg-neutral-100 border-neutral-300 text-neutral-400"
                                                         : task.isCompleted
-                                                            ? "bg-emerald-500 border-emerald-500 text-white"
+                                                            ? "bg-violet-500 border-violet-500 text-white"
                                                             : isSelected
-                                                                ? "bg-emerald-500 border-emerald-500 text-white"
-                                                                : "border-neutral-300"
+                                                                ? "bg-violet-500 border-violet-500 text-white"
+                                                                : "border-neutral-300 group-hover:border-violet-400"
                                                 )}>
                                                     {(task.isCompleted || isSelected) && !task.isFromLockedModule && (
-                                                        <Check className="h-3 w-3" />
+                                                        <Check className="h-3 w-3" strokeWidth={3} />
                                                     )}
                                                 </div>
                                             </button>
@@ -560,44 +599,28 @@ export function ModuleTasksPanel({
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                     <p className={cn(
-                                                        "font-medium",
-                                                        task.isCompleted ? "text-neutral-500" : "text-neutral-800"
+                                                        "text-sm font-medium",
+                                                        task.isCompleted ? "text-neutral-500 line-through" : "text-neutral-800"
                                                     )}>
                                                         {task.title}
                                                     </p>
                                                     {task.moduleName && (viewFilter === 'date' || viewFilter === 'all-tasks') && (
-                                                        <span className={cn(
-                                                            "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium",
-                                                            task.isFromLockedModule 
-                                                                ? "bg-neutral-200 text-neutral-500"
-                                                                : "bg-blue-100 text-blue-700"
-                                                        )}>
-                                                            {task.moduleName}
-                                                            {task.isFromLockedModule && " 🔒"}
+                                                        <span className="inline-flex items-center text-xs text-neutral-400 font-medium">
+                                                            • {task.moduleName}
                                                         </span>
                                                     )}
                                                 </div>
-                                                {task.description && (
-                                                    <p className="text-xs text-neutral-500 mt-0.5">
-                                                        {task.description}
-                                                    </p>
-                                                )}
                                             </div>
 
                                             {/* Duration and Action Menu */}
-                                            <div className="shrink-0 flex items-center gap-2">
-                                                <span className={cn(
-                                                    "text-xs font-medium px-2 py-1 rounded-lg",
-                                                    task.isCompleted
-                                                        ? "bg-neutral-100 text-neutral-400"
-                                                        : "bg-violet-100 text-violet-600"
-                                                )}>
+                                            <div className="shrink-0 flex items-center gap-3">
+                                                <span className="text-xs font-medium text-neutral-400">
                                                     {task.estimatedMinutes}m
                                                 </span>
 
                                                 {/* Action Menu (3-dot dropdown) */}
                                                 {!task.isCompleted && !task.isFromLockedModule && viewFilter === 'module' && (
-                                                    <div className="relative">
+                                                    <div className="relative opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -612,7 +635,7 @@ export function ModuleTasksPanel({
                                                         {/* Dropdown Menu */}
                                                         {activeTaskMenu === task.id && (
                                                             <div
-                                                                className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-neutral-200 py-1 z-10"
+                                                                className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-10"
                                                                 onMouseLeave={() => setActiveTaskMenu(null)}
                                                             >
                                                                 <button
@@ -650,28 +673,24 @@ export function ModuleTasksPanel({
 
                 {/* Footer */}
                 {!isLocked && incompleteTasks.length > 0 && (
-                    <div className="p-6 border-t border-neutral-100 space-y-3">
-                        {/* Summary */}
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-neutral-500">
-                                {selectedCount > 0 ? `${selectedCount} tasks selected` : `${incompleteTasks.length} tasks available`}
-                            </span>
-                            <span className="font-medium text-neutral-700">
-                                ~{totalEstimatedTime} min
-                            </span>
+                    <div className="p-6 border-t border-neutral-100/50 bg-white shadow-[0_-4px_24px_-10px_rgba(0,0,0,0.05)]">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 text-sm">
+                                <p className="font-semibold text-neutral-800">
+                                    {selectedCount > 0 ? `${selectedCount} tasks selected` : `${incompleteTasks.length} tasks ready`}
+                                </p>
+                                <p className="text-neutral-500 text-xs mt-0.5">
+                                    ~{totalEstimatedTime} minutes total
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleStartLearning}
+                                className="flex-shrink-0 inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-neutral-900 shadow-lg transition-all duration-300 bg-gradient-to-r from-[#fec5fb] to-[#00bae2] shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5"
+                            >
+                                Start Learning
+                                <Play className="h-4 w-4" fill="currentColor" strokeWidth={1} />
+                            </button>
                         </div>
-
-                        {/* Start Button */}
-                        <button
-                            onClick={handleStartLearning}
-                            className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-semibold text-white shadow-xl transition-all bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40"
-                        >
-                            <Play className="h-5 w-5" fill="currentColor" />
-                            {selectedCount > 0
-                                ? `Start Learning (${selectedCount} task${selectedCount > 1 ? 's' : ''})`
-                                : `Start Learning (${incompleteTasks.length} task${incompleteTasks.length > 1 ? 's' : ''})`
-                            }
-                        </button>
                     </div>
                 )}
 

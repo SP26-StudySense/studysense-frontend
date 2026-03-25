@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
 interface DeleteConfirmDialogProps {
@@ -17,10 +19,16 @@ export function DeleteConfirmDialog({
     taskTitle,
     isLoading = false,
 }: DeleteConfirmDialogProps) {
-    if (!isOpen) return null;
+    const [mounted, setMounted] = useState(false);
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!isOpen || !mounted) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -68,6 +76,7 @@ export function DeleteConfirmDialog({
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
