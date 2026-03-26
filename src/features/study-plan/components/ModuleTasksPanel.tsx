@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, Sparkles, FastForward } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
-import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems } from '../api/mutations';
+import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems, useCreateTasksBatch } from '../api/mutations';
 import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
 import { TaskFormModal } from './TaskFormModal';
@@ -80,6 +80,7 @@ export function ModuleTasksPanel({
     const updateTaskMutation = useUpdateTask();
     const deleteTaskMutation = useDeleteTask();
     const createAiTaskItemsMutation = useCreateAiTaskItems();
+    const createTasksBatchMutation = useCreateTasksBatch();
 
     const parseDurationToMinutes = (value: unknown): number | undefined => {
         if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
@@ -485,11 +486,31 @@ export function ModuleTasksPanel({
         setAiPreviewMessage(null);
     };
 
-    const handleAcceptAiPreview = () => {
-        // Accept flow will call a dedicated API in a follow-up task.
-        console.log('Accepted AI tasks preview:', aiPreviewTasks);
-        setAiPreviewMessage('Preview accepted. Save API will be connected in the next step.');
-        setIsAiPreviewVisible(false);
+    const handleAcceptAiPreview = async () => {
+        if (!module?.id) return;
+        
+        try {
+            setAiPreviewMessage('Saving tasks...');
+            const payload = {
+                tasks: aiPreviewTasks.map(t => ({
+                    studyPlanModuleId: Number(module.id),
+                    title: t.title,
+                    description: t.description,
+                    status: TaskStatus.Pending,
+                    estimatedDurationSeconds: (t.estimatedMinutes || 30) * 60,
+                    scheduledDate: t.scheduledDate || new Date().toISOString()
+                }))
+            };
+            
+            await createTasksBatchMutation.mutateAsync(payload);
+            
+            setAiPreviewMessage(null);
+            setIsAiPreviewVisible(false);
+            setAiPreviewTasks([]);
+        } catch (error) {
+            console.error('Failed to save AI tasks:', error);
+            setAiPreviewMessage('Failed to save tasks. Please try again.');
+        }
     };
 
     const formatTaskDeadline = (value?: string): string => {
