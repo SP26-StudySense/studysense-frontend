@@ -728,17 +728,17 @@ export function ModuleTasksPanel({
 
     const handleContinueQuiz = async () => {
         if (!currentQuizAttemptId) return;
-        
-        // Determine quiz type based on module completion state
-        const isModuleCompleted = module.status === 'completed';
-        
-        if (isModuleCompleted) {
-            // Continue Skip Quiz - completed module, going to skip quiz
+
+        if (canSkipModule) {
+            // Continue Skip Quiz - no task started yet
             router.push(
                 `/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz?attemptId=${currentQuizAttemptId}`
             );
-        } else {
-            // Continue Take Quiz - still learning, going to take quiz
+            return;
+        }
+
+        if (canTakeQuiz) {
+            // Continue Take Quiz - all tasks completed
             router.push(
                 `/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?attemptId=${currentQuizAttemptId}`
             );
@@ -747,6 +747,11 @@ export function ModuleTasksPanel({
 
     const selectedCount = selectedTaskIds.size;
     const incompleteTasks = filteredTasks.filter(t => !t.isCompleted && !t.isFromLockedModule);
+    const moduleTasks = module.tasks ?? [];
+    const hasAnyStartedTask = moduleTasks.some(task => task.isCompleted);
+    const allModuleTasksCompleted = moduleTasks.length > 0 && moduleTasks.every(task => task.isCompleted);
+    const canSkipModule = !hasAnyStartedTask;
+    const canTakeQuiz = allModuleTasksCompleted;
     const totalEstimatedTime = filteredTasks
         .filter(t => {
             if (t.isFromLockedModule) return false;
@@ -899,8 +904,8 @@ export function ModuleTasksPanel({
                     {viewFilter === 'module' && !isLocked && (
                         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-50">
                             {/* Quiz Actions - Show based on current attempt state */}
-                            {currentQuizAttemptId && module.status === 'completed' ? (
-                                // Continue Skip Quiz (for completed modules)
+                            {currentQuizAttemptId && canSkipModule ? (
+                                // Continue Skip Quiz (when no task started)
                                 <button
                                     onClick={handleContinueQuiz}
                                     className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors"
@@ -908,8 +913,8 @@ export function ModuleTasksPanel({
                                     <ArrowRight className="h-4 w-4" />
                                     <span>Continue Skip Quiz</span>
                                 </button>
-                            ) : currentQuizAttemptId ? (
-                                // Continue Take Quiz (for in-progress modules)
+                            ) : currentQuizAttemptId && canTakeQuiz ? (
+                                // Continue Take Quiz (when all tasks completed)
                                 <button
                                     onClick={handleContinueQuiz}
                                     className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00bae2] text-white text-sm font-medium hover:bg-[#00a8cc] transition-colors"
@@ -917,8 +922,8 @@ export function ModuleTasksPanel({
                                     <ArrowRight className="h-4 w-4" />
                                     <span>Continue Take Quiz</span>
                                 </button>
-                            ) : module.status === 'completed' ? (
-                                // Skip Module Button (no current attempt, module completed)
+                            ) : !currentQuizAttemptId && canSkipModule ? (
+                                // Skip Module (when no task started)
                                 <button
                                     onClick={handleOpenSkipModule}
                                     className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-600 border border-neutral-200 text-sm font-medium hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
@@ -926,8 +931,8 @@ export function ModuleTasksPanel({
                                     <FastForward className="h-4 w-4" />
                                     <span>Skip module</span>
                                 </button>
-                            ) : (
-                                // Take Quiz Button (no current attempt, module not completed)
+                            ) : !currentQuizAttemptId && canTakeQuiz ? (
+                                // Take Quiz (after all tasks completed)
                                 <button
                                     onClick={handleOpenTakeQuiz}
                                     className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00bae2] text-white text-sm font-medium hover:bg-[#00a8cc] transition-colors"
@@ -935,7 +940,7 @@ export function ModuleTasksPanel({
                                     <BookOpen className="h-4 w-4" />
                                     <span>Take Quiz</span>
                                 </button>
-                            )}
+                            ) : null}
                         </div>
                     )}
                 </div>

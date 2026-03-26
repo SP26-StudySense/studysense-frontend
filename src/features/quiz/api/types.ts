@@ -6,6 +6,15 @@ export enum QuizAttemptStatus {
 	Failed = 2,
 }
 
+export type QuizAttemptStatusValue =
+	| QuizAttemptStatus
+	| 'InProgress'
+	| 'Passed'
+	| 'Failed'
+	| 'in_progress'
+	| 'passed'
+	| 'failed';
+
 export interface CreateQuizAttemptPayload {
 	studyPlanModuleId: number;
 	level: QuizLevel;
@@ -38,7 +47,7 @@ export interface QuizAttemptDto {
 	startedAt: string;
 	submittedAt: string | null;
 	score: number | null;
-	status: QuizAttemptStatus;
+	status: QuizAttemptStatusValue;
 }
 
 export interface QuizQuestionOptionDto {
@@ -56,7 +65,17 @@ export interface QuizAttemptQuestionDto {
 	options: QuizQuestionOptionDto[];
 }
 
+export interface QuizDetailDto {
+	quizId: number;
+	title: string;
+	description: string;
+	level: QuizLevel;
+	totalScore: number;
+	passingScore: number;
+}
+
 export interface GetQuizQuestionsByAttemptResponse {
+	quiz: QuizDetailDto;
 	questions: QuizAttemptQuestionDto[];
 }
 

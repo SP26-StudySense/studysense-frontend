@@ -99,6 +99,45 @@ export function QuizAttemptPage({
 
   const shouldBlockNavigation = !!questionsData && !result;
 
+  const orderedQuestions = useMemo(() => {
+    return [...(questionsData?.questions ?? [])].sort((a, b) => a.orderNo - b.orderNo);
+  }, [questionsData?.questions]);
+
+  const shuffledOptionsByQuestionId = useMemo(() => {
+    const hashString = (value: string): number => {
+      let hash = 0;
+      for (let i = 0; i < value.length; i += 1) {
+        hash = (hash << 5) - hash + value.charCodeAt(i);
+        hash |= 0;
+      }
+      return hash;
+    };
+
+    const mulberry32 = (seed: number) => {
+      let t = seed;
+      return () => {
+        t += 0x6d2b79f5;
+        let x = Math.imul(t ^ (t >>> 15), 1 | t);
+        x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+        return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+      };
+    };
+
+    return orderedQuestions.reduce<Record<number, typeof orderedQuestions[number]['options']>>((acc, question) => {
+      const orderedOptions = [...question.options].sort((a, b) => a.orderNo - b.orderNo);
+      const seed = hashString(`${attemptId ?? 0}:${question.questionId}:${moduleId}`);
+      const random = mulberry32(seed);
+
+      for (let i = orderedOptions.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(random() * (i + 1));
+        [orderedOptions[i], orderedOptions[j]] = [orderedOptions[j], orderedOptions[i]];
+      }
+
+      acc[question.questionId] = orderedOptions;
+      return acc;
+    }, {});
+  }, [attemptId, moduleId, orderedQuestions]);
+
   const showConfirmDialog = useCallback(
     (type: QuizConfirmDialogType): Promise<boolean> => {
       return new Promise((resolve) => {
@@ -221,12 +260,18 @@ export function QuizAttemptPage({
       document.documentElement.removeAttribute('data-quiz-unsaved-changes');
     }
   }, [shouldBlockNavigation, hasUnsavedChanges]);
-
-  const isPassed = result?.quizAttempt.status === QuizAttemptStatus.Passed;
+  const isPassed =
+    result?.quizAttempt.status === QuizAttemptStatus.Passed || result?.quizAttempt.status === "Passed";
   const correctCount = result?.questions.filter((question) => question.isCorrect).length ?? 0;
-  const currentQuestion = questionsData?.questions[currentQuestionIndex];
+  const currentQuestion = orderedQuestions[currentQuestionIndex];
   const isFirstQuestion = currentQuestionIndex === 0;
   const isLastQuestion = questionCount > 0 && currentQuestionIndex === questionCount - 1;
+
+  const quizMeta = questionsData?.quiz;
+  const headerTitle = quizMeta?.title || quizTitle;
+  const headerDescription = quizMeta?.description || quizDescription;
+  const headerLevel = quizMeta?.level || level;
+  const headerPassingScore = quizMeta?.passingScore;
 
   if (isCreating && !questionsData) {
     return (
@@ -375,8 +420,19 @@ export function QuizAttemptPage({
             {backLabel}
           </button>
 
-          <h1 className="text-2xl font-bold text-neutral-900">{quizTitle}</h1>
-          <p className="text-neutral-600 mt-2">{quizDescription}</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{headerTitle}</h1>
+          <p className="text-neutral-600 mt-2">{headerDescription}</p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-cyan-50 text-cyan-700 px-2.5 py-1 text-xs font-semibold">
+              Level: {headerLevel}
+            </span>
+            {typeof headerPassingScore === 'number' && (
+              <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-xs font-semibold">
+                Passing Score: {headerPassingScore}
+              </span>
+            )}
+          </div>
 
           <div className="mt-5">
             <div className="flex justify-between text-sm text-neutral-500 mb-2">
@@ -413,7 +469,7 @@ export function QuizAttemptPage({
               <p className="text-lg font-semibold text-neutral-900">{currentQuestion.prompt}</p>
 
               <div className="mt-4 grid grid-cols-1 gap-2.5">
-                {currentQuestion.options.map((option) => {
+                {(shuffledOptionsByQuestionId[currentQuestion.questionId] ?? currentQuestion.options).map((option) => {
                   const isSelected = answers[currentQuestion.questionId] === option.optionId;
 
                   return (
