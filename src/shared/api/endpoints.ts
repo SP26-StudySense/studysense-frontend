@@ -74,6 +74,13 @@ export const endpoints = {
     events: (id: string) => `/study-sessions/${id}/events`,
   },
 
+  // Quiz Attempts
+  quizAttempts: {
+    base: '/quiz-attempts',
+    create: '/quiz-attempts',
+    submit: (id: string) => `/quiz-attempts/${id}/submit`,
+  },
+
   // Survey & Assessment
   surveys: {
     base: '/surveys',

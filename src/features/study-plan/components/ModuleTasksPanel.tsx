@@ -2,11 +2,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play, Clock, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown } from 'lucide-react';
+import { Play, Clock, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
 import { useCreateTask, useUpdateTask, useDeleteTask } from '../api/mutations';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
+import type { QuizLevel } from '@/features/quiz/api/types';
 import { TaskFormModal } from './TaskFormModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 
@@ -41,6 +43,153 @@ interface ModuleTasksPanelProps {
     isLoadingTasks?: boolean;
 }
 
+interface SkipModuleConfirmDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    moduleTitle: string;
+}
+
+interface TakeQuizLevelDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (level: QuizLevel) => void;
+    moduleTitle: string;
+}
+
+function SkipModuleConfirmDialog({
+    isOpen,
+    onClose,
+    onConfirm,
+    moduleTitle,
+}: SkipModuleConfirmDialogProps) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    if (!isOpen || !mounted) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+
+            <div className="relative z-10 w-full max-w-md mx-4 rounded-2xl bg-white shadow-2xl shadow-neutral-900/20 overflow-hidden">
+                <div className="p-6">
+                    <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-4 mx-auto">
+                        <AlertTriangle className="h-7 w-7 text-amber-700" />
+                    </div>
+
+                    <h3 className="text-lg font-bold text-neutral-900 text-center mb-2">Skip this module?</h3>
+                    <p className="text-sm text-neutral-600 text-center mb-6 break-words leading-6">
+                        To skip <span className="font-semibold text-neutral-800">{moduleTitle}</span>, you need to pass an
+                        Advanced-level quiz for this module.
+                    </p>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-all"
+                        >
+                            Take Quiz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+function TakeQuizLevelDialog({
+    isOpen,
+    onClose,
+    onConfirm,
+    moduleTitle,
+}: TakeQuizLevelDialogProps) {
+    const [mounted, setMounted] = useState(false);
+    const [level, setLevel] = useState<QuizLevel>('Intermediate');
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            setLevel('Intermediate');
+        }
+    }, [isOpen]);
+
+    if (!isOpen || !mounted) return null;
+
+    const levels: Array<{ value: QuizLevel; label: string; description: string }> = [
+        { value: 'Begineer', label: 'Beginner', description: 'Basic concepts and easy questions.' },
+        { value: 'Intermediate', label: 'Intermediate', description: 'Balanced challenge and practical checks.' },
+        { value: 'Advanced', label: 'Advanced', description: 'Difficult questions for deeper mastery.' },
+    ];
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+
+            <div className="relative z-10 w-full max-w-lg mx-4 rounded-2xl bg-white shadow-2xl shadow-neutral-900/20 overflow-hidden">
+                <div className="p-6">
+                    <h3 className="text-lg font-bold text-neutral-900">Take module quiz</h3>
+                    <p className="text-sm text-neutral-600 mt-1 mb-5">
+                        You completed <span className="font-semibold text-neutral-800">{moduleTitle}</span>. Choose a level to start.
+                    </p>
+
+                    <div className="space-y-2.5 mb-6">
+                        {levels.map((item) => {
+                            const active = level === item.value;
+                            return (
+                                <button
+                                    key={item.value}
+                                    onClick={() => setLevel(item.value)}
+                                    className={cn(
+                                        'w-full text-left rounded-xl border px-4 py-3 transition-all',
+                                        active
+                                            ? 'border-[#00bae2] bg-[#00bae2]/10'
+                                            : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                                    )}
+                                >
+                                    <p className="text-sm font-semibold text-neutral-900">{item.label}</p>
+                                    <p className="text-xs text-neutral-500 mt-1">{item.description}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => onConfirm(level)}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8cc] transition-all"
+                        >
+                            Start Quiz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
 export function ModuleTasksPanel({ 
     module, 
     onClose, 
@@ -64,6 +213,8 @@ export function ModuleTasksPanel({
     // Modal states
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
+    const [isTakeQuizOpen, setIsTakeQuizOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<ModuleTask | null>(null);
     const [deletingTask, setDeletingTask] = useState<ModuleTask | null>(null);
     const [activeTaskMenu, setActiveTaskMenu] = useState<string | null>(null);
@@ -239,6 +390,35 @@ export function ModuleTasksPanel({
         setIsFormModalOpen(true);
     };
 
+    const handleOpenSkipModule = () => {
+        setIsSkipConfirmOpen(true);
+    };
+
+    const handleConfirmSkipModule = () => {
+        if (!studyPlanId) return;
+
+        const query = new URLSearchParams({
+            moduleTitle: module.title,
+        });
+
+        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz?${query.toString()}`);
+    };
+
+    const handleOpenTakeQuiz = () => {
+        setIsTakeQuizOpen(true);
+    };
+
+    const handleConfirmTakeQuiz = (level: QuizLevel) => {
+        if (!studyPlanId) return;
+
+        const query = new URLSearchParams({
+            moduleTitle: module.title,
+            level,
+        });
+
+        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?${query.toString()}`);
+    };
+
     // Edit Task
     const handleEditTask = (task: ModuleTask, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -315,6 +495,8 @@ export function ModuleTasksPanel({
 
     // Module is locked only when viewing current module tasks AND module status is locked
     const isLocked = module.status === 'locked' && viewFilter === 'module';
+    const hasCompletedTaskInModule = module.tasks.some((task) => task.isCompleted);
+    const allTasksCompletedInModule = module.tasks.length > 0 && module.tasks.every((task) => task.isCompleted);
     const isFormLoading = createTaskMutation.isPending || updateTaskMutation.isPending;
     const isDeleteLoading = deleteTaskMutation.isPending;
 
@@ -455,13 +637,31 @@ export function ModuleTasksPanel({
                                 )}
                             </div>
                             {viewFilter === 'module' && !isLocked && (
-                                <button
-                                    onClick={handleAddTask}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm font-medium hover:bg-emerald-100 transition-colors"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Add Task
-                                </button>
+                                <>
+                                    {module.status !== 'completed' && !!studyPlanId && !hasCompletedTaskInModule && (
+                                        <button
+                                            onClick={handleOpenSkipModule}
+                                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 transition-colors"
+                                        >
+                                            Skip Module
+                                        </button>
+                                    )}
+                                    {!!studyPlanId && allTasksCompletedInModule && (
+                                        <button
+                                            onClick={handleOpenTakeQuiz}
+                                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-50 text-cyan-700 text-sm font-medium hover:bg-cyan-100 transition-colors"
+                                        >
+                                            Take Quiz
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={handleAddTask}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-sm font-medium hover:bg-emerald-100 transition-colors"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Add Task
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
@@ -686,6 +886,14 @@ export function ModuleTasksPanel({
                                     </div>
                                     <p className="text-sm font-medium text-neutral-700">All tasks completed!</p>
                                     <p className="text-xs text-neutral-500 mt-1">Great job on finishing this module</p>
+                                    {!!studyPlanId && (
+                                        <button
+                                            onClick={handleOpenTakeQuiz}
+                                            className="mt-4 inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#00bae2] to-[#00a8cc] hover:brightness-105"
+                                        >
+                                            Take Quiz
+                                        </button>
+                                    )}
                                 </>
                             ) : (
                                 <>
@@ -731,6 +939,20 @@ export function ModuleTasksPanel({
                 onConfirm={handleConfirmDelete}
                 taskTitle={deletingTask?.title || ''}
                 isLoading={isDeleteLoading}
+            />
+
+            <SkipModuleConfirmDialog
+                isOpen={isSkipConfirmOpen}
+                onClose={() => setIsSkipConfirmOpen(false)}
+                onConfirm={handleConfirmSkipModule}
+                moduleTitle={module.title}
+            />
+
+            <TakeQuizLevelDialog
+                isOpen={isTakeQuizOpen}
+                onClose={() => setIsTakeQuizOpen(false)}
+                onConfirm={handleConfirmTakeQuiz}
+                moduleTitle={module.title}
             />
         </>
     );

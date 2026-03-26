@@ -45,7 +45,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [shouldPoll, setShouldPoll] = useState(false);
     const queryClient = useQueryClient();
-    const prevStatusRef = useRef<StudyPlanStatus | undefined>();
+    const prevStatusRef = useRef<StudyPlanStatus | undefined>(undefined);
 
     // Fetch study plan with conditional polling
     const { data: studyPlan, isLoading: isLoadingPlan, error: planError } = useStudyPlan(planId, {
