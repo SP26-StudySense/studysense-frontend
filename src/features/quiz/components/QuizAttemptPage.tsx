@@ -9,6 +9,7 @@ import {
   type SubmitQuizAttemptResponse,
 } from '../api/types';
 import { useQuizAttemptFlow } from '../hooks/useQuizAttemptFlow';
+import { QuizNavigationConfirmDialog, type QuizConfirmDialogType } from './QuizNavigationConfirmDialog';
 
 interface QuizAttemptPageProps {
   moduleId: number;
@@ -72,6 +73,12 @@ export function QuizAttemptPage({
   const allowNavigationRef = useRef(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<QuizConfirmDialogType>('simple');
+  const [isDialogLoading, setIsDialogLoading] = useState(false);
+  const dialogPromiseResolveRef = useRef<((value: boolean) => void) | null>(null);
+
   useEffect(() => {
     if (initializedAttemptKeyRef.current === attemptKey) {
       return;
@@ -92,32 +99,66 @@ export function QuizAttemptPage({
 
   const shouldBlockNavigation = !!questionsData && !result;
 
+  const showConfirmDialog = useCallback(
+    (type: QuizConfirmDialogType): Promise<boolean> => {
+      return new Promise((resolve) => {
+        setDialogType(type);
+        setIsDialogOpen(true);
+        dialogPromiseResolveRef.current = resolve;
+      });
+    },
+    []
+  );
+
+  const handleDialogConfirm = useCallback(async () => {
+    setIsDialogLoading(true);
+    try {
+      if (dialogType === 'save') {
+        // Save answers before leaving
+        await saveAnswers();
+        setIsDialogOpen(false);
+        setIsDialogLoading(false);
+        dialogPromiseResolveRef.current?.(true);
+      } else {
+        // 'simple' or 'save-error' case - just leave
+        setIsDialogOpen(false);
+        setIsDialogLoading(false);
+        dialogPromiseResolveRef.current?.(true);
+      }
+    } catch (error) {
+      // Save failed - show error dialog
+      setIsDialogLoading(false);
+      setDialogType('save-error');
+      // User will click confirm again on error dialog
+    }
+  }, [dialogType, saveAnswers]);
+
+  const handleDialogCancel = useCallback(() => {
+    setIsDialogOpen(false);
+    setIsDialogLoading(false);
+
+    // For 'save' type, cancel means "leave without saving" -> resolve true
+    if (dialogType === 'save') {
+      dialogPromiseResolveRef.current?.(true);
+    } else {
+      // For 'simple' and 'save-error', cancel means "don't leave" -> resolve false
+      dialogPromiseResolveRef.current?.(false);
+    }
+  }, [dialogType]);
+
   const confirmBeforeLeave = useCallback(async () => {
     if (!shouldBlockNavigation) {
       return true;
     }
 
     if (!hasUnsavedChanges) {
-      return window.confirm('You are currently taking a quiz. Do you want to leave this page?');
+      const confirmed = await showConfirmDialog('simple');
+      return confirmed;
     }
 
-    const shouldSave = window.confirm(
-      'You have unsaved answers. Press OK to save before leaving, or Cancel to leave without saving.'
-    );
-
-    if (shouldSave) {
-      try {
-        await saveAnswers();
-        return true;
-      } catch {
-        return window.confirm(
-          'Save failed. Press OK to leave without saving, or Cancel to stay on this page.'
-        );
-      }
-    }
-
-    return true;
-  }, [hasUnsavedChanges, saveAnswers, shouldBlockNavigation]);
+    const shouldSave = await showConfirmDialog('save');
+    return shouldSave;
+  }, [hasUnsavedChanges, showConfirmDialog, shouldBlockNavigation]);
 
   const handleBackClick = useCallback(async () => {
     const canLeave = await confirmBeforeLeave();
@@ -168,6 +209,18 @@ export function QuizAttemptPage({
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [confirmBeforeLeave, shouldBlockNavigation]);
+
+  // Set data attribute for navigation guard in Sidebar
+  useEffect(() => {
+    if (shouldBlockNavigation && hasUnsavedChanges) {
+      document.documentElement.setAttribute('data-quiz-unsaved-changes', 'true');
+      return () => {
+        document.documentElement.removeAttribute('data-quiz-unsaved-changes');
+      };
+    } else {
+      document.documentElement.removeAttribute('data-quiz-unsaved-changes');
+    }
+  }, [shouldBlockNavigation, hasUnsavedChanges]);
 
   const isPassed = result?.quizAttempt.status === QuizAttemptStatus.Passed;
   const correctCount = result?.questions.filter((question) => question.isCorrect).length ?? 0;
@@ -434,6 +487,15 @@ export function QuizAttemptPage({
             </div>
           </div>
         </div>
+
+        {/* Navigation Confirmation Dialog */}
+        <QuizNavigationConfirmDialog
+          isOpen={isDialogOpen}
+          onClose={handleDialogCancel}
+          onConfirm={handleDialogConfirm}
+          type={dialogType}
+          isLoading={isDialogLoading}
+        />
       </div>
     </div>
   );

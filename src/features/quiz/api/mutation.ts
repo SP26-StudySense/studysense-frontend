@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { post } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
@@ -45,11 +45,19 @@ export function useSubmitQuizAttempt() {
  * POST /quiz-answers/attempt/{attemptId}
  */
 export function useSaveQuizAnswersByAttempt() {
+	const queryClient = useQueryClient();
+
 	return useMutation({
 		mutationFn: ({ attemptId, payload }: { attemptId: number; payload: SaveQuizAnswersByAttemptRequest }) =>
 			post<SaveQuizAnswersByAttemptResponse, SaveQuizAnswersByAttemptRequest>(
 				endpoints.quizAnswers.saveByAttempt(String(attemptId)),
 				payload
 			),
+		onSuccess: (data, variables) => {
+			// Invalidate the questions query to refetch latest data with updated selectedOptionId
+			queryClient.invalidateQueries({
+				queryKey: ['quizAttempts', 'questions', variables.attemptId],
+			});
+		},
 	});
 }

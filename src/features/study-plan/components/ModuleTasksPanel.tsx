@@ -2,13 +2,15 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, Sparkles, FastForward } from 'lucide-react';
+import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, Sparkles, FastForward, AlertTriangle, ArrowRight, BookOpen } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
 import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems } from '../api/mutations';
 import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
 import type { QuizLevel } from '@/features/quiz/api/types';
+import { useCurrentQuizAttemptByModule } from '@/features/quiz';
 import { TaskFormModal } from './TaskFormModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { AiTaskPreviewPanel, AiPreviewTask } from './AiTaskPreviewPanel';
@@ -134,7 +136,7 @@ function TakeQuizLevelDialog({
     if (!isOpen || !mounted) return null;
 
     const levels: Array<{ value: QuizLevel; label: string; description: string }> = [
-        { value: 'Begineer', label: 'Beginner', description: 'Basic concepts and easy questions.' },
+        { value: 'Beginner', label: 'Beginner', description: 'Basic concepts and easy questions.' },
         { value: 'Intermediate', label: 'Intermediate', description: 'Balanced challenge and practical checks.' },
         { value: 'Advanced', label: 'Advanced', description: 'Difficult questions for deeper mastery.' },
     ];
@@ -201,8 +203,7 @@ export function ModuleTasksPanel({
     allTasks = [], 
     allModules = [], 
     onClearDateFilter,
-    isLoadingTasks = false,
-    currentQuizAttemptId = null,
+    isLoadingTasks = false
 }: ModuleTasksPanelProps) {
     const router = useRouter();
     const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
@@ -217,8 +218,6 @@ export function ModuleTasksPanel({
     // Modal states
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
-    const [isTakeQuizOpen, setIsTakeQuizOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<ModuleTask | null>(null);
     const [deletingTask, setDeletingTask] = useState<ModuleTask | null>(null);
     const [activeTaskMenu, setActiveTaskMenu] = useState<string | null>(null);
@@ -226,6 +225,14 @@ export function ModuleTasksPanel({
     const [aiPreviewTasks, setAiPreviewTasks] = useState<AiPreviewTask[]>([]);
     const [aiPreviewMessage, setAiPreviewMessage] = useState<string | null>(null);
     const [isAiPreviewVisible, setIsAiPreviewVisible] = useState(false);
+
+    // Quiz dialog states
+    const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
+    const [isTakeQuizOpen, setIsTakeQuizOpen] = useState(false);
+    const { data: currentQuizAttemptData } = useCurrentQuizAttemptByModule(
+        module?.id ? parseInt(module.id, 10) : 0
+    );
+    const currentQuizAttemptId = currentQuizAttemptData?.quizAttempt?.id;
 
     // Mutations
     const createTaskMutation = useCreateTask();
@@ -534,51 +541,6 @@ export function ModuleTasksPanel({
         setIsFormModalOpen(true);
     };
 
-    const handleOpenSkipModule = () => {
-        setIsSkipConfirmOpen(true);
-    };
-
-    const handleConfirmSkipModule = () => {
-        if (!studyPlanId) return;
-
-        const query = new URLSearchParams({
-            moduleTitle: module.title,
-        });
-
-        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz?${query.toString()}`);
-    };
-
-    const handleOpenTakeQuiz = () => {
-        setIsTakeQuizOpen(true);
-    };
-
-    const handleContinueQuiz = () => {
-        if (!studyPlanId || !currentQuizAttemptId) return;
-
-        const query = new URLSearchParams({
-            moduleTitle: module.title,
-            attemptId: String(currentQuizAttemptId),
-        });
-
-        if (allTasksCompletedInModule) {
-            router.push(`/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?${query.toString()}`);
-            return;
-        }
-
-        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz?${query.toString()}`);
-    };
-
-    const handleConfirmTakeQuiz = (level: QuizLevel) => {
-        if (!studyPlanId) return;
-
-        const query = new URLSearchParams({
-            moduleTitle: module.title,
-            level,
-        });
-
-        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?${query.toString()}`);
-    };
-
     // Edit Task
     const handleEditTask = (task: ModuleTask, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -716,6 +678,50 @@ export function ModuleTasksPanel({
             }
             return next;
         });
+    };
+
+    // Quiz handlers
+    const handleOpenSkipModule = () => {
+        setIsSkipConfirmOpen(true);
+    };
+
+    const handleConfirmSkipModule = async () => {
+        setIsSkipConfirmOpen(false);
+        // Navigate to skip quiz with attempt ID if available
+        const attemptId = currentQuizAttemptId ? `?attemptId=${currentQuizAttemptId}` : '';
+        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz${attemptId}`);
+    };
+
+    const handleOpenTakeQuiz = () => {
+        setIsTakeQuizOpen(true);
+    };
+
+    const handleConfirmTakeQuiz = async (level: QuizLevel) => {
+        setIsTakeQuizOpen(false);
+        // Navigate to take quiz with level and attempt ID if available
+        const attemptId = currentQuizAttemptId ? `&attemptId=${currentQuizAttemptId}` : '';
+        router.push(
+            `/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?level=${level}${attemptId}`
+        );
+    };
+
+    const handleContinueQuiz = async () => {
+        if (!currentQuizAttemptId) return;
+        
+        // Determine quiz type based on module completion state
+        const isModuleCompleted = module.status === 'completed';
+        
+        if (isModuleCompleted) {
+            // Continue Skip Quiz - completed module, going to skip quiz
+            router.push(
+                `/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz?attemptId=${currentQuizAttemptId}`
+            );
+        } else {
+            // Continue Take Quiz - still learning, going to take quiz
+            router.push(
+                `/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?attemptId=${currentQuizAttemptId}`
+            );
+        }
     };
 
     const selectedCount = selectedTaskIds.size;
@@ -871,29 +877,44 @@ export function ModuleTasksPanel({
                     {/* Bottom Row: Actions */}
                     {viewFilter === 'module' && !isLocked && (
                         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-50">
-                            {/* <button
-                                onClick={handleGenerateAiTasks}
-                                disabled={createAiTaskItemsMutation.isPending}
-                                className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-600 hover:to-purple-700 shadow-sm transition-all"
-                                title="Generate tasks with AI"
-                            >
-                                <Sparkles className="h-4 w-4 text-yellow-300" />
-                                <span>{createAiTaskItemsMutation.isPending ? 'Generating...' : 'Generate task AI'}</span>
-                            </button> */}
-                            <button
-                                onClick={handleAddTask}
-                                className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f0fffe] text-[#00bae2] border border-[#baf0fa] text-sm font-medium hover:bg-[#d8f9ff] transition-colors"
-                            >
-                                <Plus className="h-4 w-4" />
-                                <span>Create task</span>
-                            </button>
-                            <button
-                                onClick={() => {}}
-                                className="w-full sm:w-auto sm:ml-auto inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-600 border border-neutral-200 text-sm font-medium hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
-                            >
-                                <FastForward className="h-4 w-4" />
-                                <span>Skip module</span>
-                            </button>
+                            {/* Quiz Actions - Show based on current attempt state */}
+                            {currentQuizAttemptId && module.status === 'completed' ? (
+                                // Continue Skip Quiz (for completed modules)
+                                <button
+                                    onClick={handleContinueQuiz}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors"
+                                >
+                                    <ArrowRight className="h-4 w-4" />
+                                    <span>Continue Skip Quiz</span>
+                                </button>
+                            ) : currentQuizAttemptId ? (
+                                // Continue Take Quiz (for in-progress modules)
+                                <button
+                                    onClick={handleContinueQuiz}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00bae2] text-white text-sm font-medium hover:bg-[#00a8cc] transition-colors"
+                                >
+                                    <ArrowRight className="h-4 w-4" />
+                                    <span>Continue Take Quiz</span>
+                                </button>
+                            ) : module.status === 'completed' ? (
+                                // Skip Module Button (no current attempt, module completed)
+                                <button
+                                    onClick={handleOpenSkipModule}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-600 border border-neutral-200 text-sm font-medium hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                                >
+                                    <FastForward className="h-4 w-4" />
+                                    <span>Skip module</span>
+                                </button>
+                            ) : (
+                                // Take Quiz Button (no current attempt, module not completed)
+                                <button
+                                    onClick={handleOpenTakeQuiz}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00bae2] text-white text-sm font-medium hover:bg-[#00a8cc] transition-colors"
+                                >
+                                    <BookOpen className="h-4 w-4" />
+                                    <span>Take Quiz</span>
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -1210,6 +1231,7 @@ export function ModuleTasksPanel({
                 isLoading={isDeleteLoading}
             />
 
+            {/* Quiz Dialogs */}
             <SkipModuleConfirmDialog
                 isOpen={isSkipConfirmOpen}
                 onClose={() => setIsSkipConfirmOpen(false)}
