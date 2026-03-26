@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { GitFork, ChevronRight } from 'lucide-react';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { NotificationBell } from '@/features/notification';
 import { Button } from '@/shared/ui/button';
 import { UserProfile } from '@/components/dashboard/UserProfile';
 
@@ -48,7 +49,10 @@ export const Header = () => {
                     {isLoading ? (
                         <div className="h-8 w-8 rounded-full bg-neutral-200 animate-pulse" />
                     ) : isAuthenticated ? (
-                        <UserProfile />
+                        <>
+                            <NotificationBell />
+                            <UserProfile />
+                        </>
                     ) : (
                         <>
                             <button

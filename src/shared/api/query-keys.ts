@@ -96,6 +96,12 @@ export const queryKeys = {
     history: (conversationId: string) => ['chat', 'history', conversationId] as const,
   },
 
+  // Notifications
+  notifications: {
+    all: ['notifications'] as const,
+    list: (page = 1, pageSize = 20) => ['notifications', 'list', page, pageSize] as const,
+  },
+
   // Admin
   admin: {
     users: {
