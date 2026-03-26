@@ -5,7 +5,8 @@ import { AuthGuard } from '@/features/auth/components/auth-guard';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { UserProfile } from '@/components/dashboard/UserProfile';
 import { ChatProvider, ChatPopup, ChatToggleButton } from '@/features/chat';
-import { Search, Bell } from 'lucide-react';
+import { NotificationBell } from '@/features/notification';
+import { Search } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -72,19 +73,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
 
               <div className="flex items-center gap-6">
-                <div className="relative w-64">
+                {/* <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                   <input
                     type="text"
                     placeholder="Search..."
                     className="w-full rounded-xl border border-neutral-200 bg-white/50 py-2 pl-10 pr-4 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:bg-white focus:ring-4 focus:ring-[#00bae2]/10"
                   />
-                </div>
+                </div> */}
 
-                <button className="relative text-neutral-500 transition-colors hover:text-neutral-900">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-                </button>
+                <NotificationBell />
 
                 <div className="h-8 w-px bg-neutral-200"></div>
 

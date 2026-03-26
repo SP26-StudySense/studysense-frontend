@@ -58,11 +58,11 @@ export const Features = () => {
         <section ref={sectionRef} className="mx-auto mb-24 max-w-[1400px] px-6 lg:px-12">
             <div data-features-header className="mx-auto mb-16 max-w-2xl text-center">
                 <h2 className="mb-4 text-3xl font-medium tracking-tight text-neutral-900">
-                    Stop learning randomly.
+                    Stop learning without a plan.
                 </h2>
                 <p className="text-neutral-500">
-                    The internet is full of tutorials. We provide the structure. Choose a path and follow it
-                    from beginner to expert.
+                    The internet is full of content. We provide structure. Choose a path and progress from
+                    beginner to confident practitioner.
                 </p>
             </div>
 
@@ -75,10 +75,10 @@ export const Features = () => {
                     <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-900 transition-all duration-300 group-hover:scale-110 group-hover:bg-[#00bae2]/20 group-hover:text-neutral-800">
                         <Map width="24" />
                     </div>
-                    <h3 className="mb-2 text-lg font-semibold text-neutral-900">Role-based Paths</h3>
+                    <h3 className="mb-2 text-lg font-semibold text-neutral-900">Goal-based Paths</h3>
                     <p className="text-sm leading-relaxed text-neutral-500">
-                        Don&apos;t know what to learn next? Follow our standardized roadmaps for Frontend,
-                        Backend, DevOps, and more.
+                        Follow structured roadmaps for language learning, communication, business, exam prep,
+                        creative skills, and more.
                     </p>
                 </div>
                 {/* Item 2 */}
@@ -103,9 +103,10 @@ export const Features = () => {
                     <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-900 transition-all duration-300 group-hover:scale-110 group-hover:bg-[#00bae2]/20 group-hover:text-neutral-800">
                         <Users width="24" />
                     </div>
-                    <h3 className="mb-2 text-lg font-semibold text-neutral-900">Community Verified</h3>
+                    <h3 className="mb-2 text-lg font-semibold text-neutral-900">Curated by Experts</h3>
                     <p className="text-sm leading-relaxed text-neutral-500">
-                        Content is open-source and maintained by thousands of top developers. Always up to date.
+                        Learning paths are reviewed by educators and practitioners to keep your plan practical
+                        and up to date.
                     </p>
                 </div>
             </div>

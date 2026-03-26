@@ -16,7 +16,7 @@ import { submitSurvey, transformResponseToAnswers } from './api';
  *
  * @param returnTo - path to redirect after a successful submit.
  *                   Defaults to '/' (landing page) when omitted.
- * @param roadmapId - roadmap id to include in payload for roadmap target survey (id = 3)
+ * @param roadmapId - roadmap id to include in payload for roadmap-target survey flow
  */
 export function useSubmitSurvey(
   surveyId: number,
@@ -43,8 +43,8 @@ export function useSubmitSurvey(
         answers,
       };
 
-      // Include roadmapId for roadmap target survey (id = 3)
-      if (surveyId === 3 && roadmapId !== undefined) {
+      // Include roadmapId when the survey is triggered from roadmap start flow.
+      if (roadmapId !== undefined) {
         payload.roadmapId = roadmapId;
       }
 
@@ -68,9 +68,8 @@ export function useSubmitSurvey(
         });
       }
 
-      // Special handling for roadmap target survey (id = 3)
-      // Redirect to plan generation page to wait for AI processing
-      if (surveyId === 3 && roadmapId !== undefined) {
+      // Special handling for roadmap-target flow.
+      if (roadmapId !== undefined) {
         router.push(`/plan-generation?roadmapId=${roadmapId}`);
       } else {
         router.push(returnTo);

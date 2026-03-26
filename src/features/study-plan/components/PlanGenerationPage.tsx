@@ -73,16 +73,16 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
             <h2 className="text-2xl font-bold text-neutral-900 mb-3">
-              Hết thời gian chờ
+              Request timed out
             </h2>
             <p className="text-neutral-600 mb-6">
-              Hệ thống xử lý quá lâu. Vui lòng thử lại hoặc liên hệ hỗ trợ nếu vấn đề vẫn tiếp tục.
+              This is taking longer than expected. Please try again or contact support if the issue continues.
             </p>
             <button
               onClick={() => router.push('/roadmaps')}
               className="w-full px-6 py-3 rounded-2xl bg-[#00bae2] text-white font-medium hover:bg-[#00a8d0] transition-colors"
             >
-              Quay lại danh sách Roadmap
+              Back to Roadmaps
             </button>
           </div>
         </div>
@@ -103,16 +103,16 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
                 <AlertCircle className="h-8 w-8 text-red-600" />
               </div>
               <h2 className="text-2xl font-bold text-neutral-900 mb-3">
-                Đã xảy ra lỗi
+                Something went wrong
               </h2>
               <p className="text-neutral-600 mb-6">
-                {error.message || 'Không thể tải dữ liệu. Vui lòng thử lại.'}
+                {error.message || 'Unable to load data. Please try again.'}
               </p>
               <button
                 onClick={() => router.push('/roadmaps')}
                 className="w-full px-6 py-3 rounded-2xl bg-[#00bae2] text-white font-medium hover:bg-[#00a8d0] transition-colors"
               >
-                Quay lại danh sách Roadmap
+                Back to Roadmaps
               </button>
             </div>
           </div>
@@ -135,15 +135,15 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
 
           {/* Main Message */}
           <h1 className="text-3xl font-bold text-neutral-900 mb-4">
-            Đang tạo lộ trình học tập
+            Building your study plan
           </h1>
           
           <p className="text-lg text-neutral-600 mb-2">
-            AI đang phân tích kết quả khảo sát của bạn...
+            We are analyzing your survey results...
           </p>
           
           <p className="text-sm text-neutral-500 mb-8">
-            Quá trình này có thể mất 30-120 giây
+            This can take 30-120 seconds
           </p>
 
           {/* Progress Indicator */}
@@ -152,7 +152,7 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
             <div className="flex items-center justify-center gap-3">
               <Loader2 className="h-6 w-6 text-[#00bae2] animate-spin" />
               <span className="text-sm font-medium text-neutral-700">
-                Đang xử lý... ({elapsedSeconds}s)
+                Processing... ({elapsedSeconds}s)
               </span>
             </div>
 
@@ -169,16 +169,16 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
             {/* Status Messages */}
             <div className="mt-8 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600">✓ Phân tích mục tiêu học tập</span>
-                <span className="text-green-600 font-medium">Hoàn thành</span>
+                <span className="text-neutral-600">✓ Learning goals analyzed</span>
+                <span className="text-green-600 font-medium">Done</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600">⟳ Tạo lộ trình chi tiết</span>
-                <span className="text-[#00bae2] font-medium animate-pulse">Đang xử lý...</span>
+                <span className="text-neutral-600">⟳ Creating your personalized roadmap</span>
+                <span className="text-[#00bae2] font-medium animate-pulse">In progress...</span>
               </div>
               <div className="flex items-center justify-between text-sm text-neutral-400">
-                <span>◦ Sinh danh sách công việc học tập</span>
-                <span>Chờ xử lý</span>
+                <span>◦ Generating study tasks</span>
+                <span>Pending</span>
               </div>
             </div>
           </div>
@@ -186,7 +186,7 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
           {/* Tips */}
           <div className="mt-10 pt-8 border-t border-neutral-200">
             <p className="text-xs text-neutral-500">
-              💡 <strong>Mẹo:</strong> Bạn có thể rời khỏi trang này. Chúng tôi sẽ gửi thông báo khi hoàn tất.
+              <strong>Tip:</strong> You can leave this page. We will notify you when your plan is ready.
             </p>
           </div>
         </div>

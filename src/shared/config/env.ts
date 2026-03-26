@@ -21,6 +21,7 @@ const envSchema = z.object({
   // Feature Flags
   NEXT_PUBLIC_ENABLE_ANALYTICS: z.coerce.boolean().default(false),
   NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS: z.coerce.boolean().default(true),
+  NEXT_PUBLIC_ONESIGNAL_APP_ID: z.string().default(''),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -38,6 +39,7 @@ function getEnv(): Env {
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
     NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS: process.env.NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS,
+    NEXT_PUBLIC_ONESIGNAL_APP_ID: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
   });
 
   if (!parsed.success) {

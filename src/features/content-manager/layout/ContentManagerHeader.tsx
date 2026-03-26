@@ -1,7 +1,7 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
-import { Button } from "@/shared/ui/button";
+import { Search } from "lucide-react";
+import { NotificationBell } from '@/features/notification';
 
 interface ContentManagerHeaderProps {
   pageTitle: string;
@@ -28,14 +28,10 @@ export function ContentManagerHeader({ pageTitle }: ContentManagerHeaderProps) {
         </div>
 
         {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative rounded-xl hover:bg-neutral-100"
-        >
-          <Bell className="h-5 w-5 text-neutral-600" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#00bae2]" />
-        </Button>
+        <NotificationBell
+          buttonClassName="relative rounded-xl p-2 text-neutral-600 transition hover:bg-neutral-100"
+          iconClassName="h-5 w-5"
+        />
       </div>
     </header>
   );

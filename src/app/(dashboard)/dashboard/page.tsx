@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export default function DashboardRootPage() {
   const router = useRouter();
@@ -22,9 +21,5 @@ export default function DashboardRootPage() {
     }
   }, [router]);
 
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <LoadingSpinner size="lg" />
-    </div>
-  );
+  return null;
 }

@@ -56,7 +56,13 @@ export const queryKeys = {
   // Study Sessions
   studySessions: {
     ...createQueryKeys('studySessions'),
-    active: () => ['studySessions', 'active'] as const,
+    active: (planId?: number) => {
+      if (typeof planId === 'number') {
+        return ['studySessions', 'active', planId] as const;
+      }
+
+      return ['studySessions', 'active'] as const;
+    },
     history: (params?: QueryParams) => ['studySessions', 'history', params] as const,
     recent: (limit?: number) => ['studySessions', 'recent', limit] as const,
     statistics: (period?: string) => ['studySessions', 'statistics', period] as const,
@@ -94,6 +100,12 @@ export const queryKeys = {
     conversationsByRoadmap: (roadmapId: string) =>
       ['chat', 'conversations', roadmapId] as const,
     history: (conversationId: string) => ['chat', 'history', conversationId] as const,
+  },
+
+  // Notifications
+  notifications: {
+    all: ['notifications'] as const,
+    list: (page = 1, pageSize = 20) => ['notifications', 'list', page, pageSize] as const,
   },
 
   // Admin

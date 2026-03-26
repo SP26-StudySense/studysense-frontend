@@ -108,6 +108,17 @@ export interface CreateTasksBatchRequest {
   tasks: TaskItemInput[];
 }
 
+// AI Task Items
+export interface CreateAiTaskItemsRequest {
+  studyPlanModuleId: number;
+}
+
+export interface CreateAiTaskItemsResult {
+  success: boolean;
+  message?: string;
+  rawTaskItens?: unknown;
+}
+
 // API Response wrapper
 export interface ApiResponse<T> {
   success: boolean;

@@ -14,13 +14,13 @@ const steps = [
         icon: Map,
         number: '01',
         title: 'Pick a Roadmap',
-        description: 'Choose a learning path that matches your career goals from our curated templates.',
+        description: 'Choose a learning path that matches your goals from our curated templates.',
     },
     {
         icon: Rocket,
         number: '02',
         title: 'Start Your Journey',
-        description: 'The system automatically creates a study plan with detailed tasks for each module.',
+        description: 'The system creates a study plan with clear tasks for each module.',
     },
     {
         icon: BarChart3,
@@ -32,7 +32,7 @@ const steps = [
         icon: Trophy,
         number: '04',
         title: 'Achieve Your Goals',
-        description: 'Master the skills and get ready for your next job opportunity.',
+        description: 'Build practical skills and reach your personal or professional learning goals.',
     },
 ];
 
@@ -132,7 +132,7 @@ export const HowItWorks = () => {
                     Get started in 4 simple steps
                 </h2>
                 <p className="text-neutral-500">
-                    StudySense helps you learn systematically with ease. No more getting lost in a sea of knowledge.
+                    StudySense helps you learn systematically. No more getting lost in scattered content.
                 </p>
             </div>
 

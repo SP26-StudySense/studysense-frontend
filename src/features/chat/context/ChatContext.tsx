@@ -48,6 +48,47 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const generateId = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+function areModulesEqual(prev: AvailableModule[], next: AvailableModule[]): boolean {
+    if (prev === next) return true;
+    if (prev.length !== next.length) return false;
+
+    for (let i = 0; i < prev.length; i += 1) {
+        const a = prev[i];
+        const b = next[i];
+        if (
+            a.id !== b.id ||
+            a.title !== b.title ||
+            a.taskCount !== b.taskCount ||
+            a.status !== b.status
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function areTasksEqual(prev: AvailableTask[], next: AvailableTask[]): boolean {
+    if (prev === next) return true;
+    if (prev.length !== next.length) return false;
+
+    for (let i = 0; i < prev.length; i += 1) {
+        const a = prev[i];
+        const b = next[i];
+        if (
+            a.id !== b.id ||
+            a.title !== b.title ||
+            a.moduleId !== b.moduleId ||
+            a.moduleTitle !== b.moduleTitle ||
+            a.isCompleted !== b.isCompleted
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const queryClient = useQueryClient();
@@ -148,15 +189,36 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     );
 
     useEffect(() => {
-        setState((prev) => ({
-            ...prev,
-            roadmapId: resolvedRoadmapId,
-            availableModules,
-            availableTasks,
-            isConversationLoading: conversationsQuery.isLoading,
-            isHistoryLoading: historyQuery.isLoading,
-            isCreatingConversation: createConversationMutation.isPending,
-        }));
+        setState((prev) => {
+            const sameRoadmapId = prev.roadmapId === resolvedRoadmapId;
+            const sameModules = areModulesEqual(prev.availableModules, availableModules);
+            const sameTasks = areTasksEqual(prev.availableTasks, availableTasks);
+            const sameConversationLoading = prev.isConversationLoading === conversationsQuery.isLoading;
+            const sameHistoryLoading = prev.isHistoryLoading === historyQuery.isLoading;
+            const sameCreatingConversation =
+                prev.isCreatingConversation === createConversationMutation.isPending;
+
+            if (
+                sameRoadmapId &&
+                sameModules &&
+                sameTasks &&
+                sameConversationLoading &&
+                sameHistoryLoading &&
+                sameCreatingConversation
+            ) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                roadmapId: resolvedRoadmapId,
+                availableModules,
+                availableTasks,
+                isConversationLoading: conversationsQuery.isLoading,
+                isHistoryLoading: historyQuery.isLoading,
+                isCreatingConversation: createConversationMutation.isPending,
+            };
+        });
     }, [
         availableModules,
         availableTasks,

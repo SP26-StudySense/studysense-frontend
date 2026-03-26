@@ -86,7 +86,7 @@ export function CalendarView({ selectedDate, onDateSelect, taskDates = [], class
 
     return (
         <div className={cn(
-            "rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-6 shadow-xl shadow-neutral-900/5",
+            "bg-transparent",
             className
         )}>
             {/* View Toggle */}

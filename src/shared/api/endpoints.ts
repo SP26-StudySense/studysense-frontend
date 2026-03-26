@@ -116,6 +116,21 @@ export const endpoints = {
     history: (conversationId: string) => `/ai/chat/${conversationId}/history`,
   },
 
+  // AI Task Items
+  ai: {
+    createTaskItems: '/ai/create-task-items',
+  },
+
+  // Notifications
+  notifications: {
+    my: '/notifications/me',
+    markAsRead: (id: number | string) => `/notifications/${id}/read`,
+    markAllAsRead: '/notifications/read-all',
+    sendTest: '/notifications/test/send-me',
+    registerPushToken: '/notifications/push-tokens/register',
+    deactivatePushToken: '/notifications/push-tokens/deactivate',
+  },
+
   // Admin endpoints
   admin: {
     users: {
