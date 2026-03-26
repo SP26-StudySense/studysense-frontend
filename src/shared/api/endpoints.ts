@@ -74,6 +74,20 @@ export const endpoints = {
     events: (id: string) => `/study-sessions/${id}/events`,
   },
 
+  // Quiz Attempts
+  quizAttempts: {
+    base: '/quiz-attempts',
+    create: '/quiz-attempts',
+    submit: (id: string) => `/quiz-attempts/${id}/submit`,
+    currentByModule: (moduleId: string) => `/quiz-attempts/currentByModule/${moduleId}`,
+    questions: (attemptId: string) => `/quiz-attempts/${attemptId}/questions`,
+  },
+
+  // Quiz Answers
+  quizAnswers: {
+    saveByAttempt: (attemptId: string) => `/quiz-answers/attempt/${attemptId}`,
+  },
+
   // Survey & Assessment
   surveys: {
     base: '/surveys',

@@ -11,6 +11,7 @@ import { CalendarView } from './components/CalendarView';
 import { useStudyPlan, useTasksByPlan } from './api/queries';
 import { ModuleStatus, TaskStatus, StudyModuleDto, TaskItemDto, StudyPlanStatus } from './api/types';
 import { useSessionStore } from '@/store/session.store';
+import { useCurrentQuizAttemptByModule } from '@/features/quiz';
 
 interface StudyPlanDetailPageProps {
     planId?: string;
@@ -173,6 +174,11 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     }));
 
     const selectedModule = modulesWithTasks.find(m => m.id === selectedModuleId) || null;
+    const selectedModuleNumericId = selectedModule ? Number(selectedModule.id) : undefined;
+    const { data: currentQuizAttemptData } = useCurrentQuizAttemptByModule(selectedModuleNumericId, {
+        enabled: !!selectedModuleNumericId,
+    });
+    const currentQuizAttemptId = currentQuizAttemptData?.quizAttempt?.id ?? null;
 
     // Derived stats
     const totalTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.length, 0);
