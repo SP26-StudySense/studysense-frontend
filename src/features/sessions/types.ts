@@ -10,7 +10,7 @@ import { SessionStatus, SessionEndedReason, StudyEventType } from '@/shared/type
 export interface SessionNodeInfo {
   id: number;
   title: string;
-  description: string;
+  description: string | null;
 }
 
 export interface SessionPlanInfo {
@@ -21,7 +21,7 @@ export interface SessionPlanInfo {
 export interface SessionTaskItem {
   id: number;
   title: string;
-  description: string;
+  description: string | null;
   order: number;
   estimatedMinutes: number;
   isCompleted: boolean;
@@ -52,7 +52,6 @@ export interface PauseSessionResponse {
   sessionId: string;
   status: SessionStatus;
   pauseCount: number;
-  activeSeconds: number;
   pauseSeconds: number;
 }
 
@@ -75,11 +74,7 @@ export interface EndSessionRequest {
   selfRating?: number;
   notes?: string;
   actualDurationSeconds?: number;
-  activeSeconds?: number;
-  idleSeconds?: number;
   tasks?: EndSessionTaskInput[];
-  focusScore?: number;
-  fatigueScore?: number;
 }
 
 export interface EndSessionResponse {
@@ -87,7 +82,6 @@ export interface EndSessionResponse {
   totalDurationMinutes: number;
   tasksCompleted: number;
   totalTasks: number;
-  focusScore: number;
   xpEarned: number;
 }
 
@@ -102,6 +96,7 @@ export interface ActiveSessionResponse {
   nodeId: number | null;
   nodeTitle: string | null;
   planTitle: string | null;
+  tasks: SessionTaskItem[];
 }
 
 // ─── Session Detail ─────────────────────────────────────────────────────────
@@ -134,6 +129,7 @@ export interface SessionDetailResponse {
 // ─── Session History ────────────────────────────────────────────────────────
 
 export interface SessionHistoryParams {
+  planId?: number;
   pageNumber?: number;
   pageSize?: number;
   sortBy?: string;
@@ -184,8 +180,27 @@ export interface SessionStatistics {
 
 // ─── Study Events ───────────────────────────────────────────────────────────
 
+export enum SessionEventType {
+  VIEW = 'View',
+  CLICK = 'Click',
+  START = 'Start',
+  SUBMIT = 'Submit',
+  COMPLETE = 'Complete',
+}
+
+export enum StudyEventCategory {
+  LEARNING = 'Learning',
+}
+
+export enum ContentMode {
+  TEXT = 'Text',
+  VIDEO = 'Video',
+}
+
 export interface LogEventRequest {
-  eventType: StudyEventType;
+  eventType: SessionEventType | string;
+  eventCategory?: StudyEventCategory | string;
+  contentMode?: ContentMode | string;
   taskId?: number;
   metadata?: Record<string, unknown>;
 }
@@ -193,7 +208,7 @@ export interface LogEventRequest {
 export interface LogEventResponse {
   id: string;
   sessionId: string;
-  eventType: StudyEventType;
+  eventType: SessionEventType | string;
   taskId: number | null;
   timestamp: string;
 }

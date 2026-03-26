@@ -28,25 +28,59 @@ const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
 export function SessionsPage() {
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const selectedNode = useSessionStore((state) => state.selectedNode);
+    const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
     const setActiveTask = useSessionStore((state) => state.setActiveTask);
     const markTaskCompleted = useSessionStore((state) => state.markTaskCompleted);
     const sessionStatus = useSessionStore((state) => state.sessionStatus);
     const showSummary = useSessionStore((state) => state.showSummary);
     const showSuccess = useSessionStore((state) => state.showSuccess);
     const sessionId = useSessionStore((state) => state.sessionId);
+    const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
     const { trackInteraction } = useAnalytics();
 
+    const activePlanId = activeStudyPlanId ? Number(activeStudyPlanId) : undefined;
+    const resolvedActivePlanId =
+        typeof activePlanId === 'number' && Number.isFinite(activePlanId) && activePlanId > 0
+            ? activePlanId
+            : undefined;
+
+    const hasPlanScopedContext = typeof resolvedActivePlanId === 'number';
+
+    const selectedPlanId = selectedNode?.planId ? Number(selectedNode.planId) : undefined;
+    const resolvedSelectedPlanId =
+        typeof selectedPlanId === 'number' && Number.isFinite(selectedPlanId) && selectedPlanId > 0
+            ? selectedPlanId
+            : undefined;
+
     // Check for active session on mount (restore interrupted sessions)
-    const { data: activeSession, isLoading: isCheckingActive } = useActiveSession({
-        enabled: !sessionId, // Only check if we don't already have a session
+    const { data: activeSession, isLoading: isCheckingActive } = useActiveSession(resolvedActivePlanId, {
+        // In plan-scoped pages, always re-check with planId to avoid stale cross-roadmap session state.
+        enabled: hasPlanScopedContext || !sessionId,
     });
 
     useEffect(() => {
-        if (activeSession && !sessionId) {
+        if (activeSession && activeSession.sessionId !== sessionId) {
             setActiveSessionFromApi(activeSession);
+            return;
         }
-    }, [activeSession, sessionId, setActiveSessionFromApi]);
+
+        // If this page is scoped to a specific plan and backend says no active session for that plan,
+        // clear stale local session from another roadmap.
+        if (!activeSession && hasPlanScopedContext && sessionId) {
+            if (resolvedSelectedPlanId !== resolvedActivePlanId) {
+                resetSessionFlow();
+            }
+        }
+    }, [
+        activeSession,
+        hasPlanScopedContext,
+        resolvedActivePlanId,
+        resolvedSelectedPlanId,
+        resetSessionFlow,
+        sessionId,
+        setActiveSessionFromApi,
+    ]);
 
     // Get display tasks
     const displayTasks: SessionTask[] = selectedTasks.length > 0
@@ -73,7 +107,7 @@ export function SessionsPage() {
     }
 
     // Loading state while checking for active session
-    if (isCheckingActive && !sessionId) {
+    if (isCheckingActive && (!sessionId || hasPlanScopedContext)) {
         return (
             <div className="max-w-[1600px] mx-auto flex items-center justify-center py-20">
                 <div className="flex flex-col items-center gap-3">

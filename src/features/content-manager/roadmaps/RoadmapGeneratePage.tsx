@@ -1021,7 +1021,7 @@ export function RoadmapGeneratePage() {
     generateRequest,
     { 
       enabled: !!generateRequest.message && !hasGenerated,
-      retry: 1,
+      retry: false,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: false,

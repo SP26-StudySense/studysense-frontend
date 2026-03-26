@@ -5,6 +5,7 @@
 
 import { get, post, patch } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
+import { ApiException } from '@/shared/api/errors';
 import type {
   StartSessionRequest,
   StartSessionResponse,
@@ -50,17 +51,16 @@ export async function endSession(
 
 // ─── Session Queries ────────────────────────────────────────────────────────
 
-export async function getActiveSession(): Promise<ActiveSessionResponse | null> {
+export async function getActiveSession(
+  planId?: number
+): Promise<ActiveSessionResponse | null> {
   try {
-    return await get<ActiveSessionResponse>(ep.active);
+    return await get<ActiveSessionResponse | null>(ep.active, {
+      params: planId ? { planId } : undefined,
+    });
   } catch (error: unknown) {
-    // 204 No Content → no active session
-    if (
-      error &&
-      typeof error === 'object' &&
-      'statusCode' in error &&
-      (error as { statusCode: number }).statusCode === 204
-    ) {
+    // 204 No Content means the user has no active session.
+    if (error instanceof ApiException && error.status === 204) {
       return null;
     }
     throw error;

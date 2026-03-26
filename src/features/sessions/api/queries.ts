@@ -21,14 +21,15 @@ import type { PaginatedResponse } from '@/shared/types';
  * Returns `null` when there is no active session (204 No Content).
  */
 export function useActiveSession(
+  planId?: number,
   options?: Omit<
     UseQueryOptions<ActiveSessionResponse | null>,
     'queryKey' | 'queryFn'
   >
 ) {
   return useQuery({
-    queryKey: queryKeys.studySessions.active(),
-    queryFn: api.getActiveSession,
+    queryKey: queryKeys.studySessions.active(planId),
+    queryFn: () => api.getActiveSession(planId),
     staleTime: 30 * 1000, // 30 seconds
     refetchOnWindowFocus: true,
     ...options,
