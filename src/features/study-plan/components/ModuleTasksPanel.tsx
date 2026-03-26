@@ -6,6 +6,7 @@ import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, S
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
 import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems } from '../api/mutations';
+import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
 import { TaskFormModal } from './TaskFormModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
@@ -54,6 +55,7 @@ export function ModuleTasksPanel({
     isLoadingTasks = false
 }: ModuleTasksPanelProps) {
     const router = useRouter();
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
     const setSelectedNode = useSessionStore((state) => state.setSelectedNode);
     const setSelectedTasks = useSessionStore((state) => state.setSelectedTasks);
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
@@ -176,6 +178,16 @@ export function ModuleTasksPanel({
         ].includes(normalized);
     };
 
+    const parsedPlanId = studyPlanId ? Number(studyPlanId) : undefined;
+    const scopedPlanId =
+        typeof parsedPlanId === 'number' && Number.isFinite(parsedPlanId) && parsedPlanId > 0
+            ? parsedPlanId
+            : undefined;
+
+    // Prevent creating a new session when a previous one is still active in this plan.
+    const { data: activeSession } = useActiveSession(scopedPlanId);
+    const hasUnfinishedSession = Boolean(activeSession?.sessionId);
+
     // Helper function to get module name by task's studyPlanModuleId
     const getModuleName = (studyPlanModuleId: number): string => {
         const foundModule = allModules.find((m: any) => String(m.id) === String(studyPlanModuleId));
@@ -289,6 +301,7 @@ export function ModuleTasksPanel({
     if (!module) return null;
 
     const handleTaskToggle = (taskId: string) => {
+        if (hasUnfinishedSession) return;
         setSelectedTaskIds(prev => {
             const newSet = new Set(prev);
             if (newSet.has(taskId)) {
@@ -301,6 +314,7 @@ export function ModuleTasksPanel({
     };
 
     const handleSelectAll = () => {
+        if (hasUnfinishedSession) return;
         // Filter out completed tasks and locked module tasks
         const selectableTasks = filteredTasks.filter(t => !t.isCompleted && !t.isFromLockedModule);
         if (selectedTaskIds.size === selectableTasks.length) {
@@ -311,6 +325,15 @@ export function ModuleTasksPanel({
     };
 
     const handleStartLearning = () => {
+        if (hasUnfinishedSession) {
+            router.push('/sessions');
+            return;
+        }
+
+        if (studyPlanId) {
+            setActiveStudyPlanId(studyPlanId);
+        }
+
         // Reset any previous session state
         resetSessionFlow();
 
@@ -319,7 +342,7 @@ export function ModuleTasksPanel({
             id: module.id,
             roadmapNodeId: module.roadmapNodeId,
             title: module.title,
-            planId: studyPlanId || '1',
+            planId: studyPlanId,
             planTitle: 'Learning Path',
         };
         setSelectedNode(nodeInfo);
@@ -700,10 +723,22 @@ export function ModuleTasksPanel({
                                 <div className="flex items-center justify-end mb-2">
                                     <button
                                         onClick={handleSelectAll}
-                                        className="text-xs font-semibold text-violet-600 hover:text-violet-700 transition-colors"
+                                        disabled={hasUnfinishedSession}
+                                        className="text-xs font-semibold text-violet-600 hover:text-violet-700 transition-colors disabled:text-neutral-400 disabled:cursor-not-allowed"
                                     >
                                         {selectedTaskIds.size === incompleteTasks.length ? 'Deselect All' : 'Select All'}
                                     </button>
+                                </div>
+                            )}
+
+                            {hasUnfinishedSession && (
+                                <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                                    <p className="text-sm font-medium text-amber-800">
+                                        You already have an unfinished study session.
+                                    </p>
+                                    <p className="text-xs text-amber-700 mt-1">
+                                        Please end your current session before selecting tasks or starting a new one.
+                                    </p>
                                 </div>
                             )}
 
@@ -772,7 +807,6 @@ export function ModuleTasksPanel({
                                     const isSelected = selectedTaskIds.has(task.id);
                                     const isDisabled = task.isCompleted || !!task.isFromLockedModule;
                                     const isExpanded = expandedTaskIds.has(task.id);
-
                                     return (
                                         <div
                                             key={task.id}
@@ -927,7 +961,7 @@ export function ModuleTasksPanel({
                                 Start Learning
                                 <Play className="h-4 w-4" fill="currentColor" strokeWidth={1} />
                             </button>
-                        </div>
+                        </div>           
                     </div>
                 )}
 

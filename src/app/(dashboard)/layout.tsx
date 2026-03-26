@@ -5,7 +5,8 @@ import { AuthGuard } from '@/features/auth/components/auth-guard';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { UserProfile } from '@/components/dashboard/UserProfile';
 import { ChatProvider, ChatPopup, ChatToggleButton } from '@/features/chat';
-import { Search, Bell } from 'lucide-react';
+import { NotificationBell } from '@/features/notification';
+import { Search } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -81,10 +82,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   />
                 </div> */}
 
-                <button className="relative text-neutral-500 transition-colors hover:text-neutral-900">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-                </button>
+                <NotificationBell />
 
                 <div className="h-8 w-px bg-neutral-200"></div>
 

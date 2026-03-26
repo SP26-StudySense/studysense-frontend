@@ -51,6 +51,9 @@ import type {
   GenerateRoadmapResponse,
 } from './types';
 
+// AI generation endpoints can legitimately take longer than regular CRUD APIs.
+const AI_REQUEST_TIMEOUT_MS = 180000;
+
 // ==================== Utility Functions ====================
 
 export function buildQueryString(params: Record<string, any>): string {
@@ -177,7 +180,9 @@ export async function syncRoadmapGraph(
 export async function generateRoadmapAI(
   request: GenerateRoadmapRequest
 ): Promise<GenerateRoadmapResponse> {
-  return post<GenerateRoadmapResponse>("/ai/create-road-map", request);
+  return post<GenerateRoadmapResponse>("/ai/create-road-map", request, {
+    timeout: AI_REQUEST_TIMEOUT_MS,
+  });
 }
 
 export async function createQuiz(
@@ -195,7 +200,9 @@ export async function createQuizQuestion(
 export async function createAiQuizQuestions(
   request: CreateAiQuizQuestionsRequest
 ): Promise<CreateAiQuizQuestionsResponse> {
-  return post<CreateAiQuizQuestionsResponse>('/ai/create-quiz-questions', request);
+  return post<CreateAiQuizQuestionsResponse>('/ai/create-quiz-questions', request, {
+    timeout: AI_REQUEST_TIMEOUT_MS,
+  });
 }
 
 export async function updateQuizQuestion(

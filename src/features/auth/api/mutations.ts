@@ -35,6 +35,10 @@ import type {
 import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
 import { SurveyTriggerType } from '@/features/survey/api/types';
 import { SurveyTriggerReason } from '@/features/survey/types';
+import {
+  deactivateStoredPushToken,
+  syncOneSignalSubscriptionToBackend,
+} from '@/features/notification';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
@@ -146,6 +150,10 @@ export function useLogin() {
         description: `Welcome ${response.user.firstName || response.user.email}`,
       });
 
+      await syncOneSignalSubscriptionToBackend().catch(() => {
+        // OneSignal may not be initialized or push permission not granted.
+      });
+
       // Redirect Analyst users directly to analyst dashboard
       const isAnalyst = response.user.roles?.includes(UserRole.ANALYST);
       if (isAnalyst) {
@@ -218,6 +226,9 @@ export function useLogout() {
       }
 
       // Always clear tokens and cache, even if logout API fails
+      deactivateStoredPushToken().catch(() => {
+        // Ignore deactivation failures during logout.
+      });
       clearAccessToken();
       clearUserFromStorage();
       queryClient.clear();
@@ -403,6 +414,10 @@ export function useGoogleLogin() {
         // Show success toast
         toast.success('Login successful!', {
           description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
+        });
+
+        await syncOneSignalSubscriptionToBackend().catch(() => {
+          // OneSignal may not be initialized or push permission not granted.
         });
 
         // Redirect Analyst users directly to analyst dashboard
