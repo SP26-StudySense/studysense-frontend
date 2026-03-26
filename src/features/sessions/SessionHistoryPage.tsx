@@ -5,6 +5,7 @@ import { Calendar, Clock, CheckCircle2, TrendingUp, ChevronLeft, ChevronRight, L
 import { cn } from '@/shared/lib/utils';
 import { useSessionHistory, useSessionStatistics } from './api/queries';
 import type { SessionHistoryItem as HistoryItem } from './types';
+import { useSessionStore } from '@/store/session.store';
 
 function formatDate(dateStr: string): string {
     const date = new Date(dateStr);
@@ -128,9 +129,17 @@ function SessionCard({ session }: { session: HistoryItem }) {
 export function SessionHistoryPage() {
     const [page, setPage] = useState(1);
     const pageSize = 10;
+    const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
+
+    const parsedPlanId = activeStudyPlanId ? Number(activeStudyPlanId) : undefined;
+    const planId =
+        typeof parsedPlanId === 'number' && Number.isFinite(parsedPlanId) && parsedPlanId > 0
+            ? parsedPlanId
+            : undefined;
 
     // Fetch real data from API
     const { data: historyData, isLoading: historyLoading } = useSessionHistory({
+        planId,
         pageNumber: page,
         pageSize,
         sortBy: 'date',
@@ -149,6 +158,11 @@ export function SessionHistoryPage() {
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-neutral-900 mb-2">Session History</h1>
                 <p className="text-neutral-500">Review your past study sessions and track your progress</p>
+                {planId && (
+                    <p className="mt-2 inline-flex items-center rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                        Filtered by current roadmap
+                    </p>
+                )}
             </div>
 
             {/* Stats Overview */}
