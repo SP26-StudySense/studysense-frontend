@@ -202,6 +202,8 @@ export interface LogEventRequest {
   eventCategory?: StudyEventCategory | string;
   contentMode?: ContentMode | string;
   taskId?: number;
+  userId?: string;
+  studyPlanModuleId?: string;
   metadata?: Record<string, unknown>;
 }
 
