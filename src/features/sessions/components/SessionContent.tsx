@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/utils';
 import { useSessionStore } from '@/store/session.store';
 import { useStudyPlan } from '@/features/study-plan/api';
 import { useNodeContents } from '@/features/roadmaps/api';
+import { useCurrentUser } from '@/features/auth/api/queries';
 import { useLogEvent } from '../api';
 import { ContentMode, SessionEventType, StudyEventCategory } from '../types';
 
@@ -22,10 +23,12 @@ export function SessionContent({ className }: SessionContentProps) {
     const selectedNode = useSessionStore((state) => state.selectedNode);
     const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
     const sessionId = useSessionStore((state) => state.sessionId);
+    const { data: currentUser } = useCurrentUser();
     const { mutate: logEvent } = useLogEvent();
 
     const studyPlanId = toPositiveNumber(selectedNode?.planId ?? activeStudyPlanId);
     const nodeId = selectedNode?.roadmapNodeId ?? toPositiveNumber(selectedNode?.id);
+    const studyPlanModuleId = toPositiveNumber(selectedNode?.id);
 
     const { data: studyPlan, isLoading: isPlanLoading } = useStudyPlan(
         studyPlanId ? String(studyPlanId) : undefined
@@ -59,6 +62,8 @@ export function SessionContent({ className }: SessionContentProps) {
                 eventType: SessionEventType.CLICK,
                 eventCategory: StudyEventCategory.LEARNING,
                 contentMode: resolveContentMode(content.contentType),
+                userId: currentUser?.id,
+                studyPlanModuleId: studyPlanModuleId ? String(studyPlanModuleId) : undefined,
                 metadata: {
                     contentId: content.id,
                     contentTitle: content.title,
