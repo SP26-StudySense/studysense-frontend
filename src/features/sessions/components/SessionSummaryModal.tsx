@@ -6,6 +6,7 @@ import { useSessionStore } from '@/store/session.store';
 import { useEndSession } from '../api/mutations';
 import { SessionEndedReason } from '@/shared/types';
 import { toast } from '@/shared/lib';
+import { queryKeys } from '@/shared/api/query-keys';
 
 interface SessionSummaryModalProps {
     isOpen: boolean;
@@ -57,7 +58,6 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                     selfRating: summaryData.rating || undefined,
                     notes: notes || undefined,
                     actualDurationSeconds: elapsedSeconds,
-                    activeSeconds: elapsedSeconds,
                     tasks: tasksPayload,
                 },
             },
@@ -67,7 +67,7 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                     await Promise.all([
                         queryClient.invalidateQueries({ queryKey: ['tasks'] }),
                         queryClient.invalidateQueries({ queryKey: ['studyPlans'] }),
-                        queryClient.invalidateQueries({ queryKey: ['study-sessions'] }),
+                        queryClient.invalidateQueries({ queryKey: queryKeys.studySessions.all }),
                     ]);
 
                     completeSession(data);

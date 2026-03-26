@@ -9,6 +9,7 @@ import { ModuleTasksPanel, ModuleData, ModuleTask } from './components/ModuleTas
 import { CalendarView } from './components/CalendarView';
 import { useStudyPlan, useTasksByPlan } from './api/queries';
 import { ModuleStatus, TaskStatus, StudyModuleDto, TaskItemDto, StudyPlanStatus } from './api/types';
+import { useSessionStore } from '@/store/session.store';
 
 interface StudyPlanDetailPageProps {
     planId?: string;
@@ -45,7 +46,12 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [shouldPoll, setShouldPoll] = useState(false);
     const queryClient = useQueryClient();
-    const prevStatusRef = useRef<StudyPlanStatus | undefined>();
+    const prevStatusRef = useRef<StudyPlanStatus | undefined>(undefined);
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
+
+    useEffect(() => {
+        setActiveStudyPlanId(planId ?? null);
+    }, [planId, setActiveStudyPlanId]);
 
     // Fetch study plan with conditional polling
     const { data: studyPlan, isLoading: isLoadingPlan, error: planError } = useStudyPlan(planId, {

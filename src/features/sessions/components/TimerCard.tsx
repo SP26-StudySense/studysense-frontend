@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useCallback, useState } from 'react';
-import { Play, Pause, RotateCcw, Square, AlertTriangle } from 'lucide-react';
+import { Play, Pause, Square, AlertTriangle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore } from '@/store/session.store';
-import { useStartSession, usePauseSession, useResumeSession, useEndSession } from '../api/mutations';
+import { useStartSession, usePauseSession, useResumeSession } from '../api/mutations';
 import { SessionStatus } from '@/shared/types';
 import { toast } from '@/shared/lib';
 import { ApiException } from '@/shared/api/errors';
@@ -30,13 +30,11 @@ export function TimerCard({ className }: TimerCardProps) {
     const storePauseSession = useSessionStore((state) => state.pauseSession);
     const storeResumeSession = useSessionStore((state) => state.resumeSession);
     const storeEndSession = useSessionStore((state) => state.endSession);
-    const storeResetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
 
     // API mutations
     const startMutation = useStartSession();
     const pauseMutation = usePauseSession();
     const resumeMutation = useResumeSession();
-    const endMutation = useEndSession();
 
     // Analytics
     const { trackClick, trackInteraction } = useAnalytics();
@@ -87,6 +85,11 @@ export function TimerCard({ className }: TimerCardProps) {
             .map((task) => safeNumberId(task.id))
             .filter((id): id is number => typeof id === 'number');
 
+        const plannedDurationSeconds = selectedTasks.reduce((total, task) => {
+            const taskMinutes = Number.isFinite(task.estimatedMinutes) ? task.estimatedMinutes : 0;
+            return total + Math.max(0, taskMinutes) * 60;
+        }, 0);
+
         const resolvedStudyPlanId = safeNumberId(activeStudyPlanId) ?? safeNumberId(selectedNode?.planId);
         const resolvedModuleId = safeNumberId(selectedNode?.id);
 
@@ -95,6 +98,7 @@ export function TimerCard({ className }: TimerCardProps) {
             nodeId: selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id),
             moduleId: resolvedModuleId,
             taskIds: taskIds.length > 0 ? taskIds : undefined,
+            plannedDurationSeconds: plannedDurationSeconds > 0 ? plannedDurationSeconds : undefined,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         };
 
@@ -168,10 +172,6 @@ export function TimerCard({ className }: TimerCardProps) {
         });
     }, [sessionId, resumeMutation, storeResumeSession, trackClick, elapsedSeconds]);
 
-    const handleReset = useCallback(() => {
-        storeResetSessionFlow();
-    }, [storeResetSessionFlow]);
-
     const handleEndSession = useCallback(() => {
         trackInteraction('session_ended', {
             sessionId,
@@ -181,7 +181,7 @@ export function TimerCard({ className }: TimerCardProps) {
         storeEndSession();
     }, [storeEndSession, trackInteraction, sessionId, elapsedSeconds, selectedTasks.length]);
 
-    const isAnyPending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending || endMutation.isPending;
+    const isAnyPending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending;
 
     return (
         <div className={cn(
@@ -245,13 +245,6 @@ export function TimerCard({ className }: TimerCardProps) {
                                 {resumeMutation.isPending ? 'Resuming...' : 'Resume'}
                             </button>
                         )}
-                        <button
-                            onClick={handleReset}
-                            className="flex items-center justify-center rounded-xl border border-neutral-200 bg-white/80 p-4 text-neutral-600 shadow-sm hover:bg-neutral-50 hover:text-neutral-900 hover:scale-105 transition-all duration-300"
-                            title="Reset"
-                        >
-                            <RotateCcw className="h-5 w-5" />
-                        </button>
                         <button
                             onClick={handleEndSession}
                             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/40 hover:scale-105 transition-all duration-300"

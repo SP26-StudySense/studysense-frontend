@@ -5,6 +5,8 @@ import { cn } from '@/shared/lib/utils';
 import { useSessionStore } from '@/store/session.store';
 import { useStudyPlan } from '@/features/study-plan/api';
 import { useNodeContents } from '@/features/roadmaps/api';
+import { useLogEvent } from '../api';
+import { ContentMode, SessionEventType, StudyEventCategory } from '../types';
 
 interface SessionContentProps {
     className?: string;
@@ -19,6 +21,8 @@ function toPositiveNumber(value: string | number | undefined | null): number | n
 export function SessionContent({ className }: SessionContentProps) {
     const selectedNode = useSessionStore((state) => state.selectedNode);
     const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
+    const sessionId = useSessionStore((state) => state.sessionId);
+    const { mutate: logEvent } = useLogEvent();
 
     const studyPlanId = toPositiveNumber(selectedNode?.planId ?? activeStudyPlanId);
     const nodeId = selectedNode?.roadmapNodeId ?? toPositiveNumber(selectedNode?.id);
@@ -41,6 +45,31 @@ export function SessionContent({ className }: SessionContentProps) {
     const errorMessage = contentsError instanceof Error
         ? contentsError.message
         : 'Failed to load module contents';
+
+    const resolveContentMode = (contentType?: string): ContentMode => {
+        return contentType?.toLowerCase().includes('video') ? ContentMode.VIDEO : ContentMode.TEXT;
+    };
+
+    const handleContentClick = (content: (typeof nodeContents)[number]) => {
+        if (!sessionId) return;
+
+        logEvent({
+            sessionId,
+            request: {
+                eventType: SessionEventType.CLICK,
+                eventCategory: StudyEventCategory.LEARNING,
+                contentMode: resolveContentMode(content.contentType),
+                metadata: {
+                    contentId: content.id,
+                    contentTitle: content.title,
+                    contentType: content.contentType,
+                    contentUrl: content.url,
+                    nodeId,
+                    studyPlanId,
+                },
+            },
+        });
+    };
 
     return (
         <div
@@ -113,6 +142,7 @@ export function SessionContent({ className }: SessionContentProps) {
                                         href={content.url}
                                         target="_blank"
                                         rel="noreferrer"
+                                        onClick={() => handleContentClick(content)}
                                         className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 hover:text-sky-800"
                                     >
                                         Open
