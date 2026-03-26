@@ -9,6 +9,7 @@ import { ModuleTasksPanel, ModuleData, ModuleTask } from './components/ModuleTas
 import { CalendarView } from './components/CalendarView';
 import { useStudyPlan, useTasksByPlan } from './api/queries';
 import { ModuleStatus, TaskStatus, StudyModuleDto, TaskItemDto, StudyPlanStatus } from './api/types';
+import { useCurrentQuizAttemptByModule } from '@/features/quiz';
 
 interface StudyPlanDetailPageProps {
     planId?: string;
@@ -164,6 +165,11 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     }));
 
     const selectedModule = modulesWithTasks.find(m => m.id === selectedModuleId) || null;
+    const selectedModuleNumericId = selectedModule ? Number(selectedModule.id) : undefined;
+    const { data: currentQuizAttemptData } = useCurrentQuizAttemptByModule(selectedModuleNumericId, {
+        enabled: !!selectedModuleNumericId,
+    });
+    const currentQuizAttemptId = currentQuizAttemptData?.quizAttempt?.id ?? null;
 
     // Derived stats
     const totalTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.length, 0);
@@ -319,6 +325,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                                 allModules={studyPlan?.modules}
                                 onClearDateFilter={() => setSelectedDate(null)}
                                 isLoadingTasks={isLoadingTasks}
+                                currentQuizAttemptId={currentQuizAttemptId}
                             />
                         ) : (
                             <div className="h-[calc(100vh-450px)] min-h-[400px] flex items-center justify-center rounded-3xl bg-white/50 border border-neutral-200/60 p-6 text-neutral-400">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Loader2, RotateCcw, XCircle } from 'lucide-react';
 
 import {
@@ -12,6 +12,7 @@ import { useQuizAttemptFlow } from '../hooks/useQuizAttemptFlow';
 
 interface QuizAttemptPageProps {
   moduleId: number;
+  quizAttemptId?: number;
   moduleTitle?: string;
   level?: QuizLevel;
   contextLabel: string;
@@ -26,6 +27,7 @@ interface QuizAttemptPageProps {
 
 export function QuizAttemptPage({
   moduleId,
+  quizAttemptId,
   moduleTitle,
   level = 'Advanced',
   contextLabel,
@@ -38,26 +40,36 @@ export function QuizAttemptPage({
   onSubmitted,
 }: QuizAttemptPageProps) {
   const {
-    attemptData,
+    attemptId,
+    questionsData,
     answers,
     result,
     error,
+    hasUnsavedChanges,
     setAnswer,
+    saveAnswers,
     startAttempt,
+    resetAttempt,
     submitAttempt,
     questionCount,
     answeredCount,
     allAnswered,
     isCreating,
+    isSaving,
     isSubmitting,
   } = useQuizAttemptFlow({
     moduleId,
     level,
+    initialQuizAttemptId: quizAttemptId,
     onSubmitted,
   });
 
-  const attemptKey = useMemo(() => `${moduleId}:${level}`, [moduleId, level]);
+  const attemptKey = useMemo(
+    () => `${moduleId}:${level}:${quizAttemptId ?? 'new'}`,
+    [moduleId, level, quizAttemptId]
+  );
   const initializedAttemptKeyRef = useRef<string>('');
+  const allowNavigationRef = useRef(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   useEffect(() => {
@@ -66,20 +78,104 @@ export function QuizAttemptPage({
     }
 
     initializedAttemptKeyRef.current = attemptKey;
+    if (quizAttemptId && quizAttemptId > 0) {
+      resetAttempt(quizAttemptId);
+      return;
+    }
+
     startAttempt();
-  }, [attemptKey, startAttempt]);
+  }, [attemptKey, quizAttemptId, resetAttempt, startAttempt]);
 
   useEffect(() => {
     setCurrentQuestionIndex(0);
-  }, [attemptData?.quizAttempt.id]);
+  }, [attemptId]);
+
+  const shouldBlockNavigation = !!questionsData && !result;
+
+  const confirmBeforeLeave = useCallback(async () => {
+    if (!shouldBlockNavigation) {
+      return true;
+    }
+
+    if (!hasUnsavedChanges) {
+      return window.confirm('You are currently taking a quiz. Do you want to leave this page?');
+    }
+
+    const shouldSave = window.confirm(
+      'You have unsaved answers. Press OK to save before leaving, or Cancel to leave without saving.'
+    );
+
+    if (shouldSave) {
+      try {
+        await saveAnswers();
+        return true;
+      } catch {
+        return window.confirm(
+          'Save failed. Press OK to leave without saving, or Cancel to stay on this page.'
+        );
+      }
+    }
+
+    return true;
+  }, [hasUnsavedChanges, saveAnswers, shouldBlockNavigation]);
+
+  const handleBackClick = useCallback(async () => {
+    const canLeave = await confirmBeforeLeave();
+    if (!canLeave) {
+      return;
+    }
+
+    allowNavigationRef.current = true;
+    onBack();
+  }, [confirmBeforeLeave, onBack]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!shouldBlockNavigation || allowNavigationRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [shouldBlockNavigation]);
+
+  useEffect(() => {
+    if (!shouldBlockNavigation) {
+      return;
+    }
+
+    window.history.pushState(null, '', window.location.href);
+
+    const handlePopState = async () => {
+      if (allowNavigationRef.current) {
+        return;
+      }
+
+      const canLeave = await confirmBeforeLeave();
+      if (canLeave) {
+        allowNavigationRef.current = true;
+        window.history.back();
+        return;
+      }
+
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [confirmBeforeLeave, shouldBlockNavigation]);
 
   const isPassed = result?.quizAttempt.status === QuizAttemptStatus.Passed;
   const correctCount = result?.questions.filter((question) => question.isCorrect).length ?? 0;
-  const currentQuestion = attemptData?.questions[currentQuestionIndex];
+  const currentQuestion = questionsData?.questions[currentQuestionIndex];
   const isFirstQuestion = currentQuestionIndex === 0;
   const isLastQuestion = questionCount > 0 && currentQuestionIndex === questionCount - 1;
 
-  if (isCreating && !attemptData) {
+  if (isCreating && !questionsData) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center px-4">
         <div className="rounded-3xl bg-white/90 border border-neutral-200/60 p-8 w-full max-w-xl text-center shadow-xl shadow-neutral-900/10">
@@ -91,7 +187,7 @@ export function QuizAttemptPage({
     );
   }
 
-  if (error && !attemptData) {
+  if (error && !questionsData) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center px-4">
         <div className="rounded-3xl bg-white/95 border border-red-200 p-8 w-full max-w-xl text-center shadow-xl shadow-red-900/10">
@@ -99,7 +195,7 @@ export function QuizAttemptPage({
           <p className="text-sm text-neutral-600 mb-6">{error}</p>
           <div className="flex gap-3 justify-center">
             <button
-              onClick={onBack}
+              onClick={handleBackClick}
               className="px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50"
             >
               {backLabel}
@@ -190,7 +286,7 @@ export function QuizAttemptPage({
 
           <div className="flex flex-wrap items-center gap-3 justify-end">
             <button
-              onClick={onBack}
+              onClick={handleBackClick}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -198,7 +294,10 @@ export function QuizAttemptPage({
             </button>
             {!isPassed && (
               <button
-                onClick={startAttempt}
+                onClick={() => {
+                  resetAttempt();
+                  startAttempt();
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600"
               >
                 <RotateCcw className="h-4 w-4" />
@@ -216,7 +315,7 @@ export function QuizAttemptPage({
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="rounded-3xl bg-white/90 border border-neutral-200/60 p-6 sm:p-8 shadow-xl shadow-neutral-900/10">
           <button
-            onClick={onBack}
+            onClick={handleBackClick}
             className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -292,6 +391,14 @@ export function QuizAttemptPage({
                 : 'Please answer all questions before submitting.'}
             </p>
             <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={saveAnswers}
+                disabled={!hasUnsavedChanges || isSaving || isSubmitting}
+                className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : 'Save Progress'}
+              </button>
+
               <button
                 onClick={() => setCurrentQuestionIndex((prev) => Math.max(prev - 1, 0))}
                 disabled={isFirstQuestion}

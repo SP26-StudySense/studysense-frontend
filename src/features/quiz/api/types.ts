@@ -51,14 +51,47 @@ export interface QuizQuestionOptionDto {
 export interface QuizAttemptQuestionDto {
 	questionId: number;
 	prompt: string;
-	type: number;
 	orderNo: number;
+	selectedOptionId: number | null;
 	options: QuizQuestionOptionDto[];
 }
 
-export interface CreateQuizAttemptResponse {
-	quizAttempt: QuizAttemptDto;
+export interface GetQuizQuestionsByAttemptResponse {
 	questions: QuizAttemptQuestionDto[];
+}
+
+export interface CreateQuizAttemptResponse {
+	id: number;
+	quizId: number;
+	userId: string;
+	startedAt: string;
+	submittedAt: string | null;
+	score: number | null;
+	status: QuizAttemptStatus;
+}
+
+export interface GetCurrentQuizAttemptByModuleResponse {
+	quizAttempt: QuizAttemptDto | null;
+}
+
+export interface SaveQuizAnswerItem {
+	id?: number;
+	attemptId: number;
+	questionId: number;
+	optionId?: number | null;
+	textValue?: string | null;
+	numberValue?: number | null;
+	answeredAt?: string;
+}
+
+export interface SaveQuizAnswersByAttemptRequest {
+	attemptId: number;
+	quizAnswers: SaveQuizAnswerItem[];
+}
+
+export interface SaveQuizAnswersByAttemptResponse {
+	success: boolean;
+	updatedCount: number;
 }
 
 export interface SubmittedQuizQuestionResultDto {

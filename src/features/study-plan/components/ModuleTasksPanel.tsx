@@ -41,6 +41,7 @@ interface ModuleTasksPanelProps {
     allModules?: any[];
     onClearDateFilter?: () => void;
     isLoadingTasks?: boolean;
+    currentQuizAttemptId?: number | null;
 }
 
 interface SkipModuleConfirmDialogProps {
@@ -199,7 +200,8 @@ export function ModuleTasksPanel({
     allTasks = [], 
     allModules = [], 
     onClearDateFilter,
-    isLoadingTasks = false
+    isLoadingTasks = false,
+    currentQuizAttemptId = null,
 }: ModuleTasksPanelProps) {
     const router = useRouter();
     const setSelectedNode = useSessionStore((state) => state.setSelectedNode);
@@ -408,6 +410,22 @@ export function ModuleTasksPanel({
         setIsTakeQuizOpen(true);
     };
 
+    const handleContinueQuiz = () => {
+        if (!studyPlanId || !currentQuizAttemptId) return;
+
+        const query = new URLSearchParams({
+            moduleTitle: module.title,
+            attemptId: String(currentQuizAttemptId),
+        });
+
+        if (allTasksCompletedInModule) {
+            router.push(`/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?${query.toString()}`);
+            return;
+        }
+
+        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz?${query.toString()}`);
+    };
+
     const handleConfirmTakeQuiz = (level: QuizLevel) => {
         if (!studyPlanId) return;
 
@@ -497,6 +515,15 @@ export function ModuleTasksPanel({
     const isLocked = module.status === 'locked' && viewFilter === 'module';
     const hasCompletedTaskInModule = module.tasks.some((task) => task.isCompleted);
     const allTasksCompletedInModule = module.tasks.length > 0 && module.tasks.every((task) => task.isCompleted);
+    const showContinueQuiz =
+        !!currentQuizAttemptId &&
+        ((allTasksCompletedInModule && module.status !== 'completed') ||
+            (!hasCompletedTaskInModule && module.status !== 'completed'));
+    const isContinueTakeQuiz = showContinueQuiz && allTasksCompletedInModule;
+    const continueQuizLabel = isContinueTakeQuiz ? 'Continue Take Quiz' : 'Continue Skip Quiz';
+    const continueQuizButtonClass = isContinueTakeQuiz
+        ? 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-50 text-cyan-700 text-sm font-medium hover:bg-cyan-100 transition-colors'
+        : 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 transition-colors';
     const isFormLoading = createTaskMutation.isPending || updateTaskMutation.isPending;
     const isDeleteLoading = deleteTaskMutation.isPending;
 
@@ -638,7 +665,16 @@ export function ModuleTasksPanel({
                             </div>
                             {viewFilter === 'module' && !isLocked && (
                                 <>
-                                    {module.status !== 'completed' && !!studyPlanId && !hasCompletedTaskInModule && (
+                                    {showContinueQuiz && !!studyPlanId && (
+                                        <button
+                                            onClick={handleContinueQuiz}
+                                            className={continueQuizButtonClass}
+                                            title={continueQuizLabel}
+                                        >
+                                            {continueQuizLabel}
+                                        </button>
+                                    )}
+                                    {!showContinueQuiz && module.status !== 'completed' && !!studyPlanId && !hasCompletedTaskInModule && (
                                         <button
                                             onClick={handleOpenSkipModule}
                                             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 transition-colors"
@@ -646,7 +682,7 @@ export function ModuleTasksPanel({
                                             Skip Module
                                         </button>
                                     )}
-                                    {!!studyPlanId && allTasksCompletedInModule && (
+                                    {!showContinueQuiz && !!studyPlanId && allTasksCompletedInModule && (
                                         <button
                                             onClick={handleOpenTakeQuiz}
                                             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-50 text-cyan-700 text-sm font-medium hover:bg-cyan-100 transition-colors"
@@ -888,10 +924,17 @@ export function ModuleTasksPanel({
                                     <p className="text-xs text-neutral-500 mt-1">Great job on finishing this module</p>
                                     {!!studyPlanId && (
                                         <button
-                                            onClick={handleOpenTakeQuiz}
-                                            className="mt-4 inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#00bae2] to-[#00a8cc] hover:brightness-105"
+                                            onClick={showContinueQuiz ? handleContinueQuiz : handleOpenTakeQuiz}
+                                            className={cn(
+                                                'mt-4 inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white hover:brightness-105',
+                                                showContinueQuiz
+                                                    ? (isContinueTakeQuiz
+                                                        ? 'bg-gradient-to-r from-[#00bae2] to-[#00a8cc]'
+                                                        : 'bg-gradient-to-r from-amber-500 to-amber-600')
+                                                    : 'bg-gradient-to-r from-[#00bae2] to-[#00a8cc]'
+                                            )}
                                         >
-                                            Take Quiz
+                                            {showContinueQuiz ? continueQuizLabel : 'Take Quiz'}
                                         </button>
                                     )}
                                 </>

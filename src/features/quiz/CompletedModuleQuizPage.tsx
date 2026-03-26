@@ -9,6 +9,7 @@ import type { QuizLevel } from './api/types';
 interface CompletedModuleQuizPageProps {
   studyPlanId: string;
   moduleId: number;
+  quizAttemptId?: number;
   moduleTitle?: string;
   level?: string;
 }
@@ -24,6 +25,7 @@ function normalizeLevel(level?: string): QuizLevel {
 export function CompletedModuleQuizPage({
   studyPlanId,
   moduleId,
+  quizAttemptId,
   moduleTitle,
   level,
 }: CompletedModuleQuizPageProps) {
@@ -35,6 +37,7 @@ export function CompletedModuleQuizPage({
   return (
     <QuizAttemptPage
       moduleId={moduleId}
+      quizAttemptId={quizAttemptId}
       moduleTitle={moduleTitle}
       level={selectedLevel}
       contextLabel="Module Completion Quiz"

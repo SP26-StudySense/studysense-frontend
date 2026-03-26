@@ -8,16 +8,18 @@ import { QuizAttemptPage } from './components/QuizAttemptPage';
 interface SkipModuleQuizPageProps {
   studyPlanId: string;
   moduleId: number;
+  quizAttemptId?: number;
   moduleTitle?: string;
 }
 
-export function SkipModuleQuizPage({ studyPlanId, moduleId, moduleTitle }: SkipModuleQuizPageProps) {
+export function SkipModuleQuizPage({ studyPlanId, moduleId, quizAttemptId, moduleTitle }: SkipModuleQuizPageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
   return (
     <QuizAttemptPage
       moduleId={moduleId}
+      quizAttemptId={quizAttemptId}
       moduleTitle={moduleTitle}
       level="Advanced"
       contextLabel="Skip Module Assessment"

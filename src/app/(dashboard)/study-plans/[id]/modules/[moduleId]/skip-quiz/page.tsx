@@ -7,6 +7,7 @@ interface SkipQuizPageProps {
   }>;
   searchParams: Promise<{
     moduleTitle?: string;
+    attemptId?: string;
   }>;
 }
 
@@ -15,12 +16,15 @@ export default async function StudyPlanModuleSkipQuizPage({
   searchParams,
 }: SkipQuizPageProps) {
   const { id, moduleId } = await params;
-  const { moduleTitle } = await searchParams;
+  const { moduleTitle, attemptId } = await searchParams;
+  const parsedAttemptId = Number(attemptId);
+  const quizAttemptId = Number.isFinite(parsedAttemptId) && parsedAttemptId > 0 ? parsedAttemptId : undefined;
 
   return (
     <SkipModuleQuizPage
       studyPlanId={id}
       moduleId={Number(moduleId)}
+      quizAttemptId={quizAttemptId}
       moduleTitle={moduleTitle}
     />
   );

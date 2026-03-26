@@ -6,6 +6,8 @@ import { endpoints } from '@/shared/api/endpoints';
 import type {
 	CreateQuizAttemptRequest,
 	CreateQuizAttemptResponse,
+	SaveQuizAnswersByAttemptRequest,
+	SaveQuizAnswersByAttemptResponse,
 	SubmitQuizAttemptRequest,
 	SubmitQuizAttemptResponse,
 } from './types';
@@ -33,6 +35,20 @@ export function useSubmitQuizAttempt() {
 		mutationFn: ({ id, payload }: { id: number; payload: SubmitQuizAttemptRequest }) =>
 			post<SubmitQuizAttemptResponse, SubmitQuizAttemptRequest>(
 				endpoints.quizAttempts.submit(String(id)),
+				payload
+			),
+	});
+}
+
+/**
+ * Save quiz answers by attempt id.
+ * POST /quiz-answers/attempt/{attemptId}
+ */
+export function useSaveQuizAnswersByAttempt() {
+	return useMutation({
+		mutationFn: ({ attemptId, payload }: { attemptId: number; payload: SaveQuizAnswersByAttemptRequest }) =>
+			post<SaveQuizAnswersByAttemptResponse, SaveQuizAnswersByAttemptRequest>(
+				endpoints.quizAnswers.saveByAttempt(String(attemptId)),
 				payload
 			),
 	});
