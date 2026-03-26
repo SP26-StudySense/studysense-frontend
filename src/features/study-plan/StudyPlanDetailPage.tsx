@@ -349,7 +349,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                                             studyPlanId={planId}
                                             filterDate={selectedDate}
                                             allTasks={tasks}
-                                            allModules={studyPlan?.modules}
+                                            allModules={modulesWithTasks}
                                             onClearDateFilter={() => setSelectedDate(null)}
                                             isLoadingTasks={isLoadingTasks}
                                         />

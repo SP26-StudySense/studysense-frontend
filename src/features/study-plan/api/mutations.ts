@@ -9,6 +9,8 @@ import {
   TaskItemDto,
   TaskItemInput,
   CreateTasksBatchRequest,
+  CreateAiTaskItemsRequest,
+  CreateAiTaskItemsResult,
 } from './types';
 
 /**
@@ -115,6 +117,19 @@ export function useDeleteTask() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+/**
+ * Hook to request AI-generated task items for a module
+ * POST /ai/create-task-items
+ */
+export function useCreateAiTaskItems() {
+  return useMutation({
+    mutationFn: async (request: CreateAiTaskItemsRequest) => {
+      const data = await post<CreateAiTaskItemsResult>(endpoints.ai.createTaskItems, request);
+      return data;
     },
   });
 }

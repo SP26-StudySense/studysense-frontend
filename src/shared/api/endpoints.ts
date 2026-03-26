@@ -101,7 +101,10 @@ export const endpoints = {
         : '/ai/chat/conversations',
     history: (conversationId: string) => `/ai/chat/${conversationId}/history`,
   },
-
+  // AI Task Items
+  ai: {
+    createTaskItems: '/ai/create-task-items',
+  },
   // Admin endpoints
   admin: {
     users: {
