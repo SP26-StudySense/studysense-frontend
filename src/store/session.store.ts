@@ -30,7 +30,6 @@ export interface SessionSummaryData {
   tasksCompleted: number;
   totalTasks: number;
   xpEarned: number;
-  focusScore: number;
   rating: number;
   notes: string;
 }
@@ -222,7 +221,7 @@ export const useSessionStore = create<SessionState>()(
               ? tasks.map((t) => ({
                   id: String(t.id),
                   title: t.title,
-                  description: t.description,
+                  description: t.description ?? undefined,
                   estimatedMinutes: t.estimatedMinutes,
                   isCompleted: t.isCompleted,
                   isActive: false,
@@ -271,7 +270,6 @@ export const useSessionStore = create<SessionState>()(
         const completedTasks = selectedTasks.filter((t) => t.isCompleted).length;
 
         set({
-          sessionStatus: SessionStatus.PAUSED,
           timerRunning: false,
           showSummary: true,
           summaryData: {
@@ -279,7 +277,6 @@ export const useSessionStore = create<SessionState>()(
             tasksCompleted: completedTasks,
             totalTasks: selectedTasks.length,
             xpEarned: 0, // Will be populated from API
-            focusScore: 0,
             rating: 0,
             notes: '',
           },
@@ -300,10 +297,10 @@ export const useSessionStore = create<SessionState>()(
           summaryData: summaryData
             ? {
                 ...summaryData,
+                timeStudiedMinutes: endResponse.totalDurationMinutes,
                 xpEarned: endResponse.xpEarned,
                 tasksCompleted: endResponse.tasksCompleted,
                 totalTasks: endResponse.totalTasks,
-                focusScore: endResponse.focusScore,
               }
             : null,
         });
@@ -333,11 +330,30 @@ export const useSessionStore = create<SessionState>()(
 
       // Restore from API on app reload
       setActiveSessionFromApi: (data) => {
+        const currentActiveStudyPlanId = get().activeStudyPlanId;
+        const mappedTasks: SelectedTask[] = (data.tasks || []).map((task) => ({
+          id: String(task.id),
+          title: task.title,
+          description: task.description ?? undefined,
+          estimatedMinutes: task.estimatedMinutes,
+          isCompleted: task.isCompleted,
+          isActive: false,
+          completedAt: task.isCompleted ? new Date().toISOString() : null,
+        }));
+
+        const firstIncompleteTask = mappedTasks.find((task) => !task.isCompleted);
+
         set({
+          activeStudyPlanId:
+            currentActiveStudyPlanId || (data.planId ? String(data.planId) : null),
           sessionId: data.sessionId,
           sessionStatus: data.status as SessionStatus,
           elapsedSeconds: data.elapsedSeconds,
           timerRunning: data.status === SessionStatus.IN_PROGRESS,
+          selectedTasks: mappedTasks.map((task) => ({
+            ...task,
+            isActive: Boolean(firstIncompleteTask) && firstIncompleteTask?.id === task.id,
+          })),
           selectedNode: data.nodeId
             ? {
                 id: String(data.nodeId),
