@@ -102,6 +102,11 @@ export const endpoints = {
     history: (conversationId: string) => `/ai/chat/${conversationId}/history`,
   },
 
+  // AI Task Items
+  ai: {
+    createTaskItems: '/ai/create-task-items',
+  },
+
   // Notifications
   notifications: {
     my: '/notifications/me',

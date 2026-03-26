@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useStudyPlan, useTasksByPlan } from '@/features/study-plan/api/queries';
 import { StudyPlanStatus } from '@/features/study-plan/api/types';
@@ -70,37 +70,9 @@ export function StudyPlanStatusHandler({ studyPlanId, children }: StudyPlanStatu
     });
   }, [studyPlanId, status, shouldPoll, tasks?.length]);
 
-  // Render banner only for GeneratingTasks status
+  // For GeneratingTasks, keep page usable and poll silently in background.
   if (status === StudyPlanStatus.GeneratingTasks) {
-    return (
-      <div className="space-y-6">
-        {/* Banner showing generation in progress */}
-        <div className="glass-panel rounded-3xl border border-blue-200/60 bg-gradient-to-r from-blue-50/80 to-purple-50/80 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <Sparkles className="h-8 w-8 text-[#00bae2] animate-pulse" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-neutral-900 mb-1">
-                AI đang tạo danh sách công việc học tập
-              </h3>
-              <p className="text-sm text-neutral-600 mb-3">
-                Các module đã được tạo. Chúng tôi đang sinh danh sách task học tập chi tiết cho bạn...
-              </p>
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 text-[#00bae2] animate-spin" />
-                <span className="text-xs font-medium text-neutral-600">
-                  Quá trình này có thể mất 30-90 giây
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Show children with indication that tasks are loading */}
-        {children}
-      </div>
-    );
+    return <>{children}</>;
   }
 
   if (status === StudyPlanStatus.Failed) {

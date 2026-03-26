@@ -41,8 +41,8 @@ function getBackendRootUrl(apiUrl: string): string {
 
 const BACKEND_ROOT_URL = getBackendRootUrl(BACKEND_API_URL);
 
-function isChatApiPath(apiPath: string): boolean {
-    return apiPath.startsWith('/ai/chat');
+function isRootApiPath(apiPath: string): boolean {
+    return apiPath.startsWith('/ai/');
 }
 
 /**
@@ -54,8 +54,8 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
     // Remove the /api/proxy prefix to get the actual API path
     const apiPath = pathname.replace(API_PROXY_PREFIX, '');
-    const useRootBaseForChat = isChatApiPath(apiPath);
-    const targetBase = useRootBaseForChat ? BACKEND_ROOT_URL : BACKEND_API_URL;
+    const useRootBase = isRootApiPath(apiPath);
+    const targetBase = useRootBase ? BACKEND_ROOT_URL : BACKEND_API_URL;
     const targetUrl = `${targetBase}${apiPath}${search}`;
 
     console.log('[Proxy] Request:', {
@@ -109,8 +109,8 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
             body,
         });
 
-        if (isChatApiPath(apiPath)) {
-            console.log('[Proxy][Chat] Forwarded request:', {
+        if (isRootApiPath(apiPath)) {
+            console.log('[Proxy][RootApi] Forwarded request:', {
                 method: request.method,
                 apiPath,
                 targetUrl,
@@ -119,15 +119,15 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
             });
         }
 
-        if (!response.ok && isChatApiPath(apiPath)) {
+        if (!response.ok && isRootApiPath(apiPath)) {
             let backendErrorBody = '';
             try {
                 backendErrorBody = await response.clone().text();
             } catch {
-                backendErrorBody = '[Proxy][Chat] Cannot read error body';
+                backendErrorBody = '[Proxy][RootApi] Cannot read error body';
             }
 
-            console.error('[Proxy][Chat] Backend non-2xx response:', {
+            console.error('[Proxy][RootApi] Backend non-2xx response:', {
                 method: request.method,
                 targetUrl,
                 status: response.status,

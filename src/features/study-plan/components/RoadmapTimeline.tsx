@@ -44,11 +44,13 @@ export function RoadmapTimeline({ modules, selectedModuleId, onModuleClick, clas
                             <button
                                 key={module.id}
                                 onClick={() => isClickable && onModuleClick?.(module.id)}
+                                onMouseDown={(e) => e.preventDefault()}
                                 disabled={!isClickable}
                                 className={cn(
-                                    "relative flex gap-4 w-full text-left rounded-2xl p-3 -ml-1 transition-all duration-200",
-                                    isClickable && !isSelected && "hover:bg-neutral-50 cursor-pointer",
-                                    isSelected && "bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200",
+                                    "relative flex gap-4 w-full text-left rounded-2xl p-3 -ml-1 transition-all duration-200 border border-transparent",
+                                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2",
+                                    isClickable && !isSelected && "hover:bg-neutral-50/80 cursor-pointer",
+                                    isSelected && "bg-violet-50/60 border-violet-200 shadow-sm",
                                     !isClickable && "cursor-not-allowed opacity-70"
                                 )}
                             >

@@ -73,14 +73,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
 
               <div className="flex items-center gap-6">
-                <div className="relative w-64">
+                {/* <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                   <input
                     type="text"
                     placeholder="Search..."
                     className="w-full rounded-xl border border-neutral-200 bg-white/50 py-2 pl-10 pr-4 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:bg-white focus:ring-4 focus:ring-[#00bae2]/10"
                   />
-                </div>
+                </div> */}
 
                 <NotificationBell />
 
