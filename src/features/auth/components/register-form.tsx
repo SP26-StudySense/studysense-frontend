@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 import { registerSchema, type RegisterInput } from '../schema/auth.schema';
 import { useRegister, useGoogleLogin } from '../api/mutations';
+import { useTransitionRouter } from '@/shared/context/TransitionContext';
 
 export const RegisterForm = () => {
   const [apiError, setApiError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export const RegisterForm = () => {
 
   const registerMutation = useRegister();
   const { loginWithGoogle } = useGoogleLogin();
+  const { navigateWithTransition } = useTransitionRouter();
 
   const onSubmit = async (data: RegisterInput) => {
     setApiError(null);
@@ -72,12 +74,13 @@ export const RegisterForm = () => {
           </div>
           <h3 className="text-lg font-semibold text-neutral-900">Check your email</h3>
           <p className="text-sm text-neutral-600">{successMessage}</p>
-          <Link
-            href="/login"
+          <button
+            type="button"
+            onClick={() => navigateWithTransition('/login')}
             className="mt-4 text-sm font-medium text-neutral-900 hover:underline"
           >
             Back to login
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -215,9 +218,13 @@ export const RegisterForm = () => {
 
       <p className="mt-8 text-center text-sm text-neutral-500">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-neutral-900 hover:underline">
+        <button
+          type="button"
+          onClick={() => navigateWithTransition('/login')}
+          className="font-semibold text-neutral-900 hover:underline"
+        >
           Sign in
-        </Link>
+        </button>
       </p>
     </div>
   );

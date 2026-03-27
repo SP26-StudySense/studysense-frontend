@@ -10,6 +10,7 @@ import { Chrome, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 import { loginSchema, type LoginInput } from '../schema/auth.schema';
 import { useLogin, useGoogleLogin } from '../api/mutations';
+import { useTransitionRouter } from '@/shared/context/TransitionContext';
 
 export const LoginForm = () => {
   const [apiError, setApiError] = useState<string | null>(null);
@@ -29,6 +30,7 @@ export const LoginForm = () => {
 
   const loginMutation = useLogin();
   const { loginWithGoogle } = useGoogleLogin();
+  const { navigateWithTransition } = useTransitionRouter();
 
   const onSubmit = async (data: LoginInput) => {
     setApiError(null);
@@ -139,9 +141,13 @@ export const LoginForm = () => {
 
       <p className="mt-8 text-center text-sm text-neutral-500">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-semibold text-neutral-900 hover:underline">
+        <button
+          type="button"
+          onClick={() => navigateWithTransition('/register')}
+          className="font-semibold text-neutral-900 hover:underline"
+        >
           Sign up
-        </Link>
+        </button>
       </p>
     </div>
   );
