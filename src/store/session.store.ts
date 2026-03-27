@@ -26,7 +26,7 @@ export interface SelectedNodeInfo {
 
 // Session summary data (populated from API response)
 export interface SessionSummaryData {
-  timeStudiedMinutes: number;
+  timeStudiedSeconds: number;
   tasksCompleted: number;
   totalTasks: number;
   xpEarned: number;
@@ -273,7 +273,7 @@ export const useSessionStore = create<SessionState>()(
           timerRunning: false,
           showSummary: true,
           summaryData: {
-            timeStudiedMinutes: Math.floor(elapsedSeconds / 60),
+            timeStudiedSeconds: elapsedSeconds,
             tasksCompleted: completedTasks,
             totalTasks: selectedTasks.length,
             xpEarned: 0, // Will be populated from API
@@ -297,7 +297,7 @@ export const useSessionStore = create<SessionState>()(
           summaryData: summaryData
             ? {
                 ...summaryData,
-                timeStudiedMinutes: endResponse.totalDurationMinutes,
+                timeStudiedSeconds: endResponse.totalDurationSeconds,
                 xpEarned: endResponse.xpEarned,
                 tasksCompleted: endResponse.tasksCompleted,
                 totalTasks: endResponse.totalTasks,

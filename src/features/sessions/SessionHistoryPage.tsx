@@ -26,7 +26,22 @@ function formatDate(dateStr: string): string {
     }
 }
 
-function StarRating({ rating }: { rating: number }) {
+function formatDuration(totalSeconds: number): string {
+    const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+    const hrs = Math.floor(safeSeconds / 3600);
+    const mins = Math.floor((safeSeconds % 3600) / 60);
+    const secs = safeSeconds % 60;
+
+    if (hrs > 0) {
+        return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function StarRating({ rating }: { rating: number | null }) {
+    const safeRating = rating ?? 0;
+
     return (
         <div className="flex gap-0.5">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -34,7 +49,7 @@ function StarRating({ rating }: { rating: number }) {
                     key={star}
                     className={cn(
                         "h-4 w-4",
-                        star <= rating ? "fill-amber-400 text-amber-400" : "text-neutral-200"
+                        star <= safeRating ? "fill-amber-400 text-amber-400" : "text-neutral-200"
                     )}
                     viewBox="0 0 24 24"
                 >
@@ -55,8 +70,8 @@ function SessionCard({ session }: { session: HistoryItem }) {
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
                 <div>
-                    <h3 className="font-semibold text-neutral-900">{session.nodeTitle}</h3>
-                    <p className="text-sm text-neutral-500">{session.planTitle}</p>
+                    <h3 className="font-semibold text-neutral-900">{session.nodeTitle ?? 'Unknown module'}</h3>
+                    <p className="text-sm text-neutral-500">{session.planTitle ?? 'Unknown plan'}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className={cn(
@@ -82,7 +97,7 @@ function SessionCard({ session }: { session: HistoryItem }) {
                         <Clock className="h-4 w-4" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-neutral-900">{session.durationMinutes}m</p>
+                        <p className="text-sm font-semibold text-neutral-900">{formatDuration(session.durationSeconds)}</p>
                         <p className="text-[10px] text-neutral-400">Duration</p>
                     </div>
                 </div>
@@ -181,7 +196,7 @@ export function SessionHistoryPage() {
                         <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-5 text-white">
                             <Clock className="h-6 w-6 mb-2 opacity-80" />
                             <p className="text-3xl font-bold">
-                                {Math.floor((stats?.totalMinutes ?? 0) / 60)}h {(stats?.totalMinutes ?? 0) % 60}m
+                                {formatDuration(stats?.totalSeconds ?? 0)}
                             </p>
                             <p className="text-sm opacity-80">Time Studied</p>
                         </div>
