@@ -941,6 +941,31 @@ export function ModuleTasksPanel({
                                     <span>Take Quiz</span>
                                 </button>
                             ) : null}
+
+                            {/* Right Side: Task Management Actions */}
+                            {/* Điều kiện: Chỉ hiện khi module đã có task (user đã gen task trước đó) */}
+                            {module.tasks && module.tasks.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-3 ml-auto">
+                                    <button
+                                        onClick={handleAddTask}
+                                        className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f0fffe] text-[#00bae2] border border-[#baf0fa] text-sm font-medium hover:bg-[#d8f9ff] transition-colors"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        <span>Create task</span>
+                                    </button>
+                                    
+                                    {/* Không được uncomment nút này nhé */}
+                                    {/* <button
+                                        onClick={handleGenerateAiTasks}
+                                        disabled={createAiTaskItemsMutation.isPending}
+                                        className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-600 hover:to-purple-700 shadow-sm transition-all"
+                                        title="Generate tasks with AI"
+                                    >
+                                        <Sparkles className="h-4 w-4 text-yellow-300" />
+                                        <span>{createAiTaskItemsMutation.isPending ? 'Generating...' : 'Generate task AI'}</span>
+                                    </button> */}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -1046,142 +1071,149 @@ export function ModuleTasksPanel({
                             )}
 
                             {/* Tasks */}
-                            <div className="space-y-0 relative border border-neutral-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-                                {filteredTasks.map((task) => {
-                                    const isSelected = selectedTaskIds.has(task.id);
-                                    const isDisabled = task.isCompleted || !!task.isFromLockedModule;
-                                    const isExpanded = expandedTaskIds.has(task.id);
-                                    return (
-                                        <div
-                                            key={task.id}
-                                            className="border-b border-neutral-100 last:border-0"
-                                        >
+                            {filteredTasks.length > 0 && (
+                                <div className="space-y-0 relative border border-neutral-200 rounded-2xl bg-white shadow-sm flex flex-col">
+                                    {filteredTasks.map((task, index) => {
+                                        const isSelected = selectedTaskIds.has(task.id);
+                                        const isDisabled = task.isCompleted || !!task.isFromLockedModule;
+                                        const isExpanded = expandedTaskIds.has(task.id);
+                                        const isFirst = index === 0;
+                                        const isLast = index === filteredTasks.length - 1;
+                                        return (
                                             <div
+                                                key={task.id}
                                                 className={cn(
-                                                    "group w-full flex items-start gap-4 text-sm py-4 px-2 transition-colors relative",
+                                                    "border-b border-neutral-100 last:border-0 transition-colors group relative",
+                                                    isFirst && "rounded-t-2xl",
+                                                    isLast && "rounded-b-2xl",
                                                     task.isCompleted
                                                         ? "opacity-50"
                                                         : isDisabled
                                                             ? "opacity-60"
                                                             : isSelected
                                                                 ? "bg-violet-50/50"
-                                                                : "hover:bg-neutral-50/50"
+                                                                : "hover:bg-neutral-50/50",
+                                                    activeTaskMenu === task.id ? "z-20" : "z-10"
                                                 )}
                                             >
-                                                {/* Checkbox Button */}
-                                                <button
-                                                    onClick={() => !isDisabled && handleTaskToggle(task.id)}
-                                                    disabled={isDisabled}
-                                                    className="mt-0.5 cursor-pointer disabled:cursor-not-allowed shrink-0"
-                                                    title={task.isFromLockedModule ? 'Task from locked module' : undefined}
-                                                >
-                                                    <div className={cn(
-                                                        "flex h-4 w-4 items-center justify-center rounded-sm border transition-all",
-                                                        isDisabled
-                                                            ? "bg-neutral-100 border-neutral-300 text-neutral-400"
-                                                            : task.isCompleted
-                                                                ? "bg-violet-500 border-violet-500 text-white"
-                                                                : isSelected
-                                                                    ? "bg-violet-500 border-violet-500 text-white"
-                                                                    : "border-neutral-300 group-hover:border-violet-400"
-                                                    )}>
-                                                        {(task.isCompleted || isSelected) && !task.isFromLockedModule && (
-                                                            <Check className="h-3 w-3" strokeWidth={3} />
-                                                        )}
-                                                    </div>
-                                                </button>
-
-                                                {/* Content */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                        <p className={cn(
-                                                            "text-sm font-medium",
-                                                            task.isCompleted ? "text-neutral-500 line-through" : "text-neutral-800"
-                                                        )}>
-                                                            {task.title}
-                                                        </p>
-                                                        {task.moduleName && (viewFilter === 'date' || viewFilter === 'all-tasks') && (
-                                                            <span className="inline-flex items-center text-xs text-neutral-400 font-medium">
-                                                                • {task.moduleName}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Duration and Action Menu */}
-                                                <div className="shrink-0 flex items-center gap-2">
+                                                <div className="w-full flex items-start gap-4 text-sm py-4 px-2 relative">
+                                                    {/* Checkbox Button */}
                                                     <button
-                                                        onClick={() => handleToggleTaskExpand(task.id)}
-                                                        className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-                                                        title={isExpanded ? 'Collapse details' : 'Expand details'}
+                                                        onClick={() => !isDisabled && handleTaskToggle(task.id)}
+                                                        disabled={isDisabled}
+                                                        className="mt-0.5 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                                                        title={task.isFromLockedModule ? 'Task from locked module' : undefined}
                                                     >
-                                                        <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />
+                                                        <div className={cn(
+                                                            "flex h-4 w-4 items-center justify-center rounded-sm border transition-all",
+                                                            isDisabled
+                                                                ? "bg-neutral-100 border-neutral-300 text-neutral-400"
+                                                                : task.isCompleted
+                                                                    ? "bg-violet-500 border-violet-500 text-white"
+                                                                    : isSelected
+                                                                        ? "bg-violet-500 border-violet-500 text-white"
+                                                                        : "border-neutral-300 group-hover:border-violet-400"
+                                                        )}>
+                                                            {(task.isCompleted || isSelected) && !task.isFromLockedModule && (
+                                                                <Check className="h-3 w-3" strokeWidth={3} />
+                                                            )}
+                                                        </div>
                                                     </button>
-                                                    <span className="text-xs font-medium text-neutral-400">
-                                                        {task.estimatedMinutes}m
-                                                    </span>
 
-                                                    {/* Action Menu (3-dot dropdown) */}
-                                                    {!task.isCompleted && !task.isFromLockedModule && viewFilter === 'module' && (
-                                                        <div className="relative opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setActiveTaskMenu(activeTaskMenu === task.id ? null : task.id);
-                                                                }}
-                                                                className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-                                                                title="More options"
-                                                            >
-                                                                <MoreVertical className="h-4 w-4" />
-                                                            </button>
+                                                    {/* Content */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                            <p className={cn(
+                                                                "text-sm font-medium",
+                                                                task.isCompleted ? "text-neutral-500 line-through" : "text-neutral-800"
+                                                            )}>
+                                                                {task.title}
+                                                            </p>
+                                                            {task.moduleName && (viewFilter === 'date' || viewFilter === 'all-tasks') && (
+                                                                <span className="inline-flex items-center text-xs text-neutral-400 font-medium">
+                                                                    • {task.moduleName}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
 
-                                                            {/* Dropdown Menu */}
-                                                            {activeTaskMenu === task.id && (
-                                                                <div
-                                                                    className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-10"
-                                                                    onMouseLeave={() => setActiveTaskMenu(null)}
-                                                                >
+                                                    {/* Duration and Action Menu */}
+                                                    <div className="shrink-0 flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => handleToggleTaskExpand(task.id)}
+                                                            className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+                                                            title={isExpanded ? 'Collapse details' : 'Expand details'}
+                                                        >
+                                                            <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />
+                                                        </button>
+                                                        <span className="text-xs font-medium text-neutral-400 w-8 text-right">
+                                                            {task.estimatedMinutes}m
+                                                        </span>
+
+                                                        {/* Action Menu (3-dot dropdown placeholder to keep width fixed) */}
+                                                        <div className="w-6 h-6 flex items-center justify-center relative">
+                                                            {!task.isCompleted && !task.isFromLockedModule && viewFilter === 'module' && (
+                                                                <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                                                     <button
                                                                         onClick={(e) => {
-                                                                            handleEditTask(task, e);
-                                                                            setActiveTaskMenu(null);
+                                                                            e.stopPropagation();
+                                                                            setActiveTaskMenu(activeTaskMenu === task.id ? null : task.id);
                                                                         }}
-                                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                                                                        className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+                                                                        title="More options"
                                                                     >
-                                                                        <Pencil className="h-3.5 w-3.5" />
-                                                                        Edit
+                                                                        <MoreVertical className="h-4 w-4" />
                                                                     </button>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            handleDeleteClick(task, e);
-                                                                            setActiveTaskMenu(null);
-                                                                        }}
-                                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                        Delete
-                                                                    </button>
+
+                                                                    {/* Dropdown Menu */}
+                                                                    {activeTaskMenu === task.id && (
+                                                                        <div
+                                                                            className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-50 origin-top-right"
+                                                                            onMouseLeave={() => setActiveTaskMenu(null)}
+                                                                        >
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    handleEditTask(task, e);
+                                                                                    setActiveTaskMenu(null);
+                                                                                }}
+                                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                                                                            >
+                                                                                <Pencil className="h-3.5 w-3.5" />
+                                                                                Edit
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    handleDeleteClick(task, e);
+                                                                                    setActiveTaskMenu(null);
+                                                                                }}
+                                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                                            >
+                                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {isExpanded && (
-                                                <div className="pl-10 pr-2 pb-4 space-y-1.5">
-                                                    <p className="text-xs text-neutral-600">
-                                                        <span className="font-semibold text-neutral-700">Deadline:</span> {formatTaskDeadline(task.scheduledDate)}
-                                                    </p>
-                                                    <p className="text-xs text-neutral-600 leading-relaxed">
-                                                        <span className="font-semibold text-neutral-700">Description:</span> {task.description?.trim() || 'No description.'}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                                {isExpanded && (
+                                                    <div className="pl-10 pr-2 pb-4 space-y-1.5 w-full relative z-0">
+                                                        <p className="text-xs text-neutral-600">
+                                                            <span className="font-semibold text-neutral-700">Deadline:</span> {formatTaskDeadline(task.scheduledDate)}
+                                                        </p>
+                                                        <p className="text-xs text-neutral-600 leading-relaxed">
+                                                            <span className="font-semibold text-neutral-700">Description:</span> {task.description?.trim() || 'No description.'}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -1202,7 +1234,7 @@ export function ModuleTasksPanel({
                                 onClick={handleStartLearning}
                                 className="flex-shrink-0 inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-neutral-900 shadow-lg transition-all duration-300 bg-gradient-to-r from-[#fec5fb] to-[#00bae2] shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5"
                             >
-                                Start Learning
+                                {hasUnfinishedSession ? 'Continue Learning' : 'Start Learning'}
                                 <Play className="h-4 w-4" fill="currentColor" strokeWidth={1} />
                             </button>
                         </div>           
