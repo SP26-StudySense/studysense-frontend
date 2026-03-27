@@ -7,7 +7,8 @@ import { useStudyPlan } from '@/features/study-plan/api';
 import { useNodeContents } from '@/features/roadmaps/api';
 import { useCurrentUser } from '@/features/auth/api/queries';
 import { useLogEvent } from '../api';
-import { ContentMode, SessionEventType, StudyEventCategory } from '../types';
+import { ContentMode, LearningEventName, SessionEventType, StudyEventCategory } from '../types';
+import { useAnalytics } from '@/shared/hooks/use-analytics';
 
 interface SessionContentProps {
     className?: string;
@@ -25,6 +26,7 @@ export function SessionContent({ className }: SessionContentProps) {
     const sessionId = useSessionStore((state) => state.sessionId);
     const { data: currentUser } = useCurrentUser();
     const { mutate: logEvent } = useLogEvent();
+    const { trackEvent } = useAnalytics();
 
     const studyPlanId = toPositiveNumber(selectedNode?.planId ?? activeStudyPlanId);
     const nodeId = selectedNode?.roadmapNodeId ?? toPositiveNumber(selectedNode?.id);
@@ -73,6 +75,15 @@ export function SessionContent({ className }: SessionContentProps) {
                     studyPlanId,
                 },
             },
+        });
+        trackEvent(LearningEventName.CONTENT_OPENED, {
+            sessionId,
+            contentId: content.id,
+            contentTitle: content.title,
+            contentType: content.contentType,
+            nodeId,
+            studyPlanId,
+            contentMode: resolveContentMode(content.contentType),
         });
     };
 

@@ -13,6 +13,13 @@ interface SessionSummaryModalProps {
     className?: string;
 }
 
+function formatDuration(totalSeconds: number): string {
+    const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
 export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalProps) {
     const queryClient = useQueryClient();
     const summaryData = useSessionStore((state) => state.summaryData);
@@ -106,8 +113,8 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 mb-3">
                                 <Clock className="h-5 w-5" />
                             </div>
-                            <span className="text-2xl font-bold text-neutral-900">{summaryData.timeStudiedMinutes}</span>
-                            <span className="text-xs text-neutral-500">minutes</span>
+                            <span className="text-2xl font-bold text-neutral-900">{formatDuration(summaryData.timeStudiedSeconds)}</span>
+                            <span className="text-xs text-neutral-500">mm:ss</span>
                             <span className="text-[10px] text-neutral-400 mt-0.5">Time Studied</span>
                         </div>
 

@@ -10,8 +10,9 @@ export function CSPostHogProvider({ children }: { children: React.ReactNode }) {
     if (env.NEXT_PUBLIC_ENABLE_ANALYTICS && env.NEXT_PUBLIC_POSTHOG_KEY) {
       posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
         api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
+        autocapture: false,
         capture_pageview: false, // We handle manually for SPA route changes
-        capture_pageleave: true,
+        capture_pageleave: false,
       });
 
       if (process.env.NODE_ENV === 'development') {

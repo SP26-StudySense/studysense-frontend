@@ -11,6 +11,7 @@ import { useSessionStore, SelectedTask } from '@/store/session.store';
 import { useActiveSession } from './api/queries';
 import { SessionStatus } from '@/shared/types';
 import { useAnalytics } from '@/shared/hooks/use-analytics';
+import { LearningEventName } from './types';
 
 // Helper to convert SelectedTask to SessionTask format
 const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
@@ -37,7 +38,7 @@ export function SessionsPage() {
     const sessionId = useSessionStore((state) => state.sessionId);
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
-    const { trackInteraction } = useAnalytics();
+    const { trackEvent } = useAnalytics();
 
     const activePlanId = activeStudyPlanId ? Number(activeStudyPlanId) : undefined;
     const resolvedActivePlanId =
@@ -91,13 +92,13 @@ export function SessionsPage() {
 
     const handleSetActiveTask = (taskId: string) => {
         if (!canInteractTasks) return;
-        trackInteraction('set_active_task', { taskId, page: 'sessions' });
+        trackEvent(LearningEventName.TASK_ACTIVATED, { taskId, page: 'sessions', sessionId });
         setActiveTask(taskId);
     };
 
     const handleCompleteTask = (taskId: string) => {
         if (!canInteractTasks) return;
-        trackInteraction('complete_task', { taskId, page: 'sessions' });
+        trackEvent(LearningEventName.TASK_COMPLETED, { taskId, page: 'sessions', sessionId });
         markTaskCompleted(taskId);
     };
 

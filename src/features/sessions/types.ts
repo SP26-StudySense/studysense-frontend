@@ -79,7 +79,7 @@ export interface EndSessionRequest {
 
 export interface EndSessionResponse {
   sessionId: string;
-  totalDurationMinutes: number;
+  totalDurationSeconds: number;
   tasksCompleted: number;
   totalTasks: number;
   xpEarned: number;
@@ -142,13 +142,13 @@ export interface SessionHistoryParams {
 export interface SessionHistoryItem {
   id: string;
   date: string;
-  nodeTitle: string;
-  planTitle: string;
-  durationMinutes: number;
+  nodeTitle: string | null;
+  planTitle: string | null;
+  durationSeconds: number;
   tasksCompleted: number;
   totalTasks: number;
   xpEarned: number;
-  rating: number;
+  rating: number | null;
   status: SessionStatus;
 }
 
@@ -156,24 +156,25 @@ export interface SessionHistoryItem {
 
 export interface RecentSessionItem {
   id: string;
-  durationMinutes: number;
+  durationSeconds: number;
   tasksCompleted: number;
+  totalTasks: number;
   date: string;
-  rating: number;
-  nodeTitle: string;
+  rating: number | null;
+  nodeTitle: string | null;
 }
 
 // ─── Session Statistics ─────────────────────────────────────────────────────
 
 export interface SessionStatistics {
   totalSessions: number;
-  totalMinutes: number;
-  averageSessionLength: number;
+  totalSeconds: number;
+  averageSessionLengthSeconds: number;
   completionRate: number;
   currentStreak: number;
   longestStreak: number;
   sessionsThisWeek: number;
-  minutesThisWeek: number;
+  secondsThisWeek: number;
   totalXpEarned: number;
   averageRating: number;
 }
@@ -195,6 +196,16 @@ export enum StudyEventCategory {
 export enum ContentMode {
   TEXT = 'Text',
   VIDEO = 'Video',
+}
+
+export enum LearningEventName {
+  SESSION_STARTED = 'learning_session_started',
+  SESSION_PAUSED = 'learning_session_paused',
+  SESSION_RESUMED = 'learning_session_resumed',
+  SESSION_ENDED = 'learning_session_ended',
+  TASK_ACTIVATED = 'learning_task_activated',
+  TASK_COMPLETED = 'learning_task_completed',
+  CONTENT_OPENED = 'learning_content_opened',
 }
 
 export interface LogEventRequest {

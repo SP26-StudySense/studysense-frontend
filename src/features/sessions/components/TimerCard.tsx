@@ -9,6 +9,7 @@ import { SessionStatus } from '@/shared/types';
 import { toast } from '@/shared/lib';
 import { ApiException } from '@/shared/api/errors';
 import { useAnalytics } from '@/shared/hooks/use-analytics';
+import { LearningEventName } from '../types';
 
 interface TimerCardProps {
     className?: string;
@@ -37,7 +38,7 @@ export function TimerCard({ className }: TimerCardProps) {
     const resumeMutation = useResumeSession();
 
     // Analytics
-    const { trackClick, trackInteraction } = useAnalytics();
+    const { trackEvent } = useAnalytics();
 
     // Error state for start session
     const [startError, setStartError] = useState<string | null>(null);
@@ -51,6 +52,19 @@ export function TimerCard({ className }: TimerCardProps) {
         }
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
+
+    const toDurationMinutes = useCallback((seconds: number): number => {
+        return Math.floor(Math.max(0, seconds) / 60);
+    }, []);
+
+    const getPlannedDurationSeconds = useCallback((): number | null => {
+        const total = selectedTasks.reduce((sum, task) => {
+            const taskMinutes = Number.isFinite(task.estimatedMinutes) ? task.estimatedMinutes : 0;
+            return sum + Math.max(0, taskMinutes) * 60;
+        }, 0);
+
+        return total > 0 ? total : null;
+    }, [selectedTasks]);
 
     const hasStarted = sessionStatus !== SessionStatus.NOT_STARTED;
 
@@ -72,33 +86,47 @@ export function TimerCard({ className }: TimerCardProps) {
         };
     }, [timerRunning, incrementElapsed, incrementPauseSeconds]);
 
-    /** Safely convert a string ID to number, returning undefined if not a valid integer */
-    const safeNumberId = (value: string | undefined | null): number | undefined => {
+    /** Safely convert an ID-like value to number, returning undefined if invalid */
+    const safeNumberId = useCallback((value: string | number | undefined | null): number | undefined => {
         if (!value) return undefined;
         const num = Number(value);
         return Number.isFinite(num) && num > 0 ? num : undefined;
-    };
+    }, []);
 
-    const doStartSession = useCallback(() => {
-        setStartError(null);
+    const getSessionEventContext = useCallback(() => {
         const taskIds = selectedTasks
             .map((task) => safeNumberId(task.id))
             .filter((id): id is number => typeof id === 'number');
 
-        const plannedDurationSeconds = selectedTasks.reduce((total, task) => {
-            const taskMinutes = Number.isFinite(task.estimatedMinutes) ? task.estimatedMinutes : 0;
-            return total + Math.max(0, taskMinutes) * 60;
-        }, 0);
+        const studyPlanId = safeNumberId(activeStudyPlanId) ?? safeNumberId(selectedNode?.planId) ?? null;
+        const nodeId = selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id) ?? null;
+        const moduleId = safeNumberId(selectedNode?.id) ?? null;
 
-        const resolvedStudyPlanId = safeNumberId(activeStudyPlanId) ?? safeNumberId(selectedNode?.planId);
-        const resolvedModuleId = safeNumberId(selectedNode?.id);
+        return {
+            studyPlanId,
+            nodeId,
+            moduleId,
+            subject: selectedNode?.planTitle ?? null,
+            topic: selectedNode?.title ?? null,
+            taskId: taskIds[0] ?? null,
+            contentId: moduleId ?? nodeId ?? null,
+            taskIds: taskIds.length > 0 ? taskIds : undefined,
+            taskCount: selectedTasks.length,
+            completedTaskCount: selectedTasks.filter((task) => task.isCompleted).length,
+        };
+    }, [activeStudyPlanId, safeNumberId, selectedNode, selectedTasks]);
+
+    const doStartSession = useCallback(() => {
+        setStartError(null);
+        const eventContext = getSessionEventContext();
+        const plannedDurationSeconds = getPlannedDurationSeconds();
 
         const payload = {
-            studyPlanId: resolvedStudyPlanId,
-            nodeId: selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id),
-            moduleId: resolvedModuleId,
-            taskIds: taskIds.length > 0 ? taskIds : undefined,
-            plannedDurationSeconds: plannedDurationSeconds > 0 ? plannedDurationSeconds : undefined,
+            studyPlanId: eventContext.studyPlanId ?? undefined,
+            nodeId: eventContext.nodeId ?? undefined,
+            moduleId: eventContext.moduleId ?? undefined,
+            taskIds: eventContext.taskIds,
+            plannedDurationSeconds: plannedDurationSeconds ?? undefined,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         };
 
@@ -115,12 +143,15 @@ export function TimerCard({ className }: TimerCardProps) {
             {
                 onSuccess: (data) => {
                     storeStartSession(data.sessionId, data.tasks);
-                    trackInteraction('session_started', {
+
+                    trackEvent(LearningEventName.SESSION_STARTED, {
                         sessionId: data.sessionId,
-                        nodeId: payload.nodeId,
-                        studyPlanId: payload.studyPlanId,
-                        moduleId: payload.moduleId,
-                        taskCount: selectedTasks.length,
+                        ...eventContext,
+                        plannedDurationSeconds: payload.plannedDurationSeconds,
+                        planned_duration_seconds: payload.plannedDurationSeconds,
+                        durationMinutes: payload.plannedDurationSeconds
+                            ? toDurationMinutes(payload.plannedDurationSeconds)
+                            : null,
                     });
                     toast.success('Session started!');
                 },
@@ -143,7 +174,7 @@ export function TimerCard({ className }: TimerCardProps) {
                 },
             }
         );
-    }, [startMutation, activeStudyPlanId, selectedNode, selectedTasks, storeStartSession]);
+    }, [getPlannedDurationSeconds, getSessionEventContext, startMutation, selectedTasks, activeStudyPlanId, selectedNode, safeNumberId, storeStartSession, toDurationMinutes, trackEvent]);
 
     const handleStart = useCallback(async () => {
         setStartError(null);
@@ -153,33 +184,59 @@ export function TimerCard({ className }: TimerCardProps) {
 
     const handlePause = useCallback(() => {
         if (!sessionId) return;
-        trackClick('pause_session', { sessionId, elapsedSeconds });
+        const plannedDurationSeconds = getPlannedDurationSeconds();
+        const eventContext = getSessionEventContext();
+        trackEvent(LearningEventName.SESSION_PAUSED, {
+            sessionId,
+            ...eventContext,
+            elapsedSeconds,
+            timeSpentSeconds: elapsedSeconds,
+            plannedDurationSeconds,
+            planned_duration_seconds: plannedDurationSeconds,
+            durationMinutes: toDurationMinutes(elapsedSeconds),
+        });
         pauseMutation.mutate(sessionId, {
             onSuccess: (data) => {
                 storePauseSession();
                 useSessionStore.getState().setPauseData(data.pauseCount, data.pauseSeconds);
             },
         });
-    }, [sessionId, pauseMutation, storePauseSession, trackClick, elapsedSeconds]);
+    }, [sessionId, getPlannedDurationSeconds, getSessionEventContext, pauseMutation, storePauseSession, toDurationMinutes, trackEvent, elapsedSeconds]);
 
     const handleResume = useCallback(() => {
         if (!sessionId) return;
-        trackClick('resume_session', { sessionId, elapsedSeconds });
+        const plannedDurationSeconds = getPlannedDurationSeconds();
+        const eventContext = getSessionEventContext();
+        trackEvent(LearningEventName.SESSION_RESUMED, {
+            sessionId,
+            ...eventContext,
+            elapsedSeconds,
+            timeSpentSeconds: elapsedSeconds,
+            plannedDurationSeconds,
+            planned_duration_seconds: plannedDurationSeconds,
+            durationMinutes: toDurationMinutes(elapsedSeconds),
+        });
         resumeMutation.mutate(sessionId, {
             onSuccess: () => {
                 storeResumeSession();
             },
         });
-    }, [sessionId, resumeMutation, storeResumeSession, trackClick, elapsedSeconds]);
+    }, [sessionId, getPlannedDurationSeconds, getSessionEventContext, resumeMutation, storeResumeSession, toDurationMinutes, trackEvent, elapsedSeconds]);
 
     const handleEndSession = useCallback(() => {
-        trackInteraction('session_ended', {
+        const plannedDurationSeconds = getPlannedDurationSeconds();
+        const eventContext = getSessionEventContext();
+        trackEvent(LearningEventName.SESSION_ENDED, {
             sessionId,
+            ...eventContext,
             totalSeconds: elapsedSeconds,
-            taskCount: selectedTasks.length,
+            timeSpentSeconds: elapsedSeconds,
+            plannedDurationSeconds,
+            planned_duration_seconds: plannedDurationSeconds,
+            durationMinutes: toDurationMinutes(elapsedSeconds),
         });
         storeEndSession();
-    }, [storeEndSession, trackInteraction, sessionId, elapsedSeconds, selectedTasks.length]);
+    }, [getPlannedDurationSeconds, getSessionEventContext, storeEndSession, toDurationMinutes, trackEvent, sessionId, elapsedSeconds]);
 
     const isAnyPending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending;
 

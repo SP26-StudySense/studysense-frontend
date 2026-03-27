@@ -10,6 +10,13 @@ interface SessionSuccessScreenProps {
     className?: string;
 }
 
+function formatDuration(totalSeconds: number): string {
+    const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
 export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreenProps) {
     const router = useRouter();
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
@@ -51,8 +58,8 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
                 {summaryData && (
                     <div className="flex items-center gap-6 mb-8 p-4 rounded-2xl bg-white/80 border border-neutral-100 shadow-sm">
                         <div className="text-center">
-                            <p className="text-2xl font-bold text-neutral-900">{summaryData.timeStudiedMinutes}</p>
-                            <p className="text-xs text-neutral-500">minutes</p>
+                            <p className="text-2xl font-bold text-neutral-900">{formatDuration(summaryData.timeStudiedSeconds)}</p>
+                            <p className="text-xs text-neutral-500">mm:ss</p>
                         </div>
                         <div className="h-8 w-px bg-neutral-200" />
                         <div className="text-center">

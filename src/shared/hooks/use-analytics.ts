@@ -8,20 +8,32 @@ export function useAnalytics() {
   const posthog = usePostHog();
   const enabled = env.NEXT_PUBLIC_ENABLE_ANALYTICS && !!env.NEXT_PUBLIC_POSTHOG_KEY;
 
-  const trackClick = useCallback(
-    (elementName: string, properties?: Record<string, unknown>) => {
+  const trackEvent = useCallback(
+    (eventName: string, properties?: Record<string, unknown>) => {
       if (!enabled || !posthog) return;
-      posthog.capture('click', { element: elementName, ...properties });
+      const payload: Record<string, unknown> = {
+        ...(properties ?? {}),
+        taskId: properties?.taskId ?? null,
+        contentId: properties?.contentId ?? null,
+      };
+
+      posthog.capture(eventName, payload);
     },
     [posthog, enabled]
   );
 
+  const trackClick = useCallback(
+    (elementName: string, properties?: Record<string, unknown>) => {
+      trackEvent('click', { element: elementName, ...properties });
+    },
+    [trackEvent]
+  );
+
   const trackInteraction = useCallback(
     (action: string, properties?: Record<string, unknown>) => {
-      if (!enabled || !posthog) return;
-      posthog.capture('ui_interaction', { action, ...properties });
+      trackEvent('ui_interaction', { action, ...properties });
     },
-    [posthog, enabled]
+    [trackEvent]
   );
 
   const identify = useCallback(
@@ -37,5 +49,5 @@ export function useAnalytics() {
     posthog.reset();
   }, [posthog, enabled]);
 
-  return { trackClick, trackInteraction, identify, reset };
+  return { trackEvent, trackClick, trackInteraction, identify, reset };
 }
