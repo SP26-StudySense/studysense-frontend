@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { ArrowRight, Search, Atom, CheckCircle2, Circle, Trophy } from 'lucide-react';
+import { ArrowRight, Search, Atom, CheckCircle2, Circle, BriefcaseBusiness, Palette, Stethoscope } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
@@ -18,10 +18,10 @@ export const Hero = () => {
 
     // Text content constants for scramble animation
     const HERO_TEXT = {
-        badge: 'New: Multidiscipline Learning Paths',
-        titleLine1: "Don't just collect courses.",
-        titleLine2: 'Learn with direction.',
-        description: 'Structured learning paths for languages, business, design, test prep, and technology. Track progress, stay focused, and build real skills without the noise.',
+        badge: 'New: Learning Paths For Every Field',
+        titleLine1: 'Build skills for your real goal.',
+        titleLine2: 'Not just one industry.',
+        description: 'From languages, business, and design to healthcare prep, communication, and technology. StudySense helps you follow clear roadmaps, track momentum, and grow where your future is headed.',
     };
 
     useEffect(() => {
@@ -180,7 +180,7 @@ export const Hero = () => {
                         className="gap-2"
                     >
                         <Search className="w-[18px]" />
-                        Browse Learning Paths
+                        Explore Paths By Field
                     </Button>
                 </div>
             </div>
@@ -225,26 +225,39 @@ export const Hero = () => {
                         </div>
                     </div>
 
-                    {/* Card 2: Terminal */}
+                    {/* Card 2: Multi-field Snapshot */}
                     <div
                         ref={card2Ref}
-                        className="relative z-10 transform rounded-2xl border border-neutral-800 bg-[#111] p-5 font-mono text-xs text-neutral-300 shadow-2xl transition-all duration-500 rotate-3 hover:rotate-0 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] cursor-pointer"
+                        className="relative z-10 transform rounded-2xl border border-neutral-200 bg-white p-5 text-xs text-neutral-700 shadow-2xl transition-all duration-500 rotate-3 hover:rotate-0 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.2)] cursor-pointer"
                     >
-                        <div className="mb-4 flex gap-1.5">
-                            <div className="h-2.5 w-2.5 rounded-full bg-red-500/80"></div>
-                            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80"></div>
-                            <div className="h-2.5 w-2.5 rounded-full bg-green-500/80"></div>
+                        <div className="mb-4 flex items-center justify-between">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Active Learning Tracks</p>
+                            <span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-medium text-neutral-600">This Week</span>
                         </div>
-                        <p className="mb-2">
-                            <span className="text-emerald-400">learner@studysense</span>:
-                            <span className="text-blue-400">~</span>$ update progress &quot;module complete&quot;
-                        </p>
-                        <p className="mb-2 text-neutral-500">Updating your learning map...</p>
-                        <div className="flex items-center gap-2 text-white">
-                            <span>
-                                <Trophy className="text-[#00bae2]" />
-                            </span>
-                            <span>Milestone unlocked: Clear Communication</span>
+
+                        <div className="space-y-2.5 text-[11px]">
+                            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50/70 px-2.5 py-2">
+                                <BriefcaseBusiness className="h-4 w-4 text-emerald-600" />
+                                <span className="font-medium text-neutral-700">Business Strategy</span>
+                                <span className="ml-auto text-emerald-700">31%</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 rounded-lg border border-cyan-100 bg-cyan-50/70 px-2.5 py-2">
+                                <Palette className="h-4 w-4 text-cyan-600" />
+                                <span className="font-medium text-neutral-700">Design Thinking</span>
+                                <span className="ml-auto text-cyan-700">52%</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 rounded-lg border border-violet-100 bg-violet-50/70 px-2.5 py-2">
+                                <Stethoscope className="h-4 w-4 text-violet-600" />
+                                <span className="font-medium text-neutral-700">Healthcare Prep</span>
+                                <span className="ml-auto text-violet-700">44%</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 rounded-lg border border-neutral-100 bg-neutral-50 p-2.5">
+                            <p className="text-[10px] text-neutral-500">Top milestone today</p>
+                            <p className="mt-1 text-xs font-semibold text-neutral-800">12 learners completed Presentation Fundamentals</p>
                         </div>
                     </div>
                 </div>
