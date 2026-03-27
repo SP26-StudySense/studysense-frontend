@@ -6,7 +6,6 @@ import * as LucideIcons from 'lucide-react';
 import { RoadmapTemplate, UserLearningRoadmap } from '../types';
 import { cn } from '@/shared/lib/utils';
 import { useStartLearning } from '../hooks/useStartLearning';
-import { StartLearningOverlay } from './StartLearningOverlay';
 import { useSessionStore } from '@/store/session.store';
 import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
 import { SurveyTriggerType } from '@/features/survey/api/types';
@@ -29,7 +28,6 @@ const difficultyColors = {
 
 export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
     const router = useRouter();
-    const [showOverlay, setShowOverlay] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
 
     // Check if this roadmap already has a study plan
@@ -37,15 +35,7 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, r
 
     const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
 
-    const { startLearning, currentStep, error, reset, isLoading } = useStartLearning({
-        onSuccess: () => {
-            // Close overlay after redirect
-            setShowOverlay(false);
-        },
-        onError: () => {
-            // Keep overlay open to show error
-        },
-    });
+    const { startLearning, error, reset, isLoading } = useStartLearning();
 
     const Icon = LucideIcons[roadmap.icon as keyof typeof LucideIcons] as React.ComponentType<{ className?: string }> || LucideIcons.Map;
 
@@ -109,25 +99,8 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, r
             }
 
             // No pending survey → start learning directly
-            setShowOverlay(true);
             await startLearning(Number(roadmap.id));
         }
-    };
-
-    const handleRetry = async () => {
-        reset();
-        await startLearning(Number(roadmap.id));
-    };
-
-    const handleCloseOverlay = () => {
-        // If error suggests plan already exists, redirect to dashboard on close
-        if (error && error.toLowerCase().includes('already exists')) {
-            // Try to get study plan ID from session storage
-            const studyPlanId = typeof window !== 'undefined' ? sessionStorage.getItem('activeStudyPlanId') : null;
-            router.push(studyPlanId ? `/dashboard/${studyPlanId}` : '/dashboard');
-        }
-        setShowOverlay(false);
-        reset();
     };
 
     const formatDate = (date: Date) => {
@@ -243,11 +216,13 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, r
 
             {/* Footer Action */}
             <div className="mt-auto border-t border-neutral-100 p-4 bg-neutral-50/50 group-hover:bg-neutral-50 transition-colors">
-                <button className="w-full flex items-center justify-center gap-2 text-sm font-medium text-neutral-700 group-hover:text-[#00bae2] transition-colors">
-                    {isCheckingSurvey ? (
+                <button 
+                  disabled={isCheckingSurvey || isLoading} 
+                  className="w-full flex items-center justify-center gap-2 text-sm font-medium text-neutral-700 group-hover:text-[#00bae2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isCheckingSurvey || isLoading ? (
                         <>
                             <LucideIcons.Loader2 className="h-4 w-4 animate-spin" />
-                            Checking...
+                            {isCheckingSurvey ? 'Checking...' : 'Creating Plan...'}
                         </>
                     ) : (
                         <>
@@ -261,15 +236,14 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, r
             {/* Glow effect on hover */}
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#00bae2]/0 via-[#00bae2]/0 to-[#fec5fb]/0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none" />
 
-            {/* Start Learning Overlay */}
-            <StartLearningOverlay
-                isOpen={showOverlay}
-                currentStep={currentStep}
-                roadmapTitle={roadmap.title}
-                error={error || undefined}
-                onRetry={handleRetry}
-                onClose={handleCloseOverlay}
-            />
+            {/* Optional inline error display instead of overlay */}
+            {error && (
+                <div className="p-3 bg-red-50 text-red-600 text-xs text-center border-t border-red-100">
+                    {error.toLowerCase().includes('already exists')
+                        ? 'Project already exists.'
+                        : 'Failed to create plan. Please try again.'}
+                </div>
+            )}
         </div>
     );
 }
