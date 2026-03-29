@@ -50,8 +50,17 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
+    const requestUrl = String(error.config?.url || '');
+    const isAuthEndpoint =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/forgot-password') ||
+      requestUrl.includes('/auth/reset-password') ||
+      requestUrl.includes('/auth/confirm-email');
+
     // Handle 401 - Proxy couldn't refresh token, redirect to login
-    if (error.response?.status === 401) {
+    // Skip redirect for auth form endpoints so invalid credentials do not reload the page.
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       // Clear tokens and redirect to login
       clearTokens();
 
