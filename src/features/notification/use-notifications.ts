@@ -20,6 +20,7 @@ import {
   sendTestNotification,
 } from './api';
 import type { NotificationItem, RealtimeNotification } from './types';
+import { toNotificationTimestamp } from './date-utils';
 
 const SIGNALR_EVENT = 'notification.received';
 
@@ -43,7 +44,7 @@ function upsertNotification(list: NotificationItem[], item: NotificationItem): N
   }
 
   return [item, ...list].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => toNotificationTimestamp(b.createdAt) - toNotificationTimestamp(a.createdAt)
   );
 }
 
@@ -169,6 +170,7 @@ export function useNotifications(page = 1, pageSize = 20) {
   });
 
   const unreadItems = useMemo(() => items.filter((x) => !x.isRead), [items]);
+  const total = notificationsQuery.data?.total ?? 0;
 
   const markAsRead = useCallback(
     async (id: number) => {
@@ -186,6 +188,9 @@ export function useNotifications(page = 1, pageSize = 20) {
 
   return {
     items,
+    total,
+    page,
+    pageSize,
     unreadItems,
     unreadCount,
     isLoading: notificationsQuery.isLoading,

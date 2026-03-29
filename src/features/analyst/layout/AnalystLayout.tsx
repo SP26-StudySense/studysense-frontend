@@ -10,6 +10,7 @@ interface AnalystLayoutProps {
 
 // Map routes to titles
 function getPageTitle(pathname: string): string {
+  if (pathname.startsWith('/analyst-notifications')) return 'Notifications';
   if (pathname.startsWith("/analyst-survey")) return "Survey Management";
   if (pathname.startsWith("/analyst-triggermapping/survey-trigger-types")) return "Survey Trigger Types";
   if (pathname.startsWith("/analyst-triggermapping")) return "Trigger Mapping";
