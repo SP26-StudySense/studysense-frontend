@@ -19,6 +19,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/my-roadmap')) return 'My Roadmap';
   if (pathname.startsWith('/roadmaps')) return 'Roadmaps';
   if (pathname.startsWith('/chat')) return 'Chat';
+  if (pathname.startsWith('/notifications')) return 'Notifications';
   if (pathname === '/sessions/history') return 'Session History';
   if (pathname.startsWith('/sessions')) return 'Sessions';
   if (pathname.startsWith('/community')) return 'Community';
