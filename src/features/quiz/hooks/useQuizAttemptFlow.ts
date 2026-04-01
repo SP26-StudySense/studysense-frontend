@@ -1,16 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ApiException } from '@/shared/api/errors';
+import { get } from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
 
 import {
   useCreateQuizAttempt,
+  useCurrentQuizAttemptByModule,
   useQuizQuestionsByAttempt,
   useSaveQuizAnswersByAttempt,
   useSubmitQuizAttempt,
 } from '../api';
 import type {
+  GetCurrentQuizAttemptByModuleResponse,
   GetQuizQuestionsByAttemptResponse,
   QuizLevel,
   SubmitQuizAttemptResponse,
 } from '../api/types';
+
+const QUIZ_NOT_FOUND_MESSAGE = 'Khong co quiz cho module nay.';
+
+function isQuizKeyNotFoundError(error: unknown): boolean {
+  if (error instanceof ApiException) {
+    return error.status === 404 || error.message.includes('KeyNotFoundException');
+  }
+
+  if (error instanceof Error) {
+    return error.message.includes('KeyNotFoundException') || error.message.includes(QUIZ_NOT_FOUND_MESSAGE);
+  }
+
+  return false;
+}
 
 interface UseQuizAttemptFlowOptions {
   moduleId: number;
@@ -29,15 +48,20 @@ export function useQuizAttemptFlow({
   const [answers, setAnswers] = useState<Record<number, number | null>>({});
   const [result, setResult] = useState<SubmitQuizAttemptResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isQuizUnavailable, setIsQuizUnavailable] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const initializedAnswersForAttemptRef = useRef<number | null>(null);
 
   const createMutation = useCreateQuizAttempt();
   const submitMutation = useSubmitQuizAttempt();
   const saveAnswersMutation = useSaveQuizAnswersByAttempt();
+  const { data: currentAttemptData } = useCurrentQuizAttemptByModule(moduleId, {
+    enabled: Number.isFinite(moduleId) && moduleId > 0,
+  });
   const {
     data: questionsData,
     isFetching: isFetchingQuestions,
+    error: questionsError,
   } = useQuizQuestionsByAttempt(currentAttemptId, { enabled: !!currentAttemptId });
 
   const createAttemptAsync = createMutation.mutateAsync;
@@ -50,8 +74,23 @@ export function useQuizAttemptFlow({
       initializedAnswersForAttemptRef.current = null;
       setResult(null);
       setError(null);
+      setIsQuizUnavailable(false);
     }
   }, [initialQuizAttemptId]);
+
+  useEffect(() => {
+    if (!questionsError) {
+      return;
+    }
+
+    if (isQuizKeyNotFoundError(questionsError)) {
+      setIsQuizUnavailable(true);
+      setError(QUIZ_NOT_FOUND_MESSAGE);
+      return;
+    }
+
+    setError(questionsError instanceof Error ? questionsError.message : 'Failed to load quiz questions.');
+  }, [questionsError]);
 
   useEffect(() => {
     if (!currentAttemptId || !questionsData?.questions) return;
@@ -86,11 +125,33 @@ export function useQuizAttemptFlow({
 
     setError(null);
     setResult(null);
+    setIsQuizUnavailable(false);
     setAnswers({});
     setHasUnsavedChanges(false);
     initializedAnswersForAttemptRef.current = null;
 
     try {
+      const existingAttemptId = currentAttemptData?.quizAttempt?.id;
+      if (existingAttemptId) {
+        setCurrentAttemptId(existingAttemptId);
+        return;
+      }
+
+      try {
+        await get<GetCurrentQuizAttemptByModuleResponse>(
+          endpoints.quizAttempts.currentByModule(String(moduleId))
+        );
+      } catch (precheckError) {
+        if (isQuizKeyNotFoundError(precheckError)) {
+          setCurrentAttemptId(null);
+          setIsQuizUnavailable(true);
+          setError(QUIZ_NOT_FOUND_MESSAGE);
+          return;
+        }
+
+        throw precheckError;
+      }
+
       const response = await createAttemptAsync({
         createQuizAttempt: {
           studyPlanModuleId: moduleId,
@@ -101,9 +162,14 @@ export function useQuizAttemptFlow({
       setCurrentAttemptId(response.id);
     } catch (err) {
       setCurrentAttemptId(null);
-      setError(err instanceof Error ? err.message : 'Failed to create quiz attempt.');
+      if (isQuizKeyNotFoundError(err)) {
+        setIsQuizUnavailable(true);
+        setError(QUIZ_NOT_FOUND_MESSAGE);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to create quiz attempt.');
+      }
     }
-  }, [createAttemptAsync, level, moduleId]);
+  }, [createAttemptAsync, currentAttemptData?.quizAttempt?.id, level, moduleId]);
 
   const setAnswer = useCallback((questionId: number, optionId: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
@@ -191,6 +257,7 @@ export function useQuizAttemptFlow({
     setAnswers({});
     setResult(null);
     setError(null);
+    setIsQuizUnavailable(false);
     setHasUnsavedChanges(false);
     setCurrentAttemptId(nextAttemptId ?? null);
   }, []);
@@ -201,6 +268,7 @@ export function useQuizAttemptFlow({
     answers,
     result,
     error,
+    isQuizUnavailable,
     hasUnsavedChanges,
     setAnswer,
     saveAnswers,
@@ -210,7 +278,7 @@ export function useQuizAttemptFlow({
     questionCount,
     answeredCount,
     allAnswered,
-    isCreating: createMutation.isPending || (isFetchingQuestions && !questionsData),
+    isCreating: createMutation.isPending || (isFetchingQuestions && !questionsData && !questionsError),
     isSaving: saveAnswersMutation.isPending,
     isSubmitting: submitMutation.isPending,
   };

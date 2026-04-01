@@ -133,11 +133,13 @@ export const authRoutes = [
 
 export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings'];
 
-export const adminRoutes = ['/admin'];
+export const adminRoutes = ['/admin-dashboard', '/admin-users', '/admin-categories', '/admin-transactions'];
 
 export const analystRoutes = ['/analyst-survey', '/analyst-triggermapping'];
 
 export const contentManagerRoutes = ['/content-dashboard', '/content-roadmaps', '/content-profile'];
+
+export const studyPlanRoutes = ['/study-plans'];
 
 // Helper to check route type
 export function isPublicRoute(pathname: string): boolean {
@@ -162,4 +164,8 @@ export function isAnalystRoute(pathname: string): boolean {
 
 export function isContentManagerRoute(pathname: string): boolean {
   return contentManagerRoutes.some((route) => pathname.startsWith(route));
+}
+
+export function isStudyPlanRoute(pathname: string): boolean {
+  return studyPlanRoutes.some((route) => pathname.startsWith(route));
 }

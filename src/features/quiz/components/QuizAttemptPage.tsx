@@ -46,6 +46,7 @@ export function QuizAttemptPage({
     answers,
     result,
     error,
+    isQuizUnavailable,
     hasUnsavedChanges,
     setAnswer,
     saveAnswers,
@@ -288,8 +289,12 @@ export function QuizAttemptPage({
   if (error && !questionsData) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center px-4">
-        <div className="rounded-3xl bg-white/95 border border-red-200 p-8 w-full max-w-xl text-center shadow-xl shadow-red-900/10">
-          <h1 className="text-xl font-bold text-neutral-900 mb-2">Could not start quiz</h1>
+        <div className={`rounded-3xl bg-white/95 p-8 w-full max-w-xl text-center shadow-xl ${
+          isQuizUnavailable ? 'border border-amber-200 shadow-amber-900/10' : 'border border-red-200 shadow-red-900/10'
+        }`}>
+          <h1 className="text-xl font-bold text-neutral-900 mb-2">
+            {isQuizUnavailable ? 'Khong co quiz cho module nay' : 'Could not start quiz'}
+          </h1>
           <p className="text-sm text-neutral-600 mb-6">{error}</p>
           <div className="flex gap-3 justify-center">
             <button
@@ -298,12 +303,14 @@ export function QuizAttemptPage({
             >
               {backLabel}
             </button>
-            <button
-              onClick={startAttempt}
-              className="px-4 py-2.5 rounded-xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8cc]"
-            >
-              Try Again
-            </button>
+            {!isQuizUnavailable && (
+              <button
+                onClick={startAttempt}
+                className="px-4 py-2.5 rounded-xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8cc]"
+              >
+                Try Again
+              </button>
+            )}
           </div>
         </div>
       </div>
