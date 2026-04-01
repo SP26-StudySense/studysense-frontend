@@ -15,7 +15,6 @@ import { showWarning, showInfo } from '@/shared/lib/toast';
 interface RoadmapCardProps {
     roadmap: RoadmapTemplate | UserLearningRoadmap;
     variant: 'template' | 'learning';
-    onPreview?: (startFn: () => void) => void;
     existingRoadmapIds?: Set<number>; // Track existing study plans
     roadmapToStudyPlanMap?: Map<number, number>; // Map roadmapId to studyPlanId
 }
@@ -26,7 +25,7 @@ const difficultyColors = {
     advanced: 'bg-red-100 text-red-700 border-red-200',
 };
 
-export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
+export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
     const router = useRouter();
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
 
@@ -165,7 +164,7 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, r
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onPreview?.(handleClick);
+                                router.push(`/roadmaps/preview/${roadmap.id}`);
                             }}
                             className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-100 hover:bg-[#00bae2]/10 hover:text-[#00bae2] text-neutral-600 transition-all duration-200 hover:scale-110"
                             title="Preview roadmap"

@@ -5,8 +5,6 @@ import { Loader2 } from 'lucide-react';
 import { useQueries } from '@tanstack/react-query';
 import { RoadmapCard } from './components/RoadmapCard';
 import { SearchFilterBar } from './components/SearchFilterBar';
-import { RoadmapPreviewModal } from './components/RoadmapPreviewModal';
-import { useStartLearning } from './hooks/useStartLearning';
 import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
@@ -124,9 +122,6 @@ export function RoadmapsList() {
         difficulty: 'all',
         category: 'all',
     });
-
-    const [previewRoadmap, setPreviewRoadmap] = useState<RoadmapTemplate | null>(null);
-    const [previewStartFn, setPreviewStartFn] = useState<(() => void) | null>(null);
 
     // Fetch user's study plans from API
     const { 
@@ -314,7 +309,6 @@ export function RoadmapsList() {
                                     key={roadmap.id}
                                     roadmap={roadmap}
                                     variant="template"
-                                    onPreview={(startFn) => { setPreviewRoadmap(roadmap); setPreviewStartFn(() => startFn); }}
                                     existingRoadmapIds={existingRoadmapIds}
                                     roadmapToStudyPlanMap={roadmapToStudyPlanMap}
                                 />
@@ -326,15 +320,6 @@ export function RoadmapsList() {
                 </section>
             )}
 
-            {/* Preview Modal */}
-            {previewRoadmap && (
-                <RoadmapPreviewModal
-                    roadmap={previewRoadmap}
-                    isOpen={!!previewRoadmap}
-                    onClose={() => { setPreviewRoadmap(null); setPreviewStartFn(null); }}
-                    onStartLearning={previewStartFn ?? undefined}
-                />
-            )}
         </div>
     );
 }
