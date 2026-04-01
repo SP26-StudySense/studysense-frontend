@@ -72,12 +72,23 @@ export function useRoadmapGraph(roadmapId: number | string | null) {
 /**
  * Fetch node content details (description, resources, etc.)
  */
-export function useNodeContents(roadmapId: number | string | null, nodeId: number | string | null) {
+export function useNodeContents(
+    roadmapId: number | string | null,
+    nodeId: number | string | null,
+    options?: { sanitizeUrls?: boolean }
+) {
     return useQuery({
-        queryKey: ['roadmaps', 'nodeContents', roadmapId, nodeId],
+        queryKey: ['roadmaps', 'nodeContents', roadmapId, nodeId, options?.sanitizeUrls ?? false],
         queryFn: async () => {
             const data = await get<NodeContentItemDTO[]>(
-                endpoints.roadmaps.nodeContents(String(roadmapId), String(nodeId))
+                endpoints.roadmaps.nodeContents(String(roadmapId), String(nodeId)),
+                options?.sanitizeUrls
+                    ? {
+                          headers: {
+                              'x-sanitize-node-content-url': '1',
+                          },
+                      }
+                    : undefined
             );
             return data ?? [];
         },

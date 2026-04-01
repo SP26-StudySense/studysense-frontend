@@ -8,5 +8,5 @@ interface PageProps {
 
 export default async function RoadmapSelectRoute({ params }: PageProps) {
     const { id } = await params;
-    return <RoadmapDetailPage studyPlanId={parseInt(id)} />;
+    return <RoadmapDetailPage roadmapId={parseInt(id)} />;
 }
