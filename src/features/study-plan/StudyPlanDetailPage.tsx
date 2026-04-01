@@ -183,7 +183,10 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     // Derived stats
     const totalTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.length, 0);
     const completedTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.filter(t => t.isCompleted).length, 0);
-    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    const totalModules = modulesWithTasks.length;
+    const completedModules = modulesWithTasks.filter(m => m.status === 'completed').length;
+    // Progress based on module completion progress
+    const progress = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
 
     // Calculate hours from tasks
     const totalMinutes = modulesWithTasks.reduce((acc, m) =>
