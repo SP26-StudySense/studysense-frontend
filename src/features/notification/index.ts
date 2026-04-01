@@ -4,3 +4,6 @@ export * from './push-token';
 export * from './use-notifications';
 export * from './onesignal-client';
 export * from './NotificationBell';
+export * from './NotificationsPage';
+export * from './UserNotificationsPage';
+export * from './StaffNotificationsPage';

@@ -1,5 +1,5 @@
-import { NotificationsPage } from '@/features/notification/NotificationsPage';
+import { StaffNotificationsPage } from '@/features/notification';
 
 export default function AnalystNotificationsRoute() {
-  return <NotificationsPage />;
+  return <StaffNotificationsPage />;
 }
