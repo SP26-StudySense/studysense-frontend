@@ -645,21 +645,32 @@ export function ModuleTasksPanel({
         setAiPreviewMessage(null);
     };
 
-    const handleAcceptAiPreview = async () => {
+    const handleAcceptAiPreview = async (tasksToSave: AiPreviewTask[]) => {
         if (!module?.id) return;
+        if (!tasksToSave.length) {
+            setAiPreviewMessage('No tasks to save.');
+            return;
+        }
         
         try {
             setAiPreviewMessage('Saving tasks...');
             const payload = {
-                tasks: aiPreviewTasks.map(t => ({
+                tasks: tasksToSave
+                    .filter((t) => t.title?.trim())
+                    .map(t => ({
                     studyPlanModuleId: Number(module.id),
-                    title: t.title,
+                    title: t.title.trim(),
                     description: t.description,
                     status: TaskStatus.Pending,
                     estimatedDurationSeconds: (t.estimatedMinutes || 30) * 60,
                     scheduledDate: t.scheduledDate || new Date().toISOString()
                 }))
             };
+
+            if (!payload.tasks.length) {
+                setAiPreviewMessage('Please keep at least one task with a title.');
+                return;
+            }
             
             await createTasksBatchMutation.mutateAsync(payload);
             
@@ -752,6 +763,7 @@ export function ModuleTasksPanel({
     const allModuleTasksCompleted = moduleTasks.length > 0 && moduleTasks.every(task => task.isCompleted);
     const canSkipModule = !hasAnyStartedTask;
     const canTakeQuiz = allModuleTasksCompleted;
+    const isModuleCompleted = module.status === 'completed';
     const totalEstimatedTime = filteredTasks
         .filter(t => {
             if (t.isFromLockedModule) return false;
@@ -904,7 +916,7 @@ export function ModuleTasksPanel({
                     {viewFilter === 'module' && !isLocked && (
                         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-50">
                             {/* Quiz Actions - Show based on current attempt state */}
-                            {currentQuizAttemptId && canSkipModule ? (
+                            {!isModuleCompleted && currentQuizAttemptId && canSkipModule ? (
                                 // Continue Skip Quiz (when no task started)
                                 <button
                                     onClick={handleContinueQuiz}
@@ -913,7 +925,7 @@ export function ModuleTasksPanel({
                                     <ArrowRight className="h-4 w-4" />
                                     <span>Continue Skip Quiz</span>
                                 </button>
-                            ) : currentQuizAttemptId && canTakeQuiz ? (
+                            ) : !isModuleCompleted && currentQuizAttemptId && canTakeQuiz ? (
                                 // Continue Take Quiz (when all tasks completed)
                                 <button
                                     onClick={handleContinueQuiz}
@@ -922,7 +934,7 @@ export function ModuleTasksPanel({
                                     <ArrowRight className="h-4 w-4" />
                                     <span>Continue Take Quiz</span>
                                 </button>
-                            ) : !currentQuizAttemptId && canSkipModule ? (
+                            ) : !isModuleCompleted && !currentQuizAttemptId && canSkipModule ? (
                                 // Skip Module (when no task started)
                                 <button
                                     onClick={handleOpenSkipModule}
@@ -931,7 +943,7 @@ export function ModuleTasksPanel({
                                     <FastForward className="h-4 w-4" />
                                     <span>Skip module</span>
                                 </button>
-                            ) : !currentQuizAttemptId && canTakeQuiz ? (
+                            ) : !isModuleCompleted && !currentQuizAttemptId && canTakeQuiz ? (
                                 // Take Quiz (after all tasks completed)
                                 <button
                                     onClick={handleOpenTakeQuiz}
@@ -944,7 +956,7 @@ export function ModuleTasksPanel({
 
                             {/* Right Side: Task Management Actions */}
                             {/* Điều kiện: Chỉ hiện khi module đã có task (user đã gen task trước đó) */}
-                            {module.tasks && module.tasks.length > 0 && (
+                            {!isModuleCompleted && module.tasks && module.tasks.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-3 ml-auto">
                                     <button
                                         onClick={handleAddTask}
