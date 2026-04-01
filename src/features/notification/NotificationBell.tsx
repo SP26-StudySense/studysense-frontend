@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 
@@ -24,7 +23,6 @@ export function NotificationBell({
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'unseen'>('all');
-  const pathname = usePathname();
   const { data: user } = useCurrentUser();
   const [pushStatus, setPushStatus] = useState<PushStatus>('unavailable');
   const {
@@ -91,9 +89,6 @@ export function NotificationBell({
     if (normalizedRoles.includes('analyst')) return '/analyst-notifications';
     if (normalizedRoles.includes('contentmanager')) return '/content-notifications';
 
-    if (pathname.startsWith('/admin-')) return '/admin-notifications';
-    if (pathname.startsWith('/analyst-')) return '/analyst-notifications';
-    if (pathname.startsWith('/content-')) return '/content-notifications';
     return '/notifications';
   })();
 
