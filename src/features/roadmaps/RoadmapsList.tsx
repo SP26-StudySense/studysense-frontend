@@ -11,6 +11,7 @@ import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { useStudyPlans, StudyPlanItem } from '@/features/study-plan/api';
+import { StudyPlanDto, ModuleStatus } from '@/features/study-plan/api/types';
 import type { RoadmapFilters, RoadmapTemplate, UserLearningRoadmap } from './types';
 
 // Map API response to RoadmapTemplate format
@@ -28,7 +29,10 @@ function mapApiToTemplate(item: RoadmapListItemDTO, nodeCount?: number): Roadmap
 }
 
 // Map Study Plan Item to UserLearningRoadmap format for "Continue" cards
-function mapStudyPlanToLearningRoadmap(item: StudyPlanItem): UserLearningRoadmap {
+function mapStudyPlanToLearningRoadmap(
+    item: StudyPlanItem,
+    moduleStats?: { completedModules: number; totalModules: number }
+): UserLearningRoadmap {
     return {
         id: String(item.roadmapId), // Roadmap ID for display
         studyPlanId: String(item.id), // Study Plan ID for navigation
@@ -37,9 +41,12 @@ function mapStudyPlanToLearningRoadmap(item: StudyPlanItem): UserLearningRoadmap
         description: item.roadmapDescription || 'No description available',
         difficulty: 'intermediate',
         category: 'other',
-        progress: 0, // TODO: Calculate from tasks
-        completedNodes: 0, // TODO: Calculate from modules
-        totalNodes: 0, // TODO: Calculate from modules
+        progress:
+            moduleStats && moduleStats.totalModules > 0
+                ? Math.round((moduleStats.completedModules / moduleStats.totalModules) * 100)
+                : 0,
+        completedNodes: moduleStats?.completedModules ?? 0,
+        totalNodes: moduleStats?.totalModules ?? 0,
         estimatedHours: 0,
         lastAccessed: new Date(item.createdAt),
         timeSpent: 0,
@@ -73,8 +80,46 @@ function useRoadmapNodeCounts(roadmapIds: number[]) {
     return nodeCounts;
 }
 
+function useStudyPlanModuleStats(studyPlanIds: number[]) {
+    const queries = useQueries({
+        queries: studyPlanIds.map((id) => ({
+            queryKey: ['studyPlans', 'detail', id],
+            queryFn: async () => {
+                const data = await get<StudyPlanDto>(endpoints.studyPlans.byId(String(id)));
+                const modules = data?.modules ?? [];
+                const completedModules = modules.filter((m) => m.status === ModuleStatus.Completed).length;
+                return {
+                    id,
+                    completedModules,
+                    totalModules: modules.length,
+                };
+            },
+            staleTime: 5 * 60 * 1000,
+        })),
+    });
+
+    return useMemo(() => {
+        const map = new Map<number, { completedModules: number; totalModules: number }>();
+        queries.forEach((q) => {
+            if (q.data) {
+                map.set(q.data.id, {
+                    completedModules: q.data.completedModules,
+                    totalModules: q.data.totalModules,
+                });
+            }
+        });
+        return map;
+    }, [queries]);
+}
+
 export function RoadmapsList() {
-    const [filters, setFilters] = useState<RoadmapFilters>({
+    const [activeTab, setActiveTab] = useState<'explore' | 'my-roadmap'>('explore');
+    const [exploreFilters, setExploreFilters] = useState<RoadmapFilters>({
+        search: '',
+        difficulty: 'all',
+        category: 'all',
+    });
+    const [myRoadmapFilters, setMyRoadmapFilters] = useState<RoadmapFilters>({
         search: '',
         difficulty: 'all',
         category: 'all',
@@ -94,7 +139,7 @@ export function RoadmapsList() {
     const { data: roadmapsData, isLoading, error } = useRoadmaps({
         pageIndex: 1,
         pageSize: 50,
-        q: filters.search || undefined,
+        q: exploreFilters.search || undefined,
         isLatest: true,
     });
 
@@ -118,21 +163,50 @@ export function RoadmapsList() {
     // Filter templates based on filters (difficulty and category)
     const filteredTemplates = useMemo(() => {
         return apiTemplates.filter(roadmap => {
-            if (filters.difficulty !== 'all' && roadmap.difficulty !== filters.difficulty) {
+            if (exploreFilters.difficulty !== 'all' && roadmap.difficulty !== exploreFilters.difficulty) {
                 return false;
             }
-            if (filters.category !== 'all' && roadmap.category !== filters.category) {
+            if (exploreFilters.category !== 'all' && roadmap.category !== exploreFilters.category) {
                 return false;
             }
             return true;
         });
-    }, [apiTemplates, filters]);
+    }, [apiTemplates, exploreFilters]);
+
+    const studyPlanIds = useMemo(() => studyPlans.map((plan) => plan.id), [studyPlans]);
+    const studyPlanModuleStats = useStudyPlanModuleStats(studyPlanIds);
 
     // Map study plans to learning roadmaps - NO FILTER for My Learning Roadmaps
     const learningRoadmaps = useMemo(
-        () => studyPlans.map(mapStudyPlanToLearningRoadmap),
-        [studyPlans]
+        () =>
+            studyPlans.map((plan) =>
+                mapStudyPlanToLearningRoadmap(plan, studyPlanModuleStats.get(plan.id))
+            ),
+        [studyPlans, studyPlanModuleStats]
     );
+
+    const filteredLearningRoadmaps = useMemo(() => {
+        const search = myRoadmapFilters.search.trim().toLowerCase();
+
+        return learningRoadmaps.filter((roadmap) => {
+            if (search) {
+                const haystack = `${roadmap.title} ${roadmap.description}`.toLowerCase();
+                if (!haystack.includes(search)) {
+                    return false;
+                }
+            }
+
+            if (myRoadmapFilters.difficulty !== 'all' && roadmap.difficulty !== myRoadmapFilters.difficulty) {
+                return false;
+            }
+
+            if (myRoadmapFilters.category !== 'all' && roadmap.category !== myRoadmapFilters.category) {
+                return false;
+            }
+
+            return true;
+        });
+    }, [learningRoadmaps, myRoadmapFilters]);
 
     // Create set of roadmap IDs that already have study plans
     const existingRoadmapIds = useMemo(
@@ -146,7 +220,9 @@ export function RoadmapsList() {
         [studyPlans]
     );
 
-    const hasActiveFilters = Boolean(filters.search || filters.difficulty !== 'all' || filters.category !== 'all');
+    const activeFilters = activeTab === 'explore' ? exploreFilters : myRoadmapFilters;
+    const setActiveFilters = activeTab === 'explore' ? setExploreFilters : setMyRoadmapFilters;
+    const hasActiveFilters = Boolean(activeFilters.search || activeFilters.difficulty !== 'all' || activeFilters.category !== 'all');
 
     return (
         <div className="space-y-8">
@@ -161,91 +237,94 @@ export function RoadmapsList() {
             </div>
 
             {/* Search and Filters */}
-            <SearchFilterBar filters={filters} onFiltersChange={setFilters} />
+            <SearchFilterBar filters={activeFilters} onFiltersChange={setActiveFilters} />
 
-            {/* My Learning Roadmaps Section */}
-            {isLoadingStudyPlans ? (
-                <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-semibold text-neutral-900">
-                            My Learning Roadmaps
-                        </h2>
-                    </div>
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-                    </div>
-                </section>
-            ) : studyPlansError ? (
-                <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-semibold text-neutral-900">
-                            My Learning Roadmaps
-                        </h2>
-                    </div>
-                    <div className="flex items-center justify-center py-12">
-                        <p className="text-neutral-500">Failed to load your roadmaps. Please try again.</p>
-                    </div>
-                </section>
-            ) : learningRoadmaps.length > 0 ? (
-                <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-semibold text-neutral-900">
-                            My Learning Roadmaps
-                        </h2>
-                        <span className="text-sm text-neutral-500">
-                            {learningRoadmaps.length} active
+            {/* Tabs */}
+            <div className="border-b border-neutral-200">
+                <div className="flex items-center gap-2 overflow-x-auto">
+                    <button
+                        onClick={() => setActiveTab('explore')}
+                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-semibold transition-colors ${
+                            activeTab === 'explore'
+                                ? 'bg-[#e9faff] text-[#008fb1] border border-b-0 border-[#bfefff]'
+                                : 'text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50'
+                        }`}
+                    >
+                        <span>Explore Roadmaps</span>
+                        <span className="inline-flex min-w-6 justify-center rounded-full bg-white/80 px-1.5 py-0.5 text-xs text-neutral-700">
+                            {isLoading ? '...' : filteredTemplates.length}
                         </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {learningRoadmaps.map((roadmap) => (
-                            <RoadmapCard
-                                key={roadmap.id}
-                                roadmap={roadmap}
-                                variant="learning"
-                            />
-                        ))}
-                    </div>
-                </section>
-            ) : null}
+                    </button>
 
-            {/* Template Roadmaps Section */}
-            <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold text-neutral-900">
-                        {hasActiveFilters ? 'Search Results' : 'Explore Templates'}
-                    </h2>
-                    {!isLoading && (
-                        <span className="text-sm text-neutral-500">
-                            {filteredTemplates.length} roadmap{filteredTemplates.length !== 1 ? 's' : ''}
+                    <button
+                        onClick={() => setActiveTab('my-roadmap')}
+                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-semibold transition-colors ${
+                            activeTab === 'my-roadmap'
+                                ? 'bg-[#f2f0ff] text-[#5c4fba] border border-b-0 border-[#ddd7ff]'
+                                : 'text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50'
+                        }`}
+                    >
+                        <span>My Roadmaps</span>
+                        <span className="inline-flex min-w-6 justify-center rounded-full bg-white/80 px-1.5 py-0.5 text-xs text-neutral-700">
+                            {isLoadingStudyPlans ? '...' : filteredLearningRoadmaps.length}
                         </span>
-                    )}
+                    </button>
                 </div>
+            </div>
 
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-16">
-                        <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-                    </div>
-                ) : error ? (
-                    <div className="flex items-center justify-center py-16">
-                        <p className="text-neutral-500">Failed to load roadmaps. Please try again.</p>
-                    </div>
-                ) : filteredTemplates.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredTemplates.map((roadmap) => (
-                            <RoadmapCard
-                                key={roadmap.id}
-                                roadmap={roadmap}
-                                variant="template"
-                                onPreview={(startFn) => { setPreviewRoadmap(roadmap); setPreviewStartFn(() => startFn); }}
-                                existingRoadmapIds={existingRoadmapIds}
-                                roadmapToStudyPlanMap={roadmapToStudyPlanMap}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <EmptyState hasFilters={hasActiveFilters} />
-                )}
-            </section>
+            {/* Tab Content */}
+            {activeTab === 'my-roadmap' ? (
+                <section className="space-y-4">
+                    {isLoadingStudyPlans ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
+                        </div>
+                    ) : studyPlansError ? (
+                        <div className="flex items-center justify-center py-12">
+                            <p className="text-neutral-500">Failed to load your roadmaps. Please try again.</p>
+                        </div>
+                    ) : filteredLearningRoadmaps.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredLearningRoadmaps.map((roadmap) => (
+                                <RoadmapCard
+                                    key={roadmap.id}
+                                    roadmap={roadmap}
+                                    variant="learning"
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState hasFilters={hasActiveFilters} />
+                    )}
+                </section>
+            ) : (
+                <section className="space-y-4">
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-16">
+                            <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
+                        </div>
+                    ) : error ? (
+                        <div className="flex items-center justify-center py-16">
+                            <p className="text-neutral-500">Failed to load roadmaps. Please try again.</p>
+                        </div>
+                    ) : filteredTemplates.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredTemplates.map((roadmap) => (
+                                <RoadmapCard
+                                    key={roadmap.id}
+                                    roadmap={roadmap}
+                                    variant="template"
+                                    onPreview={(startFn) => { setPreviewRoadmap(roadmap); setPreviewStartFn(() => startFn); }}
+                                    existingRoadmapIds={existingRoadmapIds}
+                                    roadmapToStudyPlanMap={roadmapToStudyPlanMap}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState hasFilters={hasActiveFilters} />
+                    )}
+                </section>
+            )}
 
             {/* Preview Modal */}
             {previewRoadmap && (

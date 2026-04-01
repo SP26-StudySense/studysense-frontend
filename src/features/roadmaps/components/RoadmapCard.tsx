@@ -103,17 +103,12 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, r
         }
     };
 
-    const formatDate = (date: Date) => {
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
-
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const formatJoinedDate = (date: Date) => {
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
     };
 
     const formatTimeSpent = (minutes: number) => {
@@ -206,9 +201,9 @@ export function RoadmapCard({ roadmap, variant, onPreview, existingRoadmapIds, r
                             </div>
                         </div>
 
-                        {/* Last Accessed */}
+                        {/* Joined date */}
                         <div className="text-xs text-neutral-400">
-                            Last accessed {formatDate(roadmap.lastAccessed)}
+                            Joined on {formatJoinedDate(roadmap.lastAccessed)}
                         </div>
                     </div>
                 )}
