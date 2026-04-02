@@ -7,6 +7,8 @@ import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/
 import * as api from './api';
 import { cmQueryKeys } from './api';
 import type {
+  CreateRoadmapRequest,
+  CreateRoadmapResponse,
   DeleteRoadmapRequest,
   DeleteNodeRequest,
   DeleteEdgeRequest,
@@ -38,6 +40,20 @@ import type {
 } from './types';
 
 // ==================== Delete Mutations ====================
+
+export function useCreateRoadmap(
+  options?: UseMutationOptions<CreateRoadmapResponse, Error, CreateRoadmapRequest>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.createRoadmap,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.roadmaps() });
+    },
+    ...options,
+  });
+}
 
 /**
  * Delete a roadmap and all its data

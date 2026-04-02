@@ -11,6 +11,7 @@ import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
 import type { QuizLevel } from '@/features/quiz/api/types';
 import { useCurrentQuizAttemptByModule } from '@/features/quiz';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { TaskFormModal } from './TaskFormModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { AiTaskPreviewPanel, AiPreviewTask } from './AiTaskPreviewPanel';
@@ -229,8 +230,15 @@ export function ModuleTasksPanel({
     // Quiz dialog states
     const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
     const [isTakeQuizOpen, setIsTakeQuizOpen] = useState(false);
-    const { data: currentQuizAttemptData } = useCurrentQuizAttemptByModule(
-        module?.id ? parseInt(module.id, 10) : 0
+    const moduleIdForQuizAttempt = module?.id ? parseInt(module.id, 10) : 0;
+    const {
+        data: currentQuizAttemptData,
+        isLoading: isLoadingCurrentQuizAttempt,
+        isFetching: isFetchingCurrentQuizAttempt,
+        isFetched: isFetchedCurrentQuizAttempt,
+    } = useCurrentQuizAttemptByModule(
+        moduleIdForQuizAttempt,
+        { enabled: !!module?.id }
     );
     const currentQuizAttemptId = currentQuizAttemptData?.quizAttempt?.id;
 
@@ -763,6 +771,9 @@ export function ModuleTasksPanel({
     const isModuleCompleted = module.status === 'completed';
     const canSkipModule = !isModuleCompleted;
     const canTakeQuiz = allModuleTasksCompleted;
+    const isQuizActionLoading =
+        !isModuleCompleted &&
+        (isLoadingCurrentQuizAttempt || isFetchingCurrentQuizAttempt || !isFetchedCurrentQuizAttempt);
     const totalEstimatedTime = filteredTasks
         .filter(t => {
             if (t.isFromLockedModule) return false;
@@ -915,7 +926,15 @@ export function ModuleTasksPanel({
                     {viewFilter === 'module' && !isLocked && (
                         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-50">
                             {/* Quiz Actions - Show based on current attempt state */}
-                            {!isModuleCompleted && currentQuizAttemptId && canTakeQuiz ? (
+                            {isQuizActionLoading ? (
+                                <button
+                                    disabled
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-2 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-500 border border-neutral-200 text-sm font-medium"
+                                >
+                                    <LoadingSpinner size="sm" />
+                                    <span>Checking quiz status...</span>
+                                </button>
+                            ) : !isModuleCompleted && currentQuizAttemptId && canTakeQuiz ? (
                                 // Continue Take Quiz (when all tasks completed)
                                 <button
                                     onClick={handleContinueQuiz}
