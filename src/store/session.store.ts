@@ -12,6 +12,7 @@ export interface SelectedTask {
   estimatedMinutes: number;
   isCompleted: boolean;
   isActive?: boolean;
+  startedAt?: string | null;
   completedAt?: string | null;
 }
 
@@ -38,6 +39,7 @@ interface SessionState {
   // Selected node and tasks from roadmap
   selectedNode: SelectedNodeInfo | null;
   selectedTasks: SelectedTask[];
+  pendingTaskStartTime: string | null;
   setSelectedNode: (node: SelectedNodeInfo | null) => void;
   setSelectedTasks: (tasks: SelectedTask[]) => void;
   setActiveTask: (taskId: string) => void;
@@ -103,6 +105,7 @@ export const useSessionStore = create<SessionState>()(
       // Selected node and tasks from roadmap
       selectedNode: null,
       selectedTasks: [],
+      pendingTaskStartTime: null,
       setSelectedNode: (node) => set({ selectedNode: node }),
       setSelectedTasks: (tasks) => {
         set({
@@ -110,26 +113,34 @@ export const useSessionStore = create<SessionState>()(
             ...task,
             isCompleted: Boolean(task.isCompleted),
             isActive: Boolean(task.isActive) && !task.isCompleted,
+            startedAt: task.startedAt || null,
             completedAt: task.isCompleted ? task.completedAt || new Date().toISOString() : null,
           })),
         });
       },
       setActiveTask: (taskId) => {
-        const { sessionStatus, selectedTasks } = get();
+        const { sessionStatus, selectedTasks, pendingTaskStartTime } = get();
 
         if (sessionStatus === SessionStatus.NOT_STARTED) {
           return;
         }
 
+        const canActivate = selectedTasks.some((task) => !task.isCompleted && task.id === taskId);
+
         set({
           selectedTasks: selectedTasks.map((task) => ({
             ...task,
             isActive: !task.isCompleted && task.id === taskId,
+            startedAt:
+              !task.isCompleted && task.id === taskId
+                ? (task.startedAt ?? pendingTaskStartTime ?? new Date().toISOString())
+                : task.startedAt,
           })),
+          pendingTaskStartTime: canActivate ? null : pendingTaskStartTime,
         });
       },
       markTaskCompleted: (taskId) => {
-        const { sessionStatus, selectedTasks } = get();
+        const { sessionStatus, selectedTasks, pendingTaskStartTime } = get();
 
         if (sessionStatus === SessionStatus.NOT_STARTED) {
           return;
@@ -137,12 +148,16 @@ export const useSessionStore = create<SessionState>()(
 
         let nextActiveId: string | null = null;
 
+        let completionTime: string | null = null;
+
         const updatedTasks = selectedTasks.map((task) => {
           if (task.id === taskId) {
+            completionTime = task.completedAt || new Date().toISOString();
             return {
               ...task,
               isCompleted: true,
-              completedAt: task.completedAt || new Date().toISOString(),
+              startedAt: task.startedAt ?? pendingTaskStartTime ?? completionTime,
+              completedAt: completionTime,
               isActive: false,
             };
           }
@@ -159,7 +174,9 @@ export const useSessionStore = create<SessionState>()(
           selectedTasks: updatedTasks.map((task) => ({
             ...task,
             isActive: nextActiveId !== null && task.id === nextActiveId,
+            startedAt: task.startedAt,
           })),
+          pendingTaskStartTime: nextActiveId !== null ? completionTime : null,
         });
       },
 
@@ -211,6 +228,7 @@ export const useSessionStore = create<SessionState>()(
       // Session lifecycle
       startSession: (sessionId, tasks) => {
         const currentSelected = get().selectedTasks;
+        const sessionStartTime = new Date().toISOString();
 
         // Keep user's pre-selected tasks if they exist;
         // only fall back to API-returned tasks when nothing was pre-selected.
@@ -225,6 +243,7 @@ export const useSessionStore = create<SessionState>()(
                   estimatedMinutes: t.estimatedMinutes,
                   isCompleted: t.isCompleted,
                   isActive: false,
+                  startedAt: null,
                   completedAt: t.isCompleted ? new Date().toISOString() : null,
                 }))
               : [];
@@ -242,9 +261,11 @@ export const useSessionStore = create<SessionState>()(
           elapsedSeconds: 0,
           pauseCount: 0,
           pauseSeconds: 0,
+          pendingTaskStartTime: sessionStartTime,
           selectedTasks: selectedTasks.map((task) => ({
             ...task,
             isActive: Boolean(activeTaskId) && task.id === activeTaskId,
+            startedAt: task.startedAt ?? null,
           })),
         });
       },
@@ -292,6 +313,7 @@ export const useSessionStore = create<SessionState>()(
           sessionStatus: SessionStatus.NOT_STARTED,
           timerRunning: false,
           elapsedSeconds: 0,
+          pendingTaskStartTime: null,
           showSummary: false,
           showSuccess: true,
           summaryData: summaryData
@@ -319,6 +341,7 @@ export const useSessionStore = create<SessionState>()(
           elapsedSeconds: 0,
           pauseCount: 0,
           pauseSeconds: 0,
+          pendingTaskStartTime: null,
           showSummary: false,
           showSuccess: false,
           summaryData: null,
@@ -338,6 +361,7 @@ export const useSessionStore = create<SessionState>()(
           estimatedMinutes: task.estimatedMinutes,
           isCompleted: task.isCompleted,
           isActive: false,
+          startedAt: null,
           completedAt: task.isCompleted ? new Date().toISOString() : null,
         }));
 
@@ -350,6 +374,7 @@ export const useSessionStore = create<SessionState>()(
           sessionStatus: data.status as SessionStatus,
           elapsedSeconds: data.elapsedSeconds,
           timerRunning: data.status === SessionStatus.IN_PROGRESS,
+          pendingTaskStartTime: null,
           selectedTasks: mappedTasks.map((task) => ({
             ...task,
             isActive: Boolean(firstIncompleteTask) && firstIncompleteTask?.id === task.id,
@@ -395,6 +420,7 @@ export const useSessionStore = create<SessionState>()(
         elapsedSeconds: state.elapsedSeconds,
         selectedNode: state.selectedNode,
         selectedTasks: state.selectedTasks,
+        pendingTaskStartTime: state.pendingTaskStartTime,
       }),
     }
   )

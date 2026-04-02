@@ -263,6 +263,9 @@ export function useRefreshToken() {
       // Store new access token
       setAccessToken(response.accessToken, response.accessTokenExpiresUtc);
 
+      // Persist latest user payload (including subscription fields)
+      saveUserToStorage(response.user);
+
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
     },

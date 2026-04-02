@@ -61,9 +61,25 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
         targetUrl,
     });
 
+    // Handle OPTIONS requests natively
+    if (request.method === 'OPTIONS') {
+        const origin = request.headers.get('origin') || '*';
+        return new NextResponse(null, {
+            status: 204,
+            headers: {
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Max-Age': '86400',
+            },
+        });
+    }
+
     // Get access token from cookies
     const accessToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
-    const refreshToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_REFRESH_KEY)?.value;
+    const refreshToken =
+        request.cookies.get(env.NEXT_PUBLIC_AUTH_REFRESH_KEY)?.value ||
+        request.cookies.get('refreshToken')?.value;
 
     // Prepare headers
     const headers = new Headers(request.headers);
@@ -131,22 +147,27 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
                     sameSite: 'lax',
                     maxAge: 60 * 60 * 24, // 1 day
                 });
-                proxyResponse.cookies.set(env.NEXT_PUBLIC_AUTH_REFRESH_KEY, refreshed.refreshToken, {
-                    httpOnly: false,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'lax',
-                    maxAge: 60 * 60 * 24 * 7, // 7 days
-                });
+
+                // Forward rotated refresh cookie from backend refresh response.
+                // Backend owns refresh token value (HttpOnly) and does not return it in JSON.
+                if (refreshed.refreshSetCookie) {
+                    proxyResponse.headers.append('set-cookie', refreshed.refreshSetCookie);
+                }
 
                 return proxyResponse;
             }
         }
 
         // Return proxied response
+        const proxyResponseHeaders = new Headers(response.headers);
+        const requestOrigin = request.headers.get('origin') || '*';
+        proxyResponseHeaders.set('Access-Control-Allow-Origin', requestOrigin);
+        proxyResponseHeaders.set('Access-Control-Allow-Credentials', 'true');
+
         return new NextResponse(response.body, {
             status: response.status,
             statusText: response.statusText,
-            headers: response.headers,
+            headers: proxyResponseHeaders,
         });
     } catch (error) {
         console.error('[Proxy Error]', error);
@@ -167,12 +188,13 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 /**
  * Try to refresh access token
  */
-async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: string; refreshSetCookie: string | null } | null> {
     try {
         const response = await fetch(`${BACKEND_API_URL}/auth/refresh`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
+            headers: {
+                Cookie: `refreshToken=${encodeURIComponent(refreshToken)}`,
+            },
         });
 
         if (!response.ok) {
@@ -180,7 +202,16 @@ async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: str
         }
 
         const data = await response.json();
-        return data.data;
+        const payload = data?.data ?? data;
+
+        if (!payload?.accessToken) {
+            return null;
+        }
+
+        return {
+            accessToken: payload.accessToken,
+            refreshSetCookie: response.headers.get('set-cookie') || null,
+        };
     } catch {
         return null;
     }

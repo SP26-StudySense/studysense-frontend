@@ -22,9 +22,17 @@ export const endpoints = {
     base: '/users',
     byId: (id: string) => `/users/${id}`,
     profile: '/users/profile',
+    membership: '/users/membership',
     preferences: '/users/preferences',
     progress: '/users/progress',
     avatar: '/users/avatar',
+  },
+
+  // Payments
+  payments: {
+    userPayments: '/payments/user-payments',
+    createPayment: '/payments/create-payment',
+    paymentStatus: (id: string) => `/payments/${id}/status`,
   },
 
   // Study Plans
