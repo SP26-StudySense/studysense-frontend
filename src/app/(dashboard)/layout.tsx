@@ -29,7 +29,7 @@ function getPageTitle(pathname: string): string {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
-  const showChatbot = pathname.startsWith('/study-plans');
+  const showChatbot = pathname.startsWith('/sessions');
 
   return (
     <AuthGuard>
@@ -95,7 +95,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </main>
 
-          {/* Chat AI Popup (only for Study Plans pages) */}
+          {/* Chat AI Popup (only for Sessions pages) */}
           {showChatbot && (
             <>
               <ChatToggleButton />
