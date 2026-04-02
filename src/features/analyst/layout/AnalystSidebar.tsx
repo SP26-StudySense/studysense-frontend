@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   ClipboardList,
   GitBranch,
   LogOut,
@@ -12,6 +13,11 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 
 const sidebarItems = [
+  {
+    title: "Dashboard",
+    href: "/analyst-dashboard",
+    icon: BarChart3,
+  },
   {
     title: "Surveys",
     href: "/analyst-survey",
@@ -35,7 +41,10 @@ export function AnalystSidebar() {
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-72 flex-col border-r border-neutral-200/60 bg-white/80 backdrop-blur-xl">
       {/* Logo */}
       <div className="flex h-20 shrink-0 items-center px-6">
-        <Link href="/analyst-survey" className="group flex items-center gap-2 cursor-pointer">
+        <Link
+          href="/analyst-dashboard"
+          className="group flex items-center gap-2 cursor-pointer"
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-[#00bae2] transition-transform duration-300 group-hover:scale-105">
             <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
           </div>

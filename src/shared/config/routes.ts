@@ -96,7 +96,7 @@ export const routes = {
 
   // Analyst routes
   analyst: {
-    home: '/analyst-survey',
+    home: '/analyst-dashboard',
     survey: '/analyst-survey',
     triggerMapping: '/analyst-triggermapping',
   },
