@@ -2,12 +2,15 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, Sparkles, FastForward } from 'lucide-react';
+import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, Sparkles, FastForward, AlertTriangle, ArrowRight, BookOpen } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
-import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems } from '../api/mutations';
+import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems, useCreateTasksBatch } from '../api/mutations';
 import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
+import type { QuizLevel } from '@/features/quiz/api/types';
+import { useCurrentQuizAttemptByModule } from '@/features/quiz';
 import { TaskFormModal } from './TaskFormModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { AiTaskPreviewPanel, AiPreviewTask } from './AiTaskPreviewPanel';
@@ -41,6 +44,154 @@ interface ModuleTasksPanelProps {
     allModules?: any[];
     onClearDateFilter?: () => void;
     isLoadingTasks?: boolean;
+    currentQuizAttemptId?: number | null;
+}
+
+interface SkipModuleConfirmDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    moduleTitle: string;
+}
+
+interface TakeQuizLevelDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (level: QuizLevel) => void;
+    moduleTitle: string;
+}
+
+function SkipModuleConfirmDialog({
+    isOpen,
+    onClose,
+    onConfirm,
+    moduleTitle,
+}: SkipModuleConfirmDialogProps) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    if (!isOpen || !mounted) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+
+            <div className="relative z-10 w-full max-w-md mx-4 rounded-2xl bg-white shadow-2xl shadow-neutral-900/20 overflow-hidden">
+                <div className="p-6">
+                    <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-4 mx-auto">
+                        <AlertTriangle className="h-7 w-7 text-amber-700" />
+                    </div>
+
+                    <h3 className="text-lg font-bold text-neutral-900 text-center mb-2">Skip this module?</h3>
+                    <p className="text-sm text-neutral-600 text-center mb-6 break-words leading-6">
+                        To skip <span className="font-semibold text-neutral-800">{moduleTitle}</span>, you need to pass an
+                        Advanced-level quiz for this module.
+                    </p>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-all"
+                        >
+                            Take Quiz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+function TakeQuizLevelDialog({
+    isOpen,
+    onClose,
+    onConfirm,
+    moduleTitle,
+}: TakeQuizLevelDialogProps) {
+    const [mounted, setMounted] = useState(false);
+    const [level, setLevel] = useState<QuizLevel>('Intermediate');
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            setLevel('Intermediate');
+        }
+    }, [isOpen]);
+
+    if (!isOpen || !mounted) return null;
+
+    const levels: Array<{ value: QuizLevel; label: string; description: string }> = [
+        { value: 'Beginner', label: 'Beginner', description: 'Basic concepts and easy questions.' },
+        { value: 'Intermediate', label: 'Intermediate', description: 'Balanced challenge and practical checks.' },
+        { value: 'Advanced', label: 'Advanced', description: 'Difficult questions for deeper mastery.' },
+    ];
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+
+            <div className="relative z-10 w-full max-w-lg mx-4 rounded-2xl bg-white shadow-2xl shadow-neutral-900/20 overflow-hidden">
+                <div className="p-6">
+                    <h3 className="text-lg font-bold text-neutral-900">Take module quiz</h3>
+                    <p className="text-sm text-neutral-600 mt-1 mb-5">
+                        You completed <span className="font-semibold text-neutral-800">{moduleTitle}</span>. Choose a level to start.
+                    </p>
+
+                    <div className="space-y-2.5 mb-6">
+                        {levels.map((item) => {
+                            const active = level === item.value;
+                            return (
+                                <button
+                                    key={item.value}
+                                    onClick={() => setLevel(item.value)}
+                                    className={cn(
+                                        'w-full text-left rounded-xl border px-4 py-3 transition-all',
+                                        active
+                                            ? 'border-[#00bae2] bg-[#00bae2]/10'
+                                            : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                                    )}
+                                >
+                                    <p className="text-sm font-semibold text-neutral-900">{item.label}</p>
+                                    <p className="text-xs text-neutral-500 mt-1">{item.description}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => onConfirm(level)}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8cc] transition-all"
+                        >
+                            Start Quiz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
 }
 
 export function ModuleTasksPanel({ 
@@ -75,11 +226,20 @@ export function ModuleTasksPanel({
     const [aiPreviewMessage, setAiPreviewMessage] = useState<string | null>(null);
     const [isAiPreviewVisible, setIsAiPreviewVisible] = useState(false);
 
+    // Quiz dialog states
+    const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
+    const [isTakeQuizOpen, setIsTakeQuizOpen] = useState(false);
+    const { data: currentQuizAttemptData } = useCurrentQuizAttemptByModule(
+        module?.id ? parseInt(module.id, 10) : 0
+    );
+    const currentQuizAttemptId = currentQuizAttemptData?.quizAttempt?.id;
+
     // Mutations
     const createTaskMutation = useCreateTask();
     const updateTaskMutation = useUpdateTask();
     const deleteTaskMutation = useDeleteTask();
     const createAiTaskItemsMutation = useCreateAiTaskItems();
+    const createTasksBatchMutation = useCreateTasksBatch();
 
     const parseDurationToMinutes = (value: unknown): number | undefined => {
         if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
@@ -485,11 +645,42 @@ export function ModuleTasksPanel({
         setAiPreviewMessage(null);
     };
 
-    const handleAcceptAiPreview = () => {
-        // Accept flow will call a dedicated API in a follow-up task.
-        console.log('Accepted AI tasks preview:', aiPreviewTasks);
-        setAiPreviewMessage('Preview accepted. Save API will be connected in the next step.');
-        setIsAiPreviewVisible(false);
+    const handleAcceptAiPreview = async (tasksToSave: AiPreviewTask[]) => {
+        if (!module?.id) return;
+        if (!tasksToSave.length) {
+            setAiPreviewMessage('No tasks to save.');
+            return;
+        }
+        
+        try {
+            setAiPreviewMessage('Saving tasks...');
+            const payload = {
+                tasks: tasksToSave
+                    .filter((t) => t.title?.trim())
+                    .map(t => ({
+                    studyPlanModuleId: Number(module.id),
+                    title: t.title.trim(),
+                    description: t.description,
+                    status: TaskStatus.Pending,
+                    estimatedDurationSeconds: (t.estimatedMinutes || 30) * 60,
+                    scheduledDate: t.scheduledDate || new Date().toISOString()
+                }))
+            };
+
+            if (!payload.tasks.length) {
+                setAiPreviewMessage('Please keep at least one task with a title.');
+                return;
+            }
+            
+            await createTasksBatchMutation.mutateAsync(payload);
+            
+            setAiPreviewMessage(null);
+            setIsAiPreviewVisible(false);
+            setAiPreviewTasks([]);
+        } catch (error) {
+            console.error('Failed to save AI tasks:', error);
+            setAiPreviewMessage('Failed to save tasks. Please try again.');
+        }
     };
 
     const formatTaskDeadline = (value?: string): string => {
@@ -521,8 +712,57 @@ export function ModuleTasksPanel({
         });
     };
 
+    // Quiz handlers
+    const handleOpenSkipModule = () => {
+        setIsSkipConfirmOpen(true);
+    };
+
+    const handleConfirmSkipModule = async () => {
+        setIsSkipConfirmOpen(false);
+        // Navigate to skip quiz with attempt ID if available
+        const attemptId = currentQuizAttemptId ? `?attemptId=${currentQuizAttemptId}` : '';
+        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz${attemptId}`);
+    };
+
+    const handleOpenTakeQuiz = () => {
+        setIsTakeQuizOpen(true);
+    };
+
+    const handleConfirmTakeQuiz = async (level: QuizLevel) => {
+        setIsTakeQuizOpen(false);
+        // Navigate to take quiz with level and attempt ID if available
+        const attemptId = currentQuizAttemptId ? `&attemptId=${currentQuizAttemptId}` : '';
+        router.push(
+            `/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?level=${level}${attemptId}`
+        );
+    };
+
+    const handleContinueQuiz = async () => {
+        if (!currentQuizAttemptId) return;
+
+        if (canSkipModule) {
+            // Continue Skip Quiz - no task started yet
+            router.push(
+                `/study-plans/${studyPlanId}/modules/${module.id}/skip-quiz?attemptId=${currentQuizAttemptId}`
+            );
+            return;
+        }
+
+        if (canTakeQuiz) {
+            // Continue Take Quiz - all tasks completed
+            router.push(
+                `/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?attemptId=${currentQuizAttemptId}`
+            );
+        }
+    };
+
     const selectedCount = selectedTaskIds.size;
     const incompleteTasks = filteredTasks.filter(t => !t.isCompleted && !t.isFromLockedModule);
+    const moduleTasks = module.tasks ?? [];
+    const allModuleTasksCompleted = moduleTasks.length > 0 && moduleTasks.every(task => task.isCompleted);
+    const isModuleCompleted = module.status === 'completed';
+    const canSkipModule = !isModuleCompleted;
+    const canTakeQuiz = allModuleTasksCompleted;
     const totalEstimatedTime = filteredTasks
         .filter(t => {
             if (t.isFromLockedModule) return false;
@@ -674,29 +914,69 @@ export function ModuleTasksPanel({
                     {/* Bottom Row: Actions */}
                     {viewFilter === 'module' && !isLocked && (
                         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-50">
-                            {/* <button
-                                onClick={handleGenerateAiTasks}
-                                disabled={createAiTaskItemsMutation.isPending}
-                                className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-600 hover:to-purple-700 shadow-sm transition-all"
-                                title="Generate tasks with AI"
-                            >
-                                <Sparkles className="h-4 w-4 text-yellow-300" />
-                                <span>{createAiTaskItemsMutation.isPending ? 'Generating...' : 'Generate task AI'}</span>
-                            </button> */}
-                            <button
-                                onClick={handleAddTask}
-                                className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f0fffe] text-[#00bae2] border border-[#baf0fa] text-sm font-medium hover:bg-[#d8f9ff] transition-colors"
-                            >
-                                <Plus className="h-4 w-4" />
-                                <span>Create task</span>
-                            </button>
-                            <button
-                                onClick={() => {}}
-                                className="w-full sm:w-auto sm:ml-auto inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-600 border border-neutral-200 text-sm font-medium hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
-                            >
-                                <FastForward className="h-4 w-4" />
-                                <span>Skip module</span>
-                            </button>
+                            {/* Quiz Actions - Show based on current attempt state */}
+                            {!isModuleCompleted && currentQuizAttemptId && canTakeQuiz ? (
+                                // Continue Take Quiz (when all tasks completed)
+                                <button
+                                    onClick={handleContinueQuiz}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00bae2] text-white text-sm font-medium hover:bg-[#00a8cc] transition-colors"
+                                >
+                                    <ArrowRight className="h-4 w-4" />
+                                    <span>Continue Take Quiz</span>
+                                </button>
+                            ) : !isModuleCompleted && currentQuizAttemptId && canSkipModule ? (
+                                // Continue Skip Quiz (when no task started)
+                                <button
+                                    onClick={handleContinueQuiz}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors"
+                                >
+                                    <ArrowRight className="h-4 w-4" />
+                                    <span>Continue Skip Quiz</span>
+                                </button>
+                            ) : !isModuleCompleted && !currentQuizAttemptId && canTakeQuiz ? (
+                                // Take Quiz (after all tasks completed)
+                                <button
+                                    onClick={handleOpenTakeQuiz}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00bae2] text-white text-sm font-medium hover:bg-[#00a8cc] transition-colors"
+                                >
+                                    <BookOpen className="h-4 w-4" />
+                                    <span>Take Quiz</span>
+                                </button>
+                            ) : !isModuleCompleted && !currentQuizAttemptId && canSkipModule ? (
+                                // Skip Module (when not all tasks completed)
+                                <button
+                                    onClick={handleOpenSkipModule}
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-600 border border-neutral-200 text-sm font-medium hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                                >
+                                    <FastForward className="h-4 w-4" />
+                                    <span>Skip module</span>
+                                </button>
+                            ) : null}
+
+                            {/* Right Side: Task Management Actions */}
+                            {/* Điều kiện: Chỉ hiện khi module đã có task (user đã gen task trước đó) */}
+                            {!isModuleCompleted && module.tasks && module.tasks.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-3 ml-auto">
+                                    <button
+                                        onClick={handleAddTask}
+                                        className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f0fffe] text-[#00bae2] border border-[#baf0fa] text-sm font-medium hover:bg-[#d8f9ff] transition-colors"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        <span>Create task</span>
+                                    </button>
+                                    
+                                    {/* Không được uncomment nút này nhé */}
+                                    {/* <button
+                                        onClick={handleGenerateAiTasks}
+                                        disabled={createAiTaskItemsMutation.isPending}
+                                        className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-600 hover:to-purple-700 shadow-sm transition-all"
+                                        title="Generate tasks with AI"
+                                    >
+                                        <Sparkles className="h-4 w-4 text-yellow-300" />
+                                        <span>{createAiTaskItemsMutation.isPending ? 'Generating...' : 'Generate task AI'}</span>
+                                    </button> */}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -802,142 +1082,149 @@ export function ModuleTasksPanel({
                             )}
 
                             {/* Tasks */}
-                            <div className="space-y-0 relative border border-neutral-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-                                {filteredTasks.map((task) => {
-                                    const isSelected = selectedTaskIds.has(task.id);
-                                    const isDisabled = task.isCompleted || !!task.isFromLockedModule;
-                                    const isExpanded = expandedTaskIds.has(task.id);
-                                    return (
-                                        <div
-                                            key={task.id}
-                                            className="border-b border-neutral-100 last:border-0"
-                                        >
+                            {filteredTasks.length > 0 && (
+                                <div className="space-y-0 relative border border-neutral-200 rounded-2xl bg-white shadow-sm flex flex-col">
+                                    {filteredTasks.map((task, index) => {
+                                        const isSelected = selectedTaskIds.has(task.id);
+                                        const isDisabled = task.isCompleted || !!task.isFromLockedModule;
+                                        const isExpanded = expandedTaskIds.has(task.id);
+                                        const isFirst = index === 0;
+                                        const isLast = index === filteredTasks.length - 1;
+                                        return (
                                             <div
+                                                key={task.id}
                                                 className={cn(
-                                                    "group w-full flex items-start gap-4 text-sm py-4 px-2 transition-colors relative",
+                                                    "border-b border-neutral-100 last:border-0 transition-colors group relative",
+                                                    isFirst && "rounded-t-2xl",
+                                                    isLast && "rounded-b-2xl",
                                                     task.isCompleted
                                                         ? "opacity-50"
                                                         : isDisabled
                                                             ? "opacity-60"
                                                             : isSelected
                                                                 ? "bg-violet-50/50"
-                                                                : "hover:bg-neutral-50/50"
+                                                                : "hover:bg-neutral-50/50",
+                                                    activeTaskMenu === task.id ? "z-20" : "z-10"
                                                 )}
                                             >
-                                                {/* Checkbox Button */}
-                                                <button
-                                                    onClick={() => !isDisabled && handleTaskToggle(task.id)}
-                                                    disabled={isDisabled}
-                                                    className="mt-0.5 cursor-pointer disabled:cursor-not-allowed shrink-0"
-                                                    title={task.isFromLockedModule ? 'Task from locked module' : undefined}
-                                                >
-                                                    <div className={cn(
-                                                        "flex h-4 w-4 items-center justify-center rounded-sm border transition-all",
-                                                        isDisabled
-                                                            ? "bg-neutral-100 border-neutral-300 text-neutral-400"
-                                                            : task.isCompleted
-                                                                ? "bg-violet-500 border-violet-500 text-white"
-                                                                : isSelected
-                                                                    ? "bg-violet-500 border-violet-500 text-white"
-                                                                    : "border-neutral-300 group-hover:border-violet-400"
-                                                    )}>
-                                                        {(task.isCompleted || isSelected) && !task.isFromLockedModule && (
-                                                            <Check className="h-3 w-3" strokeWidth={3} />
-                                                        )}
-                                                    </div>
-                                                </button>
-
-                                                {/* Content */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                        <p className={cn(
-                                                            "text-sm font-medium",
-                                                            task.isCompleted ? "text-neutral-500 line-through" : "text-neutral-800"
-                                                        )}>
-                                                            {task.title}
-                                                        </p>
-                                                        {task.moduleName && (viewFilter === 'date' || viewFilter === 'all-tasks') && (
-                                                            <span className="inline-flex items-center text-xs text-neutral-400 font-medium">
-                                                                • {task.moduleName}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Duration and Action Menu */}
-                                                <div className="shrink-0 flex items-center gap-2">
+                                                <div className="w-full flex items-start gap-4 text-sm py-4 px-2 relative">
+                                                    {/* Checkbox Button */}
                                                     <button
-                                                        onClick={() => handleToggleTaskExpand(task.id)}
-                                                        className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-                                                        title={isExpanded ? 'Collapse details' : 'Expand details'}
+                                                        onClick={() => !isDisabled && handleTaskToggle(task.id)}
+                                                        disabled={isDisabled}
+                                                        className="mt-0.5 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                                                        title={task.isFromLockedModule ? 'Task from locked module' : undefined}
                                                     >
-                                                        <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />
+                                                        <div className={cn(
+                                                            "flex h-4 w-4 items-center justify-center rounded-sm border transition-all",
+                                                            isDisabled
+                                                                ? "bg-neutral-100 border-neutral-300 text-neutral-400"
+                                                                : task.isCompleted
+                                                                    ? "bg-violet-500 border-violet-500 text-white"
+                                                                    : isSelected
+                                                                        ? "bg-violet-500 border-violet-500 text-white"
+                                                                        : "border-neutral-300 group-hover:border-violet-400"
+                                                        )}>
+                                                            {(task.isCompleted || isSelected) && !task.isFromLockedModule && (
+                                                                <Check className="h-3 w-3" strokeWidth={3} />
+                                                            )}
+                                                        </div>
                                                     </button>
-                                                    <span className="text-xs font-medium text-neutral-400">
-                                                        {task.estimatedMinutes}m
-                                                    </span>
 
-                                                    {/* Action Menu (3-dot dropdown) */}
-                                                    {!task.isCompleted && !task.isFromLockedModule && viewFilter === 'module' && (
-                                                        <div className="relative opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setActiveTaskMenu(activeTaskMenu === task.id ? null : task.id);
-                                                                }}
-                                                                className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
-                                                                title="More options"
-                                                            >
-                                                                <MoreVertical className="h-4 w-4" />
-                                                            </button>
+                                                    {/* Content */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                            <p className={cn(
+                                                                "text-sm font-medium",
+                                                                task.isCompleted ? "text-neutral-500 line-through" : "text-neutral-800"
+                                                            )}>
+                                                                {task.title}
+                                                            </p>
+                                                            {task.moduleName && (viewFilter === 'date' || viewFilter === 'all-tasks') && (
+                                                                <span className="inline-flex items-center text-xs text-neutral-400 font-medium">
+                                                                    • {task.moduleName}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
 
-                                                            {/* Dropdown Menu */}
-                                                            {activeTaskMenu === task.id && (
-                                                                <div
-                                                                    className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-10"
-                                                                    onMouseLeave={() => setActiveTaskMenu(null)}
-                                                                >
+                                                    {/* Duration and Action Menu */}
+                                                    <div className="shrink-0 flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => handleToggleTaskExpand(task.id)}
+                                                            className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+                                                            title={isExpanded ? 'Collapse details' : 'Expand details'}
+                                                        >
+                                                            <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />
+                                                        </button>
+                                                        <span className="text-xs font-medium text-neutral-400 w-8 text-right">
+                                                            {task.estimatedMinutes}m
+                                                        </span>
+
+                                                        {/* Action Menu (3-dot dropdown placeholder to keep width fixed) */}
+                                                        <div className="w-6 h-6 flex items-center justify-center relative">
+                                                            {!task.isCompleted && !task.isFromLockedModule && viewFilter === 'module' && (
+                                                                <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                                                     <button
                                                                         onClick={(e) => {
-                                                                            handleEditTask(task, e);
-                                                                            setActiveTaskMenu(null);
+                                                                            e.stopPropagation();
+                                                                            setActiveTaskMenu(activeTaskMenu === task.id ? null : task.id);
                                                                         }}
-                                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                                                                        className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
+                                                                        title="More options"
                                                                     >
-                                                                        <Pencil className="h-3.5 w-3.5" />
-                                                                        Edit
+                                                                        <MoreVertical className="h-4 w-4" />
                                                                     </button>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            handleDeleteClick(task, e);
-                                                                            setActiveTaskMenu(null);
-                                                                        }}
-                                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                        Delete
-                                                                    </button>
+
+                                                                    {/* Dropdown Menu */}
+                                                                    {activeTaskMenu === task.id && (
+                                                                        <div
+                                                                            className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 z-50 origin-top-right"
+                                                                            onMouseLeave={() => setActiveTaskMenu(null)}
+                                                                        >
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    handleEditTask(task, e);
+                                                                                    setActiveTaskMenu(null);
+                                                                                }}
+                                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                                                                            >
+                                                                                <Pencil className="h-3.5 w-3.5" />
+                                                                                Edit
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    handleDeleteClick(task, e);
+                                                                                    setActiveTaskMenu(null);
+                                                                                }}
+                                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                                            >
+                                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    )}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {isExpanded && (
-                                                <div className="pl-10 pr-2 pb-4 space-y-1.5">
-                                                    <p className="text-xs text-neutral-600">
-                                                        <span className="font-semibold text-neutral-700">Deadline:</span> {formatTaskDeadline(task.scheduledDate)}
-                                                    </p>
-                                                    <p className="text-xs text-neutral-600 leading-relaxed">
-                                                        <span className="font-semibold text-neutral-700">Description:</span> {task.description?.trim() || 'No description.'}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                                {isExpanded && (
+                                                    <div className="pl-10 pr-2 pb-4 space-y-1.5 w-full relative z-0">
+                                                        <p className="text-xs text-neutral-600">
+                                                            <span className="font-semibold text-neutral-700">Deadline:</span> {formatTaskDeadline(task.scheduledDate)}
+                                                        </p>
+                                                        <p className="text-xs text-neutral-600 leading-relaxed">
+                                                            <span className="font-semibold text-neutral-700">Description:</span> {task.description?.trim() || 'No description.'}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -958,7 +1245,7 @@ export function ModuleTasksPanel({
                                 onClick={handleStartLearning}
                                 className="flex-shrink-0 inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-neutral-900 shadow-lg transition-all duration-300 bg-gradient-to-r from-[#fec5fb] to-[#00bae2] shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5"
                             >
-                                Start Learning
+                                {hasUnfinishedSession ? 'Continue Learning' : 'Start Learning'}
                                 <Play className="h-4 w-4" fill="currentColor" strokeWidth={1} />
                             </button>
                         </div>           
@@ -1011,6 +1298,21 @@ export function ModuleTasksPanel({
                 onConfirm={handleConfirmDelete}
                 taskTitle={deletingTask?.title || ''}
                 isLoading={isDeleteLoading}
+            />
+
+            {/* Quiz Dialogs */}
+            <SkipModuleConfirmDialog
+                isOpen={isSkipConfirmOpen}
+                onClose={() => setIsSkipConfirmOpen(false)}
+                onConfirm={handleConfirmSkipModule}
+                moduleTitle={module.title}
+            />
+
+            <TakeQuizLevelDialog
+                isOpen={isTakeQuizOpen}
+                onClose={() => setIsTakeQuizOpen(false)}
+                onConfirm={handleConfirmTakeQuiz}
+                moduleTitle={module.title}
             />
         </>
     );

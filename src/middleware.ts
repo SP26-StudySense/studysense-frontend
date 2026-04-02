@@ -4,13 +4,21 @@ import type { NextRequest } from 'next/server';
 import {
     isAuthRoute,
     isProtectedRoute,
+    isAdminRoute,
     isAnalystRoute,
+    isContentManagerRoute,
+    isStudyPlanRoute,
     routes,
 } from '@/shared/config/routes';
 import { env } from '@/shared/config/env';
 
 // The claim key ASP.NET Core Identity uses for roles in JWT
 const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
+function hasRole(roles: string[], targetRole: string): boolean {
+    const normalizedTargetRole = targetRole.replace(/\s+/g, '').toLowerCase();
+    return roles.some((role) => role.replace(/\s+/g, '').toLowerCase() === normalizedTargetRole);
+}
 
 /**
  * Decode roles from a JWT token without external libraries.
@@ -35,16 +43,6 @@ const API_PROXY_PREFIX = '/api/proxy';
 // Backend API URL - HTTPS port 7243
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7243/api';
 
-function getBackendRootUrl(apiUrl: string): string {
-    return apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
-}
-
-const BACKEND_ROOT_URL = getBackendRootUrl(BACKEND_API_URL);
-
-function isRootApiPath(apiPath: string): boolean {
-    return apiPath.startsWith('/ai/');
-}
-
 /**
  * Handle API proxy requests
  * Forward requests from /api/proxy/* to backend API
@@ -54,17 +52,28 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
     // Remove the /api/proxy prefix to get the actual API path
     const apiPath = pathname.replace(API_PROXY_PREFIX, '');
-    const useRootBase = isRootApiPath(apiPath);
-    const targetBase = useRootBase ? BACKEND_ROOT_URL : BACKEND_API_URL;
-    const targetUrl = `${targetBase}${apiPath}${search}`;
+    const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
 
     console.log('[Proxy] Request:', {
         method: request.method,
         pathname,
         apiPath,
-        targetBase,
         targetUrl,
     });
+
+    // Handle OPTIONS requests natively
+    if (request.method === 'OPTIONS') {
+        const origin = request.headers.get('origin') || '*';
+        return new NextResponse(null, {
+            status: 204,
+            headers: {
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Max-Age': '86400',
+            },
+        });
+    }
 
     // Get access token from cookies
     const accessToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
@@ -111,33 +120,6 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
             body,
         });
 
-        if (isRootApiPath(apiPath)) {
-            console.log('[Proxy][RootApi] Forwarded request:', {
-                method: request.method,
-                apiPath,
-                targetUrl,
-                status: response.status,
-                statusText: response.statusText,
-            });
-        }
-
-        if (!response.ok && isRootApiPath(apiPath)) {
-            let backendErrorBody = '';
-            try {
-                backendErrorBody = await response.clone().text();
-            } catch {
-                backendErrorBody = '[Proxy][RootApi] Cannot read error body';
-            }
-
-            console.error('[Proxy][RootApi] Backend non-2xx response:', {
-                method: request.method,
-                targetUrl,
-                status: response.status,
-                statusText: response.statusText,
-                body: backendErrorBody,
-            });
-        }
-
         // Handle 401 - Token expired, try to refresh
         if (response.status === 401 && refreshToken && !pathname.includes('/auth/refresh')) {
             const refreshed = await tryRefreshToken(refreshToken);
@@ -177,10 +159,15 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
         }
 
         // Return proxied response
+        const proxyResponseHeaders = new Headers(response.headers);
+        const requestOrigin = request.headers.get('origin') || '*';
+        proxyResponseHeaders.set('Access-Control-Allow-Origin', requestOrigin);
+        proxyResponseHeaders.set('Access-Control-Allow-Credentials', 'true');
+
         return new NextResponse(response.body, {
             status: response.status,
             statusText: response.statusText,
-            headers: response.headers,
+            headers: proxyResponseHeaders,
         });
     } catch (error) {
         console.error('[Proxy Error]', error);
@@ -247,6 +234,10 @@ export function middleware(request: NextRequest) {
 
     // Redirect authenticated users away from auth pages
     if (isAuthRoute(pathname) && isAuthenticated) {
+        const roles = getRolesFromToken(accessToken!);
+        if (hasRole(roles, 'ContentManager')) {
+            return NextResponse.redirect(new URL(routes.contentManager.dashboard, request.url));
+        }
         return NextResponse.redirect(new URL(routes.dashboard.home, request.url));
     }
 
@@ -257,13 +248,43 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
     }
 
+    if (isAdminRoute(pathname)) {
+        if (!isAuthenticated) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+        const roles = getRolesFromToken(accessToken!);
+        if (!hasRole(roles, 'Admin')) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+    }
+
     // Protect analyst routes: must be authenticated and have Analyst role
     if (isAnalystRoute(pathname)) {
         if (!isAuthenticated) {
             return NextResponse.redirect(new URL(routes.public.home, request.url));
         }
         const roles = getRolesFromToken(accessToken!);
-        if (!roles.includes('Analyst')) {
+        if (!hasRole(roles, 'Analyst')) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+    }
+
+    if (isContentManagerRoute(pathname)) {
+        if (!isAuthenticated) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+        const roles = getRolesFromToken(accessToken!);
+        if (!hasRole(roles, 'ContentManager')) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+    }
+
+    if (isStudyPlanRoute(pathname)) {
+        if (!isAuthenticated) {
+            return NextResponse.redirect(new URL(routes.public.home, request.url));
+        }
+        const roles = getRolesFromToken(accessToken!);
+        if (!hasRole(roles, 'User')) {
             return NextResponse.redirect(new URL(routes.public.home, request.url));
         }
     }

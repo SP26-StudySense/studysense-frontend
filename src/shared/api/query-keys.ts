@@ -113,6 +113,9 @@ export const queryKeys = {
     users: {
       ...createQueryKeys('admin-users'),
     },
+    transactions: {
+      ...createQueryKeys('admin-transactions'),
+    },
     roadmaps: {
       ...createQueryKeys('admin-roadmaps'),
     },

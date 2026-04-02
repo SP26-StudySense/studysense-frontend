@@ -11,6 +11,7 @@ import { CalendarView } from './components/CalendarView';
 import { useStudyPlan, useTasksByPlan } from './api/queries';
 import { ModuleStatus, TaskStatus, StudyModuleDto, TaskItemDto, StudyPlanStatus } from './api/types';
 import { useSessionStore } from '@/store/session.store';
+import { useCurrentQuizAttemptByModule } from '@/features/quiz';
 
 interface StudyPlanDetailPageProps {
     planId?: string;
@@ -173,11 +174,19 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
     }));
 
     const selectedModule = modulesWithTasks.find(m => m.id === selectedModuleId) || null;
+    const selectedModuleNumericId = selectedModule ? Number(selectedModule.id) : undefined;
+    const { data: currentQuizAttemptData } = useCurrentQuizAttemptByModule(selectedModuleNumericId, {
+        enabled: !!selectedModuleNumericId,
+    });
+    const currentQuizAttemptId = currentQuizAttemptData?.quizAttempt?.id ?? null;
 
     // Derived stats
     const totalTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.length, 0);
     const completedTasks = modulesWithTasks.reduce((acc, m) => acc + m.tasks.filter(t => t.isCompleted).length, 0);
-    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    const totalModules = modulesWithTasks.length;
+    const completedModules = modulesWithTasks.filter(m => m.status === 'completed').length;
+    // Progress based on module completion progress
+    const progress = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
 
     // Calculate hours from tasks
     const totalMinutes = modulesWithTasks.reduce((acc, m) =>

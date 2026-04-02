@@ -1,61 +1,19 @@
-import { del, get, put } from "@/shared/api/client";
+import { del, get, post, put } from "@/shared/api/client";
 import { endpoints } from "@/shared/api/endpoints";
 
-import type { User } from "../types";
-import type { PaginatedResponse } from "@/shared/types/api";
-
-type GetAllUsersApiResponse = {
-  users: PaginatedResponse<UserManagementUserDto>;
-};
-
-type GetAllUserRolesApiResponse = {
-  roles: string[];
-};
-
-type GetAllLearningSubjectsApiResponse = {
-  subjects: PaginatedResponse<LearningSubjectDto>;
-};
-
-export type GetAdminUsersParams = {
-  pageIndex?: number;
-  pageSize?: number;
-  name?: string;
-  role?: string;
-};
-
-export type AdminUsersList = {
-  pageIndex: number;
-  pageSize: number;
-  totalPages: number;
-  totalCount: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
-  items: User[];
-};
-
-export type LearningSubjectOption = {
-  id: number;
-  name: string;
-};
-
-type UserManagementUserDto = {
-  id: string;
-  userName: string | null;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  phoneNumber: string | null;
-  isActive: boolean;
-  roleNames: string[];
-  assignedSubjectId?: number | null;
-  assignedSubjectName?: string | null;
-};
-
-type LearningSubjectDto = {
-  id: number;
-  name: string;
-  isActive: boolean;
-};
+import type {
+  AdminUsersList,
+  CreateAdminUserRequest,
+  CreateAdminUserResponse,
+  GetAdminUsersParams,
+  GetAllLearningSubjectsApiResponse,
+  GetAllUserRolesApiResponse,
+  GetAllUsersApiResponse,
+  LearningSubjectDto,
+  LearningSubjectOption,
+  User,
+  UserManagementUserDto,
+} from "./types";
 
 function toUiUser(user: UserManagementUserDto): User {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
@@ -144,4 +102,13 @@ export async function assignSubjectToContentManager(
 
 export async function unassignSubjectFromContentManager(userId: string): Promise<void> {
   await del<void>(endpoints.admin.users.unassignSubject(userId));
+}
+
+export async function createAdminUser(
+  payload: CreateAdminUserRequest
+): Promise<CreateAdminUserResponse> {
+  return post<CreateAdminUserResponse, CreateAdminUserRequest>(
+    endpoints.admin.users.base,
+    payload
+  );
 }

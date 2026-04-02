@@ -22,9 +22,17 @@ export const endpoints = {
     base: '/users',
     byId: (id: string) => `/users/${id}`,
     profile: '/users/profile',
+    membership: '/users/membership',
     preferences: '/users/preferences',
     progress: '/users/progress',
     avatar: '/users/avatar',
+  },
+
+  // Payments
+  payments: {
+    userPayments: '/payments/user-payments',
+    createPayment: '/payments/create-payment',
+    paymentStatus: (id: string) => `/payments/${id}/status`,
   },
 
   // Study Plans
@@ -72,6 +80,20 @@ export const endpoints = {
     recent: '/study-sessions/recent',
     statistics: '/study-sessions/statistics',
     events: (id: string) => `/study-sessions/${id}/events`,
+  },
+
+  // Quiz Attempts
+  quizAttempts: {
+    base: '/quiz-attempts',
+    create: '/quiz-attempts',
+    submit: (id: string) => `/quiz-attempts/${id}/submit`,
+    currentByModule: (moduleId: string) => `/quiz-attempts/currentByModule/${moduleId}`,
+    questions: (attemptId: string) => `/quiz-attempts/${attemptId}/questions`,
+  },
+
+  // Quiz Answers
+  quizAnswers: {
+    saveByAttempt: (attemptId: string) => `/quiz-answers/attempt/${attemptId}`,
   },
 
   // Survey & Assessment
@@ -127,6 +149,9 @@ export const endpoints = {
       deactivate: (id: string) => `/admin/users/${id}/deactivate`,
       assignSubject: (id: string) => `/admin/users/${id}/subject`,
       unassignSubject: (id: string) => `/admin/users/${id}/subject`,
+    },
+    transactions: {
+      base: '/admin/transactions',
     },
     roadmaps: {
       base: '/admin/roadmaps',

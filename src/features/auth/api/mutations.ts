@@ -2,6 +2,7 @@
  * Auth API mutations using React Query
  * Updated to match AUTH_API_README.md specifications
  */
+'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
@@ -43,6 +44,11 @@ import {
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
 const USER_STORAGE_KEY = 'sss_user';
+
+function hasNormalizedRole(roles: string[] | undefined, targetRole: string): boolean {
+  const normalizedTargetRole = targetRole.replace(/\s+/g, '').toLowerCase();
+  return !!roles?.some((role) => role.replace(/\s+/g, '').toLowerCase() === normalizedTargetRole);
+}
 
 /**
  * Set access token in cookie
@@ -154,6 +160,13 @@ export function useLogin() {
         // OneSignal may not be initialized or push permission not granted.
       });
 
+      // Redirect Content Manager users directly to content dashboard
+      const isContentManager = hasNormalizedRole(response.user.roles, 'ContentManager');
+      if (isContentManager) {
+        router.push(routes.contentManager.dashboard);
+        return;
+      }
+
       // Redirect Analyst users directly to analyst dashboard
       const isAnalyst = response.user.roles?.includes(UserRole.ANALYST);
       if (isAnalyst) {
@@ -249,6 +262,9 @@ export function useRefreshToken() {
     onSuccess: (response) => {
       // Store new access token
       setAccessToken(response.accessToken, response.accessTokenExpiresUtc);
+
+      // Persist latest user payload (including subscription fields)
+      saveUserToStorage(response.user);
 
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
@@ -419,6 +435,16 @@ export function useGoogleLogin() {
         await syncOneSignalSubscriptionToBackend().catch(() => {
           // OneSignal may not be initialized or push permission not granted.
         });
+
+        // Redirect Content Manager users directly to content dashboard
+        const isContentManager = hasNormalizedRole(normalizedUser.roles, 'ContentManager');
+        if (isContentManager) {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          router.push(routes.contentManager.dashboard);
+          return;
+        }
 
         // Redirect Analyst users directly to analyst dashboard
         const isAnalyst = normalizedUser.roles?.includes(UserRole.ANALYST);

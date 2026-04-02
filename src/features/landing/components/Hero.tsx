@@ -165,7 +165,7 @@ export const Hero = () => {
                     <Button
                         variant="brand"
                         size="xl"
-                        onClick={() => navigateWithTransition('/register')}
+                        onClick={() => navigateWithTransition('/roadmaps')}
                         className="group relative overflow-hidden"
                     >
                         <span className="relative z-10 flex items-center gap-2">

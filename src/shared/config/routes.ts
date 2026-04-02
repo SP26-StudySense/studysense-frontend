@@ -10,6 +10,14 @@ export const routes = {
     about: '/about',
     pricing: '/pricing',
     contact: '/contact',
+    upgradePlan: '/upgrade-plan',
+    membership: '/membership',
+  },
+
+  // Payment routes (can be grouped in public or separated)
+  payment: {
+    success: '/payment/success',
+    failed: '/payment/fail',
   },
 
   // Auth routes
@@ -121,6 +129,9 @@ export const publicRoutes = [
   routes.public.about,
   routes.public.pricing,
   routes.public.contact,
+  routes.public.upgradePlan,
+  routes.payment.success,
+  routes.payment.failed,
 ];
 
 export const authRoutes = [
@@ -131,13 +142,15 @@ export const authRoutes = [
   routes.auth.verifyEmail,
 ];
 
-export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings'];
+export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings', '/membership'];
 
-export const adminRoutes = ['/admin'];
+export const adminRoutes = ['/admin-dashboard', '/admin-users', '/admin-categories', '/admin-transactions'];
 
 export const analystRoutes = ['/analyst-survey', '/analyst-triggermapping'];
 
 export const contentManagerRoutes = ['/content-dashboard', '/content-roadmaps', '/content-profile'];
+
+export const studyPlanRoutes = ['/study-plans'];
 
 // Helper to check route type
 export function isPublicRoute(pathname: string): boolean {
@@ -162,4 +175,8 @@ export function isAnalystRoute(pathname: string): boolean {
 
 export function isContentManagerRoute(pathname: string): boolean {
   return contentManagerRoutes.some((route) => pathname.startsWith(route));
+}
+
+export function isStudyPlanRoute(pathname: string): boolean {
+  return studyPlanRoutes.some((route) => pathname.startsWith(route));
 }

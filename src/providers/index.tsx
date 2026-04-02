@@ -5,7 +5,7 @@ import { ThemeProvider } from './theme-provider';
 import { ToastProvider } from './toast-provider';
 import { CSPostHogProvider } from './posthog-provider';
 import { PostHogPageView } from './PostHogPageView';
-import { OneSignalBootstrap } from '@/features/notification/OneSignalBootstrap';
+import { OneSignalBootstrap } from '@/features/notification';
 
 interface ProvidersProps {
   children: React.ReactNode;

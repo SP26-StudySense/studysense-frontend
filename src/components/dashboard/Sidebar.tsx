@@ -20,6 +20,7 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useStudyPlans } from '@/features/study-plan/api';
 import { useSessionStore } from '@/store/session.store';
+import { useNavigationGuard } from '@/shared/hooks/useNavigationGuard';
 
 const baseSidebarItems = [
     {
@@ -53,6 +54,7 @@ export function Sidebar() {
     const pathname = usePathname();
     const { logout, isLoggingOut } = useAuth();
     const { data: studyPlans = [] } = useStudyPlans();
+    const { navigateWithGuard } = useNavigationGuard();
 
     const activeStudyPlanIdStore = useSessionStore((state) => state.activeStudyPlanId);
     const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
@@ -152,11 +154,11 @@ export function Sidebar() {
                         Menu
                     </div>
                     {sidebarItems.map((item) => (
-                        <Link
+                        <button
                             key={item.href}
-                            href={item.href}
+                            onClick={() => navigateWithGuard(item.href)}
                             className={cn(
-                                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 w-full text-left cursor-pointer border-0 bg-transparent",
                                 isActive(item.href)
                                     ? "bg-neutral-900 text-white shadow-lg shadow-neutral-900/10"
                                     : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
@@ -167,7 +169,7 @@ export function Sidebar() {
                                 isActive(item.href) ? "text-white" : "text-neutral-500 group-hover:text-neutral-900"
                             )} strokeWidth={2} />
                             {item.title}
-                        </Link>
+                        </button>
                     ))}
                 </nav>
             </div>
