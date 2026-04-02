@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatsCard } from './components/StatsCard';
 import { RoadmapTimeline, RoadmapModule } from './components/RoadmapTimeline';
 import { ModuleTasksPanel, ModuleData, ModuleTask } from './components/ModuleTasksPanel';
@@ -222,7 +223,9 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 className="h-12 w-12 animate-spin text-[#00bae2] mx-auto mb-4" />
+                    <div className="mx-auto mb-4 flex justify-center">
+                        <LoadingSpinner size="lg" />
+                    </div>
                     <p className="text-neutral-600">Loading your study plan...</p>
                 </div>
             </div>

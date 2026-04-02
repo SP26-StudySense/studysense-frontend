@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useUserMembership } from '@/features/membership/api/queries';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Settings, LogOut, Crown, Zap } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ConfirmationModal } from '@/shared/ui';
 
 function hasPaidSubscription(subscriptionType: unknown): boolean {
     if (typeof subscriptionType === 'number') {
@@ -18,6 +20,7 @@ function hasPaidSubscription(subscriptionType: unknown): boolean {
 
 export function UserProfile() {
     const { user, isLoading, logout, isLoggingOut } = useAuth();
+    const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
     const { data: membership } = useUserMembership(!!user);
 
     if (isLoading) {
@@ -115,7 +118,7 @@ export function UserProfile() {
 
                     {/* Logout Button */}
                     <button
-                        onClick={() => logout()}
+                        onClick={() => setIsLogoutConfirmOpen(true)}
                         disabled={isLoggingOut}
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -130,6 +133,19 @@ export function UserProfile() {
                     </button>
                 </div>
             </div>
+
+            <ConfirmationModal
+                isOpen={isLogoutConfirmOpen}
+                onClose={() => setIsLogoutConfirmOpen(false)}
+                onConfirm={() => {
+                    void logout();
+                }}
+                title="Log out"
+                description="Are you sure you want to log out of your account?"
+                confirmText="Log out"
+                cancelText="Stay logged in"
+                variant="danger"
+            />
         </div>
     );
 }

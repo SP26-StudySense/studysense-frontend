@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   LayoutDashboard,
   Map,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { ConfirmationModal } from "@/shared/ui";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
@@ -36,6 +37,7 @@ const sidebarItems = [
 export function ContentManagerSidebar() {
   const pathname = usePathname();
   const { user, logout, isLoggingOut } = useAuth();
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const displayName = useMemo(() => {
     if (!user) return "Content Manager";
@@ -131,7 +133,7 @@ export function ContentManagerSidebar() {
           variant="ghost"
           disabled={isLoggingOut}
           className="w-full justify-start gap-2 text-neutral-600 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => logout()}
+          onClick={() => setIsLogoutConfirmOpen(true)}
         >
           {isLoggingOut ? (
             <LoadingSpinner size="sm" />
@@ -142,6 +144,19 @@ export function ContentManagerSidebar() {
             </>
           )}
         </Button>
+
+        <ConfirmationModal
+          isOpen={isLogoutConfirmOpen}
+          onClose={() => setIsLogoutConfirmOpen(false)}
+          onConfirm={() => {
+            void logout();
+          }}
+          title="Log out"
+          description="Are you sure you want to log out of your account?"
+          confirmText="Log out"
+          cancelText="Stay logged in"
+          variant="danger"
+        />
       </div>
     </aside>
   );

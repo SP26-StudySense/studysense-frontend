@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -21,6 +21,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useStudyPlans } from '@/features/study-plan/api';
 import { useSessionStore } from '@/store/session.store';
 import { useNavigationGuard } from '@/shared/hooks/useNavigationGuard';
+import { ConfirmationModal } from '@/shared/ui';
 
 const baseSidebarItems = [
     {
@@ -53,6 +54,7 @@ const baseSidebarItems = [
 export function Sidebar() {
     const pathname = usePathname();
     const { logout, isLoggingOut } = useAuth();
+    const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
     const { data: studyPlans = [] } = useStudyPlans();
     const { navigateWithGuard } = useNavigationGuard();
 
@@ -180,7 +182,7 @@ export function Sidebar() {
                     variant="ghost"
                     disabled={isLoggingOut}
                     className="flex w-full items-center justify-start gap-3 rounded-xl py-6 text-neutral-600 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => logout()}
+                    onClick={() => setIsLogoutConfirmOpen(true)}
                 >
                     {isLoggingOut ? (
                         <LoadingSpinner size="sm" />
@@ -192,6 +194,19 @@ export function Sidebar() {
                     )}
                 </Button>
             </div>
+
+            <ConfirmationModal
+                isOpen={isLogoutConfirmOpen}
+                onClose={() => setIsLogoutConfirmOpen(false)}
+                onConfirm={() => {
+                    void logout();
+                }}
+                title="Log out"
+                description="Are you sure you want to log out of your account?"
+                confirmText="Log out"
+                cancelText="Stay logged in"
+                variant="danger"
+            />
         </aside>
     );
 }
