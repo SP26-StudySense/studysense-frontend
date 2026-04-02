@@ -26,7 +26,6 @@ export default function ContentDashboardPage() {
   const {
     data: statsResponse,
     isLoading: isLoadingStats,
-    isFetching: isFetchingStats,
     error,
   } = useContentManagerStats({ subjectId: selectedSubjectId });
 
