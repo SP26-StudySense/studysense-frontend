@@ -54,6 +54,7 @@ apiClient.interceptors.response.use(
     const isAuthEndpoint =
       requestUrl.includes('/auth/login') ||
       requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/refresh') ||
       requestUrl.includes('/auth/forgot-password') ||
       requestUrl.includes('/auth/reset-password') ||
       requestUrl.includes('/auth/confirm-email');
@@ -93,6 +94,7 @@ export function setTokens(accessToken: string, refreshToken: string): void {
 export function clearTokens(): void {
   Cookies.remove(ACCESS_TOKEN_KEY);
   Cookies.remove(REFRESH_TOKEN_KEY);
+  Cookies.remove('refreshToken');
 }
 
 export function getAccessToken(): string | undefined {
