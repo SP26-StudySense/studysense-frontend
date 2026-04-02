@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Edit2, Trash2, X, ExternalLink, Clock, Star, Edit, Trash } from "lucide-react";
 import { NodeContentItemDTO, NodeDifficulty } from "../types";
 
@@ -64,7 +65,9 @@ function ContentFormModal({
 
   if (!isOpen) return null;
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-sm">
       <div className="w-full max-w-full sm:max-w-2xl rounded-3xl bg-white border border-neutral-200 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white p-4 sm:p-6 border-b border-neutral-100 rounded-t-3xl">
@@ -179,7 +182,8 @@ function ContentFormModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -212,7 +216,9 @@ function NodeEditModal({
 
   if (!isOpen) return null;
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-sm">
       <div className="w-full max-w-full sm:max-w-lg rounded-3xl bg-white border border-neutral-200 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white p-4 sm:p-6 border-b border-neutral-100 rounded-t-3xl">
@@ -272,7 +278,8 @@ function NodeEditModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

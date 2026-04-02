@@ -9,6 +9,7 @@ interface CMSRoadmapGraphProps {
   nodes: RoadmapNode[];
   edges: RoadmapEdge[];
   selectedNodeId: number | string | null;
+  reformatSignal?: number;
   onNodeSelect: (nodeId: number | string | null) => void;
   className?: string;
   style?: CSSProperties;
@@ -133,6 +134,7 @@ export function CMSRoadmapGraph({
   nodes,
   edges,
   selectedNodeId,
+  reformatSignal,
   onNodeSelect,
   className,
   style,
@@ -153,22 +155,43 @@ export function CMSRoadmapGraph({
     () => computeLayout(nodes, edges)
   );
 
-  // Track newly added nodes and ensure they get a default position
-  const knownKeysRef = useRef(new Set(nodes.map(getNodeKey)));
-  nodes.forEach((n) => {
-    const key = getNodeKey(n);
-    if (!knownKeysRef.current.has(key)) {
-      knownKeysRef.current.add(key);
-      setNodePositions((prev) => {
-        if (prev.has(key)) return prev;
-        const updated = new Map(prev);
-        // Place below existing nodes
-        const maxY = Math.max(0, ...[...prev.values()].map((p) => p.y));
-        updated.set(key, { x: 80, y: maxY + NODE_HEIGHT + 40 });
-        return updated;
-      });
-    }
-  });
+  const selectedKey = selectedNodeId != null ? String(selectedNodeId) : null;
+
+  // Keep node positions in sync with current node set and place new nodes near selection.
+  useEffect(() => {
+    setNodePositions((prev) => {
+      const currentKeys = new Set(nodes.map(getNodeKey));
+      const updated = new Map(prev);
+      let changed = false;
+
+      // Remove positions of deleted nodes.
+      for (const key of [...updated.keys()]) {
+        if (!currentKeys.has(key)) {
+          updated.delete(key);
+          changed = true;
+        }
+      }
+
+      for (const node of nodes) {
+        const key = getNodeKey(node);
+        if (updated.has(key)) continue;
+
+        const anchor = selectedKey ? updated.get(selectedKey) : undefined;
+        if (anchor) {
+          updated.set(key, {
+            x: anchor.x + NODE_WIDTH + 60,
+            y: anchor.y,
+          });
+        } else {
+          const layout = computeLayout(nodes, edges);
+          updated.set(key, layout.get(key) ?? { x: 80, y: 80 });
+        }
+        changed = true;
+      }
+
+      return changed ? updated : prev;
+    });
+  }, [nodes, edges, selectedKey]);
 
   // Interaction state
   const [isPanning, setIsPanning] = useState(false);
@@ -287,8 +310,12 @@ export function CMSRoadmapGraph({
     setPanPosition({ x: 40, y: 20 });
     // Also re-compute layout
     setNodePositions(computeLayout(nodes, edges));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nodes, edges]);
+
+  useEffect(() => {
+    if (reformatSignal == null) return;
+    handleReset();
+  }, [reformatSignal, handleReset]);
 
   // Canvas bounding size
   const canvasSize = useMemo(() => {
@@ -300,8 +327,6 @@ export function CMSRoadmapGraph({
     });
     return { width: maxX, height: maxY };
   }, [nodePositions]);
-
-  const selectedKey = selectedNodeId != null ? String(selectedNodeId) : null;
 
   return (
     <div

@@ -3,12 +3,14 @@
  * React Query hooks for GET operations
  */
 
-import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import * as api from './api';
 import { cmQueryKeys } from './api';
 import type {
   GetRoadmapsParams,
+  GetManagerRoadmapsParams,
   GetRoadmapsResponse,
+  GetManagerSubjectsResponse,
   RoadmapDetail,
   NodeContent,
   GenerateRoadmapResponse,
@@ -84,12 +86,24 @@ export function useRoadmapDetail(
  * ```
  */
 export function useManagerRoadmaps(
-  params: Omit<GetRoadmapsParams, 'subjectId'>,
+  params: GetManagerRoadmapsParams,
   options?: Omit<UseQueryOptions<GetRoadmapsResponse>, 'queryKey' | 'queryFn'>
 ) {
   return useQuery({
     queryKey: cmQueryKeys.managerRoadmaps(params),
     queryFn: () => api.getManagerRoadmaps(params),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+export function useSubjectsByContentManager(
+  options?: Omit<UseQueryOptions<GetManagerSubjectsResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: cmQueryKeys.managerSubjects(),
+    queryFn: () => api.getSubjectsByContentManager(),
     staleTime: 5 * 60 * 1000,
     ...options,
   });

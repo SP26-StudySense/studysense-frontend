@@ -37,7 +37,10 @@ export enum RoadmapStatus {
 
 export interface LearningSubject {
   id: number;
+  categoryId?: number;
   name: string;
+  description?: string;
+  isActive?: boolean;
 }
 
 /**
@@ -49,7 +52,7 @@ export interface RoadmapMetadata {
   title: string;
   description: string;
   version: number;
-  status: RoadmapStatus;
+  status: RoadmapStatus | number;
   createdAt: Date;
   createdById: string;
   subject?: LearningSubject;
@@ -145,6 +148,54 @@ export interface GetRoadmapsParams {
   version?: number;
   q?: string; // Search query
   isLatest?: boolean;
+}
+
+/**
+ * Get manager roadmaps params
+ * GET /api/roadmaps/manager
+ */
+export interface GetManagerRoadmapsParams {
+  pageIndex: number;
+  pageSize: number;
+  subjectId?: number;
+  status?: RoadmapStatus;
+  version?: number;
+  isLatest?: boolean;
+  keyword?: string;
+}
+
+/**
+ * Get learning subjects assigned to current content manager
+ * GET /api/learning-subjects/manager
+ */
+export interface GetManagerSubjectsResponse {
+  subjects: LearningSubject[];
+}
+
+/**
+ * Create roadmap request
+ * POST /api/roadmaps
+ */
+export interface CreateRoadmapRequest {
+  subjectId: number;
+  title: string;
+  description?: string;
+  status?: RoadmapStatus;
+}
+
+/**
+ * Create roadmap response data
+ * Returned inside `data` from backend ApiResponse wrapper
+ */
+export interface CreateRoadmapResponse {
+  id: number;
+  subjectId: number;
+  title: string;
+  description: string;
+  createdById: string;
+  createdAt: string;
+  version: number;
+  isLatest: boolean;
 }
 
 /**
@@ -717,6 +768,8 @@ export interface GenerateRoadmapResponse {
  */
 export type ApiRequest =
   | GetRoadmapsParams
+  | GetManagerRoadmapsParams
+  | CreateRoadmapRequest
   | GetNodeContentsRequest
   | CreateRoadmapGraphRequest
   | SyncRoadmapGraphRequest
@@ -735,6 +788,8 @@ export type ApiRequest =
 export type ApiResponse =
   | GenericSuccessResponse
   | GetRoadmapsResponse
+  | GetManagerSubjectsResponse
+  | CreateRoadmapResponse
   | GetRoadmapDetailResponse
   | GetNodeContentsResponse
   | CreateRoadmapGraphResponse

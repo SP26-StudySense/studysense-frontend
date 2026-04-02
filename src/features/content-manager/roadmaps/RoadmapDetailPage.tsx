@@ -6,17 +6,18 @@ import {
   Save,
   X,
   ArrowLeft,
-  Loader2,
   AlertCircle,
   Edit2,
   Check,
   Plus,
+  RotateCcw,
   Trash2,
   ExternalLink,
   Link2,
   CircleDot,
 } from "lucide-react";
 import { CMSRoadmapGraph } from "../components/CMSRoadmapGraph";
+import { ContentManagerLoading } from "../components";
 import { useRoadmapDetail, useNodeContents, useQuizzesByNode } from "../api/queries";
 import { useCreateQuiz, useDeleteQuiz, useSyncRoadmapGraph } from "../api/mutations";
 import { toast } from "@/shared/lib";
@@ -69,7 +70,10 @@ const DIFFICULTY_STYLES: Record<string, string> = {
 interface NodeDetailSectionProps {
   node: RoadmapNode;
   roadmapId: number;
-  onUpdate: (updates: Partial<RoadmapNode>) => void;
+  onUpdate: (
+    updates: Partial<RoadmapNode>,
+    options?: { markUnsaved?: boolean }
+  ) => void;
   onDeleteNode: () => void;
   onContentsLoaded?: (nodeId: number) => void;
 }
@@ -108,7 +112,10 @@ function NodeDetailSection({
       onContentsLoaded?.(nodeId);
       // Preserve any unsaved (id=null) local contents, merge with API data
       const localOnly = (node.contents ?? []).filter((c) => c.id === null);
-      onUpdate({ contents: [...apiContents, ...localOnly] });
+      onUpdate(
+        { contents: [...apiContents, ...localOnly] },
+        { markUnsaved: false }
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiContents, nodeId]);
@@ -148,7 +155,7 @@ function NodeDetailSection({
       title: `${node.title} Quiz`,
       description: "",
       totalScore: 10,
-      level: "Beginner",
+      level: node.difficulty || "Beginner",
       passingScore: 5,
     });
   }
@@ -160,11 +167,12 @@ function NodeDetailSection({
       });
       return;
     }
+
     setQuizForm({
       title: `${node.title} Quiz`,
       description: "",
       totalScore: 10,
-      level: "Beginner",
+      level: node.difficulty || "Beginner",
       passingScore: 5,
     });
     setIsCreateQuizOpen(true);
@@ -172,8 +180,9 @@ function NodeDetailSection({
 
   const handleSubmitCreateQuiz = async () => {
     if (!nodeId) return;
+
     try {
-      await createQuizMutation.mutateAsync({
+      const createdQuiz = await createQuizMutation.mutateAsync({
         createQuizNode: {
           roadmapNodeId: nodeId,
           title: quizForm.title.trim() || null,
@@ -189,13 +198,26 @@ function NodeDetailSection({
               : 1,
         },
       });
-      toast.success("Quiz created successfully");
-      setIsCreateQuizOpen(false);
+
+      const createdQuizId = createdQuiz?.id;
+      if (createdQuizId) {
+        toast.success("Quiz created successfully");
+        setIsCreateQuizOpen(false);
+        return;
+      }
+
+      toast.success("Quiz created successfully", {
+        description: "Please open the quiz in Quizzes list to edit full details.",
+      });
     } catch {
       toast.error("Failed to create quiz", {
         description: "Please check input and try again.",
       });
     }
+  };
+
+  const handleCancelCreateQuiz = () => {
+    setIsCreateQuizOpen(false);
   };
 
   const handleDeleteQuiz = async (quizId: number) => {
@@ -321,17 +343,6 @@ function NodeDetailSection({
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleOpenCreateQuiz}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
-          >
-            {createQuizMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Plus className="h-3.5 w-3.5" />
-            )}
-            Create Quiz
-          </button>
-          <button
             onClick={onDeleteNode}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors border border-red-200"
           >
@@ -340,116 +351,6 @@ function NodeDetailSection({
           </button>
         </div>
       </div>
-
-      {isCreateQuizOpen && (
-        <div className="rounded-xl border border-[#00bae2]/20 bg-[#00bae2]/5 p-4 space-y-3">
-          <div>
-            <h4 className="text-sm font-semibold text-neutral-900">Create Quiz</h4>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Create a quiz for this roadmap node.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Title
-              </label>
-              <input
-                type="text"
-                value={quizForm.title}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({ ...prev, title: e.target.value }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-                placeholder="Quiz title"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Description
-              </label>
-              <textarea
-                value={quizForm.description}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({ ...prev, description: e.target.value }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10 min-h-[80px]"
-                placeholder="Quiz description"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Total Score
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="0.5"
-                value={quizForm.totalScore}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({
-                    ...prev,
-                    totalScore: Number(e.target.value),
-                  }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Level
-              </label>
-              <select
-                value={quizForm.level}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({
-                    ...prev,
-                    level: e.target.value,
-                  }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Passing Score
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="0.5"
-                value={quizForm.passingScore}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({
-                    ...prev,
-                    passingScore: Number(e.target.value),
-                  }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsCreateQuizOpen(false)}
-              className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmitCreateQuiz}
-              disabled={createQuizMutation.isPending}
-              className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
-            >
-              {createQuizMutation.isPending ? "Creating..." : "Create Quiz"}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Basic Information */}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
@@ -612,9 +513,12 @@ function NodeDetailSection({
         </div>
 
         {isLoadingContents && nodeId && (
-          <div className="flex items-center gap-2 py-4 text-sm text-neutral-500">
-            <Loader2 className="h-4 w-4 animate-spin text-[#00bae2]" />
-            Loading contents from server...
+          <div className="py-4">
+            <ContentManagerLoading
+              variant="inline"
+              size="sm"
+              title="Loading contents from server..."
+            />
           </div>
         )}
 
@@ -961,17 +865,131 @@ function NodeDetailSection({
           </h4>
           <button
             onClick={handleOpenCreateQuiz}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+            disabled={createQuizMutation.isPending}
           >
             <Plus className="h-3.5 w-3.5" />
             Add Quiz
           </button>
         </div>
 
+        {isCreateQuizOpen && (
+          <div className="mb-4 rounded-xl border border-[#00bae2]/20 bg-[#00bae2]/5 p-4 space-y-3">
+            <div>
+              <h4 className="text-sm font-semibold text-neutral-900">Create Quiz</h4>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Fill quiz information here, then create.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={quizForm.title}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  placeholder="Quiz title"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  value={quizForm.description}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({ ...prev, description: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10 min-h-[80px]"
+                  placeholder="Quiz description"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Total Score
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.5"
+                  value={quizForm.totalScore}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({
+                      ...prev,
+                      totalScore: Number(e.target.value),
+                    }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Level
+                </label>
+                <select
+                  value={quizForm.level}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({
+                      ...prev,
+                      level: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Passing Score
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.5"
+                  value={quizForm.passingScore}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({
+                      ...prev,
+                      passingScore: Number(e.target.value),
+                    }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCancelCreateQuiz}
+                className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitCreateQuiz}
+                disabled={createQuizMutation.isPending}
+                className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+              >
+                {createQuizMutation.isPending ? "Creating..." : "Create Quiz"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {isLoadingQuizzes && nodeId && (
-          <div className="flex items-center gap-2 py-4 text-sm text-neutral-500">
-            <Loader2 className="h-4 w-4 animate-spin text-[#00bae2]" />
-            Loading quizzes...
+          <div className="py-4">
+            <ContentManagerLoading
+              variant="inline"
+              size="sm"
+              title="Loading quizzes..."
+            />
           </div>
         )}
 
@@ -1027,7 +1045,7 @@ function NodeDetailSection({
                     className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {deletingQuizId === quiz.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <ContentManagerLoading variant="icon" size="sm" />
                     ) : (
                       <Trash2 className="h-3.5 w-3.5" />
                     )}
@@ -1286,6 +1304,13 @@ function generateClientId() {
   return `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function normalizeNodeOrder(nodes: RoadmapNode[]): RoadmapNode[] {
+  return nodes.map((node, index) => ({
+    ...node,
+    orderNo: index,
+  }));
+}
+
 export function RoadmapDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -1308,6 +1333,7 @@ export function RoadmapDetailPage() {
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
   const [metadataForm, setMetadataForm] = useState({ title: "", description: "" });
   const [selectedNodeId, setSelectedNodeId] = useState<number | string | null>(null);
+  const [reformatSignal, setReformatSignal] = useState(0);
 
   // Track which nodes had their contents loaded from the API
   const loadedNodeIdsRef = useRef<Set<number>>(new Set());
@@ -1343,10 +1369,12 @@ export function RoadmapDetailPage() {
 
   // ── Node helpers ──
   const updateNodes = useCallback(
-    (nodes: RoadmapNode[]) => {
+    (nodes: RoadmapNode[], markUnsaved = true) => {
       if (!editedData) return;
       setEditedData({ ...editedData, nodes });
-      setHasUnsavedChanges(true);
+      if (markUnsaved) {
+        setHasUnsavedChanges(true);
+      }
     },
     [editedData]
   );
@@ -1361,19 +1389,30 @@ export function RoadmapDetailPage() {
   );
 
   const handleNodeUpdate = useCallback(
-    (nodeId: number | string, updates: Partial<RoadmapNode>) => {
+    (
+      nodeId: number | string,
+      updates: Partial<RoadmapNode>,
+      options?: { markUnsaved?: boolean }
+    ) => {
       if (!editedData) return;
       const newNodes = editedData.nodes.map((n) => {
         const key = getNodeKey(n);
         return key === String(nodeId) ? { ...n, ...updates } : n;
       });
-      updateNodes(newNodes);
+      updateNodes(newNodes, options?.markUnsaved ?? true);
     },
     [editedData, updateNodes]
   );
 
   const handleAddNode = useCallback(() => {
     if (!editedData) return;
+
+    const selectedKey = selectedNodeId != null ? String(selectedNodeId) : null;
+    const selectedIndex = selectedKey
+      ? editedData.nodes.findIndex((n) => getNodeKey(n) === selectedKey)
+      : -1;
+    const insertIndex = selectedIndex >= 0 ? selectedIndex + 1 : editedData.nodes.length;
+
     const newNode: RoadmapNode = {
       id: null,
       clientId: generateClientId(),
@@ -1382,13 +1421,18 @@ export function RoadmapDetailPage() {
       description: "",
       difficulty: "Beginner" as NodeDifficulty,
       estimatedHours: 1,
-      orderNo: editedData.nodes.length,
+      orderNo: insertIndex,
       contents: [],
     };
-    const newNodes = [...editedData.nodes, newNode];
-    updateNodes(newNodes);
+    const newNodes = [...editedData.nodes];
+    newNodes.splice(insertIndex, 0, newNode);
+    updateNodes(normalizeNodeOrder(newNodes));
     setSelectedNodeId(newNode.clientId!);
-  }, [editedData, roadmapId, updateNodes]);
+  }, [editedData, roadmapId, selectedNodeId, updateNodes]);
+
+  const handleReformatGraph = useCallback(() => {
+    setReformatSignal((prev) => prev + 1);
+  }, []);
 
   const handleDeleteNode = useCallback(
     (nodeId: number | string) => {
@@ -1548,12 +1592,7 @@ export function RoadmapDetailPage() {
   // ── Loading / Error states ──
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-          <p className="text-sm text-neutral-500">Loading roadmap...</p>
-        </div>
-      </div>
+      <ContentManagerLoading variant="page" title="Loading roadmap..." />
     );
   }
 
@@ -1620,7 +1659,7 @@ export function RoadmapDetailPage() {
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <ContentManagerLoading variant="icon" size="sm" />
                     Saving...
                   </>
                 ) : (
@@ -1794,13 +1833,22 @@ export function RoadmapDetailPage() {
               Visualize and manage nodes and connections
             </p>
           </div>
-          <button
-            onClick={handleAddNode}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            Add Node
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReformatGraph}
+              className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reformat
+            </button>
+            <button
+              onClick={handleAddNode}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              Add Node
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-5 h-[520px]">
@@ -1810,6 +1858,7 @@ export function RoadmapDetailPage() {
               nodes={editedData.nodes}
               edges={editedData.edges}
               selectedNodeId={selectedNodeId}
+              reformatSignal={reformatSignal}
               onNodeSelect={setSelectedNodeId}
               className="h-full"
             />
@@ -1838,10 +1887,11 @@ export function RoadmapDetailPage() {
           <NodeDetailSection
             node={selectedNode}
             roadmapId={roadmapId}
-            onUpdate={(updates) =>
+            onUpdate={(updates, options) =>
               handleNodeUpdate(
                 selectedNode.id ?? selectedNode.clientId!,
-                updates
+                updates,
+                options
               )
             }
             onDeleteNode={() =>

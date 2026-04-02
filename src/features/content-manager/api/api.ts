@@ -4,9 +4,12 @@
  */
 
 import { get, post, put, del } from '@/shared/api/client';
+import { RoadmapStatus } from './types';
 import type {
   // Request types
   GetRoadmapsParams,
+  GetManagerRoadmapsParams,
+  CreateRoadmapRequest,
   GetNodeContentsRequest,
   CreateRoadmapGraphRequest,
   SyncRoadmapGraphRequest,
@@ -27,6 +30,8 @@ import type {
   GetQuizByIdRequest,
   // Response types
   GetRoadmapsResponse,
+  GetManagerSubjectsResponse,
+  CreateRoadmapResponse,
   RoadmapDetail,
   NodeContent,
   CreateRoadmapGraphResponse,
@@ -78,8 +83,9 @@ export const cmQueryKeys = {
     [...cmQueryKeys.roadmaps(), 'list', params] as const,
   roadmapDetail: (id: number) =>
     [...cmQueryKeys.roadmaps(), 'detail', id] as const,
-  managerRoadmaps: (params: Omit<GetRoadmapsParams, 'subjectId'>) =>
+  managerRoadmaps: (params: GetManagerRoadmapsParams) =>
     [...cmQueryKeys.roadmaps(), 'manager', params] as const,
+  managerSubjects: () => [...cmQueryKeys.all, 'manager-subjects'] as const,
   nodeContents: (roadmapId: number, nodeId: number) =>
     [...cmQueryKeys.all, 'contents', roadmapId, nodeId] as const,
   quizzes: () => [...cmQueryKeys.all, 'quizzes'] as const,
@@ -102,6 +108,15 @@ export async function getRoadmaps(
   return get<GetRoadmapsResponse>(`/roadmaps${queryString}`);
 }
 
+export async function createRoadmap(
+  request: CreateRoadmapRequest
+): Promise<CreateRoadmapResponse> {
+  return post<CreateRoadmapResponse>('/roadmaps', {
+    ...request,
+    status: request.status ?? RoadmapStatus.Draft,
+  });
+}
+
 export async function getRoadmapDetail(
   roadmapId: number
 ): Promise<RoadmapDetail> {
@@ -109,10 +124,14 @@ export async function getRoadmapDetail(
 }
 
 export async function getManagerRoadmaps(
-  params: Omit<GetRoadmapsParams, 'subjectId'>
+  params: GetManagerRoadmapsParams
 ): Promise<GetRoadmapsResponse> {
   const queryString = buildQueryString(params);
   return get<GetRoadmapsResponse>(`/roadmaps/manager${queryString}`);
+}
+
+export async function getSubjectsByContentManager(): Promise<GetManagerSubjectsResponse> {
+  return get<GetManagerSubjectsResponse>('/learning-subjects/manager');
 }
 
 export async function deleteRoadmap(

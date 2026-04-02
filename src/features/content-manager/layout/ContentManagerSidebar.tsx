@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import {
   LayoutDashboard,
   Map,
@@ -11,6 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 const sidebarItems = [
   {
@@ -32,6 +35,27 @@ const sidebarItems = [
 
 export function ContentManagerSidebar() {
   const pathname = usePathname();
+  const { user, logout, isLoggingOut } = useAuth();
+
+  const displayName = useMemo(() => {
+    if (!user) return "Content Manager";
+
+    const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+    if (fullName) return fullName;
+
+    return user.email?.split("@")[0] || "Content Manager";
+  }, [user]);
+
+  const initials = useMemo(() => {
+    if (!user) return "CM";
+
+    const first = user.firstName?.trim()?.charAt(0) ?? "";
+    const last = user.lastName?.trim()?.charAt(0) ?? "";
+    const value = `${first}${last}`.toUpperCase();
+    if (value) return value;
+
+    return user.email?.trim()?.charAt(0)?.toUpperCase() || "CM";
+  }, [user]);
 
   const isActive = (href: string) => {
     if (href === "/content-dashboard") {
@@ -90,14 +114,14 @@ export function ContentManagerSidebar() {
         <div className="mb-3 rounded-xl bg-neutral-50 p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#fec5fb] to-[#00bae2] text-sm font-bold text-neutral-900">
-              CM
+              {initials}
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium text-neutral-900">
-                Content Manager
+                {displayName}
               </p>
               <p className="truncate text-xs text-neutral-500">
-                manager@studysense.com
+                {user?.email || "-"}
               </p>
             </div>
           </div>
@@ -105,14 +129,18 @@ export function ContentManagerSidebar() {
 
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2 text-neutral-600 hover:text-red-600 hover:bg-red-50"
-          onClick={() => {
-            // Handle logout
-            window.location.href = '/login';
-          }}
+          disabled={isLoggingOut}
+          className="w-full justify-start gap-2 text-neutral-600 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => logout()}
         >
-          <LogOut className="h-[18px] w-[18px]" />
-          <span>Logout</span>
+          {isLoggingOut ? (
+            <LoadingSpinner size="sm" />
+          ) : (
+            <>
+              <LogOut className="h-[18px] w-[18px]" />
+              <span>Logout</span>
+            </>
+          )}
         </Button>
       </div>
     </aside>
