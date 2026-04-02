@@ -31,6 +31,8 @@ export const endpoints = {
   // Payments
   payments: {
     userPayments: '/payments/user-payments',
+    createPayment: '/payments/create-payment',
+    paymentStatus: (id: string) => `/payments/${id}/status`,
   },
 
   // Study Plans
