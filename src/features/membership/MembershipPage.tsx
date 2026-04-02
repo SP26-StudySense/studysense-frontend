@@ -5,12 +5,15 @@ import {
     XCircle, ArrowUpRight, Zap, AlertCircle, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useCurrentUser } from '@/features/auth/api/queries';
 import { useUserMembership, useUserPayments } from './api/queries';
 import type { UserPayment } from './api/types';
+import { post } from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
 
 type PaymentStatusKey = 'success' | 'failed' | 'pending' | 'canceled';
 
@@ -95,8 +98,26 @@ function addMonths(date: Date, months: number) {
 
 export function MembershipPage() {
     const { data: user, isLoading: isUserLoading } = useCurrentUser();
-    const { data: membership, isLoading: isMembershipLoading } = useUserMembership(!!user);
+    const { data: membership, isLoading: isMembershipLoading, refetch: refetchMembership } = useUserMembership(!!user);
     const { data: paymentsResponse, isLoading: isPaymentsLoading } = useUserPayments(!!user);
+    const [isCanceling, setIsCanceling] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+
+    const handleConfirmCancel = async () => {
+        setIsCanceling(true);
+        try {
+            await post(endpoints.users.cancelSubscription);
+            await refetchMembership();
+            setShowCancelModal(false);
+            // Optionally could use a toast notification here instead of alert
+            // alert("Your subscription has been canceled.");
+        } catch (error) {
+            console.error("Failed to cancel subscription:", error);
+            alert("An error occurred while canceling the subscription.");
+        } finally {
+            setIsCanceling(false);
+        }
+    };
 
     const payments = paymentsResponse?.payments ?? [];
 
@@ -111,24 +132,19 @@ export function MembershipPage() {
     const userSubStartDateRaw = membership?.subscriptionStartDate ?? undefined;
     const userSubEndDateRaw = membership?.subscriptionEndDate ?? undefined;
 
-    const inferredSubscriptionType =
-        userSubType !== 'free'
-            ? userSubType
-            : latestSuccessfulPayment
-                ? normalizeSubscriptionType(latestSuccessfulPayment.subscriptionType)
-                : 'free';
-
-    const startDate = userSubStartDateRaw
-        ? new Date(userSubStartDateRaw)
+    const inferredSubscriptionType = membership
+        ? userSubType
         : latestSuccessfulPayment
-            ? new Date(latestSuccessfulPayment.paymentDate)
-            : null;
+            ? normalizeSubscriptionType(latestSuccessfulPayment.subscriptionType)
+            : 'free';
 
-    const endDate = userSubEndDateRaw
-        ? new Date(userSubEndDateRaw)
-        : latestSuccessfulPayment
-            ? addMonths(new Date(latestSuccessfulPayment.paymentDate), latestSuccessfulPayment.subscriptionDuration || 1)
-            : null;
+    const startDate = membership
+        ? (userSubStartDateRaw ? new Date(userSubStartDateRaw) : null)
+        : (latestSuccessfulPayment ? new Date(latestSuccessfulPayment.paymentDate) : null);
+
+    const endDate = membership
+        ? (userSubEndDateRaw ? new Date(userSubEndDateRaw) : null)
+        : (latestSuccessfulPayment ? addMonths(new Date(latestSuccessfulPayment.paymentDate), latestSuccessfulPayment.subscriptionDuration || 1) : null);
 
     const now = new Date();
     const daysRemaining = endDate ? Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
@@ -396,12 +412,52 @@ export function MembershipPage() {
                             <Shield className="h-4 w-4 text-neutral-500" />
                             Enable Auto-Renew
                         </button> */}
-                        <button className="inline-flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:bg-red-100">
+                        <button 
+                            disabled={isCanceling}
+                            onClick={() => setShowCancelModal(true)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:bg-red-100 disabled:opacity-50"
+                        >
                             <XCircle className="h-4 w-4" />
-                            Cancel Subscription
+                            {isCanceling ? 'Canceling...' : 'Cancel Subscription'}
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Cancel Subscription Modal */}
+            {showCancelModal && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-8 pl-10 pr-10 shadow-2xl animate-in zoom-in-95 duration-200">
+                        {/* Danger Icon */}
+                        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                            <AlertCircle className="h-8 w-8 text-red-600" />
+                        </div>
+                        
+                        <h3 className="mb-2 text-center text-xl font-bold text-neutral-900">Cancel Subscription?</h3>
+                        <p className="mb-8 text-center text-sm leading-relaxed text-neutral-500">
+                            Are you absolutely sure you want to cancel your Premium subscription? Your premium features will be revoked immediately and you will lose access to all advanced tools.
+                        </p>
+                        
+                        <div className="flex flex-col gap-3 sm:flex-row-reverse sm:justify-center">
+                            <button
+                                onClick={handleConfirmCancel}
+                                disabled={isCanceling}
+                                className="inline-flex w-full items-center justify-center gap-2 sm:w-auto rounded-xl bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-500 disabled:opacity-50"
+                            >
+                                {isCanceling && <LoadingSpinner size="sm" />}
+                                {isCanceling ? 'Canceling...' : 'Yes, Cancel'}
+                            </button>
+                            <button
+                                onClick={() => setShowCancelModal(false)}
+                                disabled={isCanceling}
+                                className="inline-flex w-full items-center justify-center sm:w-auto rounded-xl border border-neutral-200 bg-white px-6 py-2.5 text-sm font-semibold text-neutral-700 transition-all hover:bg-neutral-50 focus:outline-none"
+                            >
+                                Keep Premium
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

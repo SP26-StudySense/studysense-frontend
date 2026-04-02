@@ -26,6 +26,7 @@ export const endpoints = {
     preferences: '/users/preferences',
     progress: '/users/progress',
     avatar: '/users/avatar',
+    cancelSubscription: '/users/cancel-subscription',
   },
 
   // Payments
@@ -33,6 +34,7 @@ export const endpoints = {
     userPayments: '/payments/user-payments',
     createPayment: '/payments/create-payment',
     paymentStatus: (id: string) => `/payments/${id}/status`,
+    cancelPayment: (id: string) => `/payments/${id}/cancel`,
   },
 
   // Study Plans

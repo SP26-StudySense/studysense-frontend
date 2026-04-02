@@ -1,16 +1,69 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, ArrowRight, Receipt, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+import { saveUserToStorage } from '@/features/auth/api/mutations';
+import { get } from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
+import { queryKeys } from '@/shared/api/query-keys';
 import { usePaymentStatus } from './hooks/usePaymentStatus';
 
 export function PaymentSuccessPage() {
+    const router = useRouter();
+    const queryClient = useQueryClient();
     const searchParams = useSearchParams();
     const orderCode = searchParams.get('orderCode') || searchParams.get('id');
     const { status, isLoading } = usePaymentStatus(orderCode);
 
-    if (isLoading || status === 0) { // 0 = Pending
+    useEffect(() => {
+        if (status !== 'success' || !orderCode) return;
+
+        const syncKey = `payment-success-synced-${orderCode}`;
+        if (sessionStorage.getItem(syncKey)) return;
+
+        sessionStorage.setItem(syncKey, '1');
+
+        const syncFreshState = async () => {
+            try {
+                const membershipRaw = await get<unknown>(endpoints.users.membership);
+                const membershipObj = (membershipRaw ?? {}) as Record<string, unknown>;
+                const latestSubscriptionType = String(
+                    membershipObj.subscriptionType ?? membershipObj.SubscriptionType ?? ''
+                ) || null;
+
+                const currentUser = queryClient.getQueryData(queryKeys.auth.me()) as
+                    | Record<string, unknown>
+                    | undefined;
+
+                if (currentUser) {
+                    const nextUser = {
+                        ...currentUser,
+                        subscriptionType: latestSubscriptionType,
+                    };
+
+                    queryClient.setQueryData(queryKeys.auth.me(), nextUser);
+                    saveUserToStorage(nextUser as Parameters<typeof saveUserToStorage>[0]);
+                }
+            } catch {
+                // Keep UI flow resilient even if membership sync fails.
+            }
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['membership'] }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.auth.all }),
+            ]);
+
+            router.refresh();
+        };
+
+        void syncFreshState();
+    }, [status, orderCode, queryClient, router]);
+
+    if (isLoading || status === 'pending') {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 text-center">
                 <Loader2 className="h-12 w-12 animate-spin text-[#00bae2] mb-4" />
@@ -20,7 +73,7 @@ export function PaymentSuccessPage() {
         );
     }
 
-    if (status === 2) { // 2 = Failed
+    if (status === 'failed') {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 text-center">
                 <h1 className="text-2xl font-bold text-red-600">Payment Unsuccessful</h1>
