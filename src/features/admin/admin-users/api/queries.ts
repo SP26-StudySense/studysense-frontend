@@ -6,8 +6,8 @@ import {
   getAdminUserRoles,
   getAdminUsers,
   getAssignableSubjects,
-  type GetAdminUsersParams,
 } from "./api";
+import type { GetAdminUsersParams } from "./types";
 
 export function useAdminUsersQuery(params: GetAdminUsersParams) {
   return useQuery({

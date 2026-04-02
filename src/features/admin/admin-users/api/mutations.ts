@@ -6,9 +6,11 @@ import { toast } from "@/shared/lib";
 import {
   activateAdminUser,
   assignSubjectToContentManager,
+  createAdminUser,
   deactivateAdminUser,
   unassignSubjectFromContentManager,
 } from "./api";
+import type { CreateAdminUserRequest } from "./types";
 
 export function useDeactivateAdminUserMutation() {
   const queryClient = useQueryClient();
@@ -67,6 +69,21 @@ export function useUnassignSubjectFromContentManagerMutation() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to unassign subject.");
+    },
+  });
+}
+
+export function useCreateAdminUserMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateAdminUserRequest) => createAdminUser(payload),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.all });
+      toast.success(response.message || "User account created successfully.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create user account.");
     },
   });
 }
