@@ -150,6 +150,9 @@ export const endpoints = {
       assignSubject: (id: string) => `/admin/users/${id}/subject`,
       unassignSubject: (id: string) => `/admin/users/${id}/subject`,
     },
+    transactions: {
+      base: '/admin/transactions',
+    },
     roadmaps: {
       base: '/admin/roadmaps',
       byId: (id: string) => `/admin/roadmaps/${id}`,
