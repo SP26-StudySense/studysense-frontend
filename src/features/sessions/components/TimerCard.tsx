@@ -42,6 +42,7 @@ export function TimerCard({ className }: TimerCardProps) {
 
     // Error state for start session
     const [startError, setStartError] = useState<string | null>(null);
+    const hasTasks = selectedTasks.length > 0;
 
     const formatTime = (totalSeconds: number) => {
         const hrs = Math.floor(totalSeconds / 3600);
@@ -118,6 +119,14 @@ export function TimerCard({ className }: TimerCardProps) {
 
     const doStartSession = useCallback(() => {
         setStartError(null);
+
+        if (!hasTasks) {
+            const message = 'Please select at least one task from Schedule before starting a session.';
+            setStartError(message);
+            toast.error('No tasks selected', { description: message });
+            return;
+        }
+
         const eventContext = getSessionEventContext();
         const plannedDurationSeconds = getPlannedDurationSeconds();
 
@@ -174,7 +183,19 @@ export function TimerCard({ className }: TimerCardProps) {
                 },
             }
         );
-    }, [getPlannedDurationSeconds, getSessionEventContext, startMutation, selectedTasks, activeStudyPlanId, selectedNode, safeNumberId, storeStartSession, toDurationMinutes, trackEvent]);
+    }, [
+        activeStudyPlanId,
+        getPlannedDurationSeconds,
+        getSessionEventContext,
+        hasTasks,
+        safeNumberId,
+        selectedNode,
+        selectedTasks,
+        startMutation,
+        storeStartSession,
+        toDurationMinutes,
+        trackEvent,
+    ]);
 
     const handleStart = useCallback(async () => {
         setStartError(null);
@@ -259,7 +280,13 @@ export function TimerCard({ className }: TimerCardProps) {
                 "mt-3 text-sm font-medium",
                 timerRunning ? "text-emerald-600" : hasStarted ? "text-amber-600" : startError ? "text-red-500" : "text-neutral-500"
             )}>
-                {timerRunning ? '● Session in progress' : hasStarted ? '● Paused' : 'Ready to start'}
+                {timerRunning
+                    ? '● Session in progress'
+                    : hasStarted
+                        ? '● Paused'
+                        : hasTasks
+                            ? 'Ready to start'
+                            : 'Select tasks in Schedule to start'}
             </p>
 
             {/* Error message */}
@@ -275,7 +302,7 @@ export function TimerCard({ className }: TimerCardProps) {
                 {!hasStarted ? (
                     <button
                         onClick={handleStart}
-                        disabled={isAnyPending}
+                        disabled={isAnyPending || !hasTasks}
                         className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Play className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" />
