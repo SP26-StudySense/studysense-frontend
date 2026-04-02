@@ -66,6 +66,7 @@ export interface ResumeSessionResponse {
 
 export interface EndSessionTaskInput {
   taskId: number;
+  startTime: string | null;
   endTime: string | null;
 }
 

@@ -52,10 +52,11 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
 
                 return {
                     taskId,
+                    startTime: task.startedAt || null,
                     endTime: task.isCompleted ? task.completedAt || new Date().toISOString() : null,
                 };
             })
-            .filter((task): task is { taskId: number; endTime: string | null } => task !== null);
+            .filter((task): task is { taskId: number; startTime: string | null; endTime: string | null } => task !== null);
 
         endMutation.mutate(
             {
