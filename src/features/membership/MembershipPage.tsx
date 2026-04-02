@@ -5,72 +5,14 @@ import {
     XCircle, ArrowUpRight, Zap, AlertCircle, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
+import { useMemo } from 'react';
 
-// Mock data for UI demonstration
-const mockUser = {
-    name: 'Nguyen Anh Tuan',
-    email: 'anhtuandev@gmail.com',
-    subscriptionType: 'premium', // 'free' | 'premium'
-    plan: {
-        name: 'Premium',
-        startDate: '2026-01-01',
-        expiresAt: '2027-01-01',
-        daysRemaining: 274,
-        autoRenew: true,
-        price: '$9/month',
-    },
-};
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useCurrentUser } from '@/features/auth/api/queries';
+import { useUserMembership, useUserPayments } from './api/queries';
+import type { UserPayment } from './api/types';
 
-const mockTransactions = [
-    {
-        id: 'TXN-2026-001',
-        date: '2026-01-01',
-        description: 'Premium Plan — Monthly',
-        amount: '$9.00',
-        status: 'success' as const,
-        method: 'Visa •••• 4242',
-    },
-    {
-        id: 'TXN-2025-012',
-        date: '2025-12-01',
-        description: 'Premium Plan — Monthly',
-        amount: '$9.00',
-        status: 'success' as const,
-        method: 'Visa •••• 4242',
-    },
-    {
-        id: 'TXN-2025-011',
-        date: '2025-11-01',
-        description: 'Premium Plan — Monthly',
-        amount: '$9.00',
-        status: 'success' as const,
-        method: 'Visa •••• 4242',
-    },
-    {
-        id: 'TXN-2025-010',
-        date: '2025-10-15',
-        description: 'Premium Plan — Monthly',
-        amount: '$9.00',
-        status: 'failed' as const,
-        method: 'Mastercard •••• 1234',
-    },
-    {
-        id: 'TXN-2025-009',
-        date: '2025-09-01',
-        description: 'Premium Plan — Monthly',
-        amount: '$9.00',
-        status: 'success' as const,
-        method: 'Visa •••• 4242',
-    },
-    {
-        id: 'TXN-2025-008',
-        date: '2025-08-01',
-        description: 'Premium Plan — Monthly',
-        amount: '$9.00',
-        status: 'success' as const,
-        method: 'Visa •••• 4242',
-    },
-];
+type PaymentStatusKey = 'success' | 'failed' | 'pending' | 'canceled';
 
 const statusConfig = {
     success: {
@@ -88,6 +30,11 @@ const statusConfig = {
         icon: Clock,
         className: 'text-amber-600 bg-amber-50 border-amber-100',
     },
+    canceled: {
+        label: 'Canceled',
+        icon: XCircle,
+        className: 'text-neutral-600 bg-neutral-100 border-neutral-200',
+    },
 };
 
 function formatDate(dateStr: string) {
@@ -104,9 +51,129 @@ function getDaysRemainingLabel(days: number) {
     return 'text-red-600';
 }
 
+function normalizeSubscriptionType(value: unknown): 'free' | 'premium' | 'pro' {
+    if (typeof value === 'number') {
+        if (value === 2) return 'premium';
+        if (value === 3) return 'pro';
+        return 'free';
+    }
+
+    const normalized = String(value ?? '').toLowerCase();
+    if (normalized.includes('premium')) return 'premium';
+    if (normalized.includes('pro')) return 'pro';
+    return 'free';
+}
+
+function normalizePaymentStatus(value: unknown): PaymentStatusKey {
+    if (typeof value === 'number') {
+        if (value === 1) return 'success';
+        if (value === 2) return 'failed';
+        if (value === 3) return 'canceled';
+        return 'pending';
+    }
+
+    const normalized = String(value ?? '').toLowerCase();
+    if (normalized.includes('success')) return 'success';
+    if (normalized.includes('fail')) return 'failed';
+    if (normalized.includes('cancel')) return 'canceled';
+    return 'pending';
+}
+
+function formatVnd(amount: number, currency?: string) {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: currency || 'VND',
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
+function addMonths(date: Date, months: number) {
+    const d = new Date(date);
+    d.setMonth(d.getMonth() + months);
+    return d;
+}
+
 export function MembershipPage() {
-    const isPremium = mockUser.subscriptionType === 'premium';
-    const daysRemaining = mockUser.plan.daysRemaining;
+    const { data: user, isLoading: isUserLoading } = useCurrentUser();
+    const { data: membership, isLoading: isMembershipLoading } = useUserMembership(!!user);
+    const { data: paymentsResponse, isLoading: isPaymentsLoading } = useUserPayments(!!user);
+
+    const payments = paymentsResponse?.payments ?? [];
+
+    const successfulPayments = useMemo(
+        () => payments.filter((p) => normalizePaymentStatus(p.status) === 'success'),
+        [payments]
+    );
+
+    const latestSuccessfulPayment = successfulPayments[0];
+
+    const userSubType = normalizeSubscriptionType(membership?.subscriptionType);
+    const userSubStartDateRaw = membership?.subscriptionStartDate ?? undefined;
+    const userSubEndDateRaw = membership?.subscriptionEndDate ?? undefined;
+
+    const inferredSubscriptionType =
+        userSubType !== 'free'
+            ? userSubType
+            : latestSuccessfulPayment
+                ? normalizeSubscriptionType(latestSuccessfulPayment.subscriptionType)
+                : 'free';
+
+    const startDate = userSubStartDateRaw
+        ? new Date(userSubStartDateRaw)
+        : latestSuccessfulPayment
+            ? new Date(latestSuccessfulPayment.paymentDate)
+            : null;
+
+    const endDate = userSubEndDateRaw
+        ? new Date(userSubEndDateRaw)
+        : latestSuccessfulPayment
+            ? addMonths(new Date(latestSuccessfulPayment.paymentDate), latestSuccessfulPayment.subscriptionDuration || 1)
+            : null;
+
+    const now = new Date();
+    const daysRemaining = endDate ? Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+    const isPremium = inferredSubscriptionType !== 'free' && (!!endDate ? endDate > now : true);
+
+    const totalSubscriptionDays =
+        startDate && endDate
+            ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+            : Math.max(1, (latestSuccessfulPayment?.subscriptionDuration || 1) * 30);
+
+    const remainingPercentage = Math.max(
+        0,
+        Math.min(100, Math.round((daysRemaining / totalSubscriptionDays) * 100))
+    );
+
+    const planLabel = inferredSubscriptionType === 'premium' ? 'Premium' : inferredSubscriptionType === 'pro' ? 'Pro' : 'Free';
+    const displayPrice = latestSuccessfulPayment ? formatVnd(latestSuccessfulPayment.amount, latestSuccessfulPayment.currency) : '0 ₫';
+    const durationMonths = latestSuccessfulPayment?.subscriptionDuration || 1;
+
+    const transactions = useMemo(
+        () =>
+            payments.map((payment: UserPayment) => {
+                const status = normalizePaymentStatus(payment.status);
+                const planName = normalizeSubscriptionType(payment.subscriptionType);
+                const planText = planName === 'premium' ? 'Premium' : planName === 'pro' ? 'Pro' : 'Free';
+
+                return {
+                    id: `TXN-${payment.paymentId}`,
+                    date: payment.paymentDate,
+                    description: `${planText} Plan - ${payment.subscriptionDuration} month${payment.subscriptionDuration > 1 ? 's' : ''}`,
+                    amount: formatVnd(payment.amount, payment.currency),
+                    status,
+                    method: payment.currency || 'VND',
+                };
+            }),
+        [payments]
+    );
+
+    if (isUserLoading || isMembershipLoading || isPaymentsLoading) {
+        return (
+            <div className="flex min-h-[50vh] items-center justify-center">
+                <LoadingSpinner size="lg" showText text="Loading membership..." />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 pb-16">
@@ -136,15 +203,15 @@ export function MembershipPage() {
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <h2 className="text-xl font-bold text-neutral-900">{mockUser.plan.name}</h2>
+                                    <h2 className="text-xl font-bold text-neutral-900">{planLabel}</h2>
                                     <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#00bae2]/10 to-[#fec5fb]/10 border border-[#00bae2]/20 px-2.5 py-0.5 text-[11px] font-semibold text-[#00bae2]">
                                         <Shield className="h-2.5 w-2.5" />
-                                        Active
+                                        {isPremium ? 'Active' : 'Free'}
                                     </span>
                                 </div>
                                 <p className="mt-0.5 text-sm text-neutral-500">
-                                    Billed at {mockUser.plan.price} · {mockUser.plan.autoRenew ? 'Auto-renews' : 'Expires'} on{' '}
-                                    <span className="font-medium text-neutral-700">{formatDate(mockUser.plan.expiresAt)}</span>
+                                    Billed at {displayPrice} · Expires on{' '}
+                                    <span className="font-medium text-neutral-700">{endDate ? formatDate(endDate.toISOString()) : 'N/A'}</span>
                                 </p>
                             </div>
                         </div>
@@ -168,14 +235,14 @@ export function MembershipPage() {
                                 <Calendar className="h-3.5 w-3.5" />
                                 Start Date
                             </div>
-                            <p className="font-semibold text-neutral-900">{formatDate(mockUser.plan.startDate)}</p>
+                            <p className="font-semibold text-neutral-900">{startDate ? formatDate(startDate.toISOString()) : 'N/A'}</p>
                         </div>
                         <div className="rounded-2xl border border-neutral-100 bg-neutral-50/80 p-4">
                             <div className="flex items-center gap-2 text-xs text-neutral-500 mb-1">
                                 <Clock className="h-3.5 w-3.5" />
                                 Expires
                             </div>
-                            <p className="font-semibold text-neutral-900">{formatDate(mockUser.plan.expiresAt)}</p>
+                            <p className="font-semibold text-neutral-900">{endDate ? formatDate(endDate.toISOString()) : 'N/A'}</p>
                         </div>
                         <div className="rounded-2xl border border-neutral-100 bg-neutral-50/80 p-4">
                             <div className="flex items-center gap-2 text-xs text-neutral-500 mb-1">
@@ -192,12 +259,12 @@ export function MembershipPage() {
                     <div className="mt-4">
                         <div className="flex items-center justify-between text-xs text-neutral-500 mb-1.5">
                             <span>Subscription progress</span>
-                            <span>{Math.round((daysRemaining / 365) * 100)}% remaining</span>
+                            <span>{remainingPercentage}% remaining</span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
                             <div
                                 className="h-full rounded-full bg-gradient-to-r from-[#00bae2] to-[#fec5fb] transition-all"
-                                style={{ width: `${Math.round((daysRemaining / 365) * 100)}%` }}
+                                style={{ width: `${remainingPercentage}%` }}
                             />
                         </div>
                     </div>
@@ -237,7 +304,7 @@ export function MembershipPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-neutral-500">
                         <CreditCard className="h-4 w-4" />
-                        <span>{mockTransactions.length} transactions</span>
+                        <span>{transactions.length} transactions</span>
                     </div>
                 </div>
 
@@ -253,7 +320,7 @@ export function MembershipPage() {
 
                     {/* Rows */}
                     <div className="divide-y divide-neutral-50">
-                        {mockTransactions.map((txn) => {
+                        {transactions.map((txn) => {
                             const config = statusConfig[txn.status];
                             const Icon = config.icon;
                             return (
@@ -295,20 +362,24 @@ export function MembershipPage() {
                 </div>
 
                 {/* Empty state (hidden when there are transactions) */}
-                {mockTransactions.length === 0 && (
+                {transactions.length === 0 && (
                     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/40 py-16 text-center">
                         <CreditCard className="mx-auto mb-3 h-10 w-10 text-neutral-300" />
                         <p className="font-medium text-neutral-500">No transactions yet</p>
                         <p className="mt-1 text-sm text-neutral-400">
-                            Your billing history will appear here once you make a payment.
+                            {isPremium
+                                ? 'We could not find any payment records for this account yet.'
+                                : 'Your billing history will appear here once you make a payment.'}
                         </p>
-                        <Link
-                            href="/upgrade-plan"
-                            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800"
-                        >
-                            <Crown className="h-4 w-4" />
-                            Upgrade to Premium
-                        </Link>
+                        {!isPremium && (
+                            <Link
+                                href="/upgrade-plan"
+                                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800"
+                            >
+                                <Crown className="h-4 w-4" />
+                                Upgrade to Premium
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>
@@ -318,13 +389,13 @@ export function MembershipPage() {
                 <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
                     <h3 className="font-semibold text-neutral-900">Subscription Settings</h3>
                     <p className="mt-1 text-sm text-neutral-500">
-                        Manage auto-renewal or cancel your subscription at any time.
+                        {/* Manage auto-renewal or cancel your subscription at any time. */}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-3">
-                        <button className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-all hover:border-neutral-300 hover:shadow-sm">
+                        {/* <button className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-all hover:border-neutral-300 hover:shadow-sm">
                             <Shield className="h-4 w-4 text-neutral-500" />
-                            {mockUser.plan.autoRenew ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
-                        </button>
+                            Enable Auto-Renew
+                        </button> */}
                         <button className="inline-flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:bg-red-100">
                             <XCircle className="h-4 w-4" />
                             Cancel Subscription

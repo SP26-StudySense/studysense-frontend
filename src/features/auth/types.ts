@@ -10,6 +10,7 @@ export interface User {
   firstName: string;
   lastName: string;
   avatarUrl: string | null;
+  subscriptionType?: string | null;
   roles: string[];
 }
 

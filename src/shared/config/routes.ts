@@ -130,7 +130,6 @@ export const publicRoutes = [
   routes.public.pricing,
   routes.public.contact,
   routes.public.upgradePlan,
-  routes.public.membership,
   routes.payment.success,
   routes.payment.failed,
 ];
@@ -143,7 +142,7 @@ export const authRoutes = [
   routes.auth.verifyEmail,
 ];
 
-export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings'];
+export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings', '/membership'];
 
 export const adminRoutes = ['/admin-dashboard', '/admin-users', '/admin-categories', '/admin-transactions'];
 

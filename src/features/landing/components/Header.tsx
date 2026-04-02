@@ -1,37 +1,52 @@
 'use client';
 
 import Link from 'next/link';
-import { GitFork, ChevronRight } from 'lucide-react';
+import { GitFork, ChevronRight, Crown } from 'lucide-react';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { NotificationBell } from '@/features/notification';
+import { useUserMembership } from '@/features/membership/api/queries';
 import { Button } from '@/shared/ui/button';
 import { UserProfile } from '@/components/dashboard/UserProfile';
 
-// Smart membership nav link: free → upgrade plan, premium → /membership
-function MembershipNavLink({ isAuthenticated }: { isAuthenticated: boolean }) {
-    const { user } = useAuth();
+function hasPaidSubscription(subscriptionType: unknown): boolean {
+    if (typeof subscriptionType === 'number') {
+        return subscriptionType > 1;
+    }
 
-    // Determine href based on subscription type
-    // If not authenticated yet or free plan → go to upgrade-plan
-    // If premium → go to membership detail page
-    const membershipHref = isAuthenticated && (user as any)?.subscriptionType === 'premium'
-        ? '/membership'
-        : '/upgrade-plan';
+    const normalized = String(subscriptionType ?? '').toLowerCase();
+    return normalized.includes('premium') || normalized.includes('pro');
+}
+
+function MembershipNavLink({ isPremium }: { isPremium: boolean }) {
 
     return (
         <Link
-            href={membershipHref}
+            href="/membership"
+            className="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+        >
+            {isPremium && <Crown className="h-3.5 w-3.5 text-amber-500" />}
+            Membership
+        </Link>
+    );
+}
+
+function UpgradePlanNavLink() {
+    return (
+        <Link
+            href="/upgrade-plan"
             className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
         >
-            Membership
+            Upgrade Plan
         </Link>
     );
 }
 
 export const Header = () => {
     const { navigateWithTransition } = useTransitionRouter();
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, user } = useAuth();
+    const { data: membership } = useUserMembership(isAuthenticated);
+    const isSubscribed = hasPaidSubscription(membership?.subscriptionType ?? user?.subscriptionType);
 
     return (
         <header className="glass-panel fixed left-0 right-0 top-0 z-50 border-b border-neutral-200/60">
@@ -70,7 +85,8 @@ export const Header = () => {
                     >
                         About Us
                     </Link>
-                    <MembershipNavLink isAuthenticated={isAuthenticated} />
+                    <MembershipNavLink isPremium={isSubscribed} />
+                    {(!isAuthenticated || !isSubscribed) && <UpgradePlanNavLink />}
                 </nav>
 
                 <div className="flex items-center gap-x-4">

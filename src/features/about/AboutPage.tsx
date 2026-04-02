@@ -219,7 +219,7 @@ export function AboutPage() {
                     </p>
                     <div className="flex flex-col items-center gap-3 pt-2 sm:flex-row sm:justify-center">
                         <Link
-                            href="/register"
+                            href="/roadmaps"
                             className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-neutral-900 shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5"
                         >
                             <Zap className="h-4 w-4 text-[#00bae2]" />

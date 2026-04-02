@@ -146,7 +146,7 @@ export function UpgradePlanPage() {
                     </ul>
 
                     <Link
-                        href="/register"
+                        href="/roadmaps"
                         className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-neutral-200 bg-white px-6 py-3 text-sm font-semibold text-neutral-700 transition-all hover:border-neutral-300 hover:bg-neutral-50"
                     >
                         Get Started Free
@@ -304,10 +304,10 @@ export function UpgradePlanPage() {
                     <p className="text-neutral-400 text-sm max-w-md mx-auto">
                         Join thousands of learners who've already unlocked a smarter way to learn.
                     </p>
-                    <button className="mt-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00bae2] to-[#0097c7] px-8 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-[#00bae2]/30 hover:shadow-xl hover:-translate-y-0.5">
+                    <Link href="#" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00bae2] to-[#0097c7] px-8 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-[#00bae2]/30 hover:shadow-xl hover:-translate-y-0.5">
                         <Sparkles className="h-4 w-4" />
                         Upgrade Now — {currentPricing.price} ₫ / {billing === 'monthly' ? 'month' : '6 months'}
-                    </button>
+                    </Link>
                 </div>
             </section>
         </div>
