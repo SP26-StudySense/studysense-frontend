@@ -1,11 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { AuthGuard } from '@/features/auth/components/auth-guard';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { UserProfile } from '@/components/dashboard/UserProfile';
 import { ChatProvider, ChatPopup, ChatToggleButton } from '@/features/chat';
 import { NotificationBell } from '@/features/notification';
+import { SessionTimerBadge } from '@/features/sessions/components/SessionTimerBadge';
 import { Search } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -30,7 +32,7 @@ function getPageTitle(pathname: string): string {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
-  const showChatbot = pathname.startsWith('/study-plans');
+  const showChatbot = pathname === '/sessions';
 
   return (
     <AuthGuard>
@@ -96,13 +98,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </main>
 
-          {/* Chat AI Popup (only for Study Plans pages) */}
+          {/* Chat AI Popup (only for Sessions pages) */}
           {showChatbot && (
             <>
               <ChatToggleButton />
               <ChatPopup />
             </>
           )}
+
+          {/* Session Timer Badge (shows when navigating away from sessions) */}
+          <Suspense>
+            <SessionTimerBadge />
+          </Suspense>
         </div>
       </ChatProvider>
     </AuthGuard>
