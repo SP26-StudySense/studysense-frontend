@@ -5,7 +5,7 @@ import type {
   MarkAllNotificationsAsReadResponse,
   MarkNotificationAsReadResponse,
   RegisterPushTokenRequest,
-} from './types';
+} from '../types';
 
 export async function fetchMyNotifications(page = 1, pageSize = 20) {
   const query = `?page=${page}&pageSize=${pageSize}`;

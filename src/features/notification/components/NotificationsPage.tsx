@@ -11,8 +11,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-import { useNotifications } from './use-notifications';
-import { formatNotificationDistance } from './date-utils';
+import { useNotifications } from '../hooks/use-notifications';
+import { formatNotificationDistance } from '../api/date-utils';
 
 const PAGE_SIZE = 20;
 

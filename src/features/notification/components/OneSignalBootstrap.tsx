@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initOneSignalSdk, syncOneSignalSubscriptionToBackend } from './onesignal-client';
+import {
+  initOneSignalSdk,
+  syncOneSignalSubscriptionToBackend,
+} from '../api/onesignal-client';
 
 export function OneSignalBootstrap() {
   useEffect(() => {

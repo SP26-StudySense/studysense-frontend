@@ -6,9 +6,13 @@ import { Bell } from 'lucide-react';
 
 import { useCurrentUser } from '@/features/auth/api/queries';
 import { toast } from '@/shared/lib';
-import { getPushStatus, requestPushPermissionAndSync, type PushStatus } from './onesignal-client';
-import { useNotifications } from './use-notifications';
-import { formatNotificationDistance } from './date-utils';
+import {
+  getPushStatus,
+  requestPushPermissionAndSync,
+  type PushStatus,
+} from '../api/onesignal-client';
+import { useNotifications } from '../hooks/use-notifications';
+import { formatNotificationDistance } from '../api/date-utils';
 
 interface NotificationBellProps {
   showTestButton?: boolean;
