@@ -1,10 +1,32 @@
-import { ArrowRight, Map, PlayCircle, Settings2 } from "lucide-react";
+'use client';
 
-export const QuickActions = () => {
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Map, PlayCircle, Settings2 } from "lucide-react";
+import { routes } from '@/shared/config/routes';
+
+interface QuickActionsProps {
+    studyPlanId?: string;
+}
+
+export const QuickActions = ({ studyPlanId }: QuickActionsProps) => {
+    const router = useRouter();
+
     const actions = [
-        { icon: Map, label: "View Roadmap" },
-        { icon: PlayCircle, label: "Start Session" },
-        { icon: Settings2, label: "Adjust Plan" },
+        {
+            icon: Map,
+            label: "View Roadmap",
+            href: studyPlanId
+                ? routes.dashboard.myRoadmap(studyPlanId)
+                : routes.dashboard.roadmaps.list,
+        },
+        { icon: PlayCircle, label: "Start Session", href: routes.dashboard.sessions.list },
+        {
+            icon: Settings2,
+            label: "Adjust Plan",
+            href: studyPlanId
+                ? routes.dashboard.studyPlans.detail(studyPlanId)
+                : routes.dashboard.studyPlans.list,
+        },
     ];
 
     return (
@@ -18,6 +40,7 @@ export const QuickActions = () => {
                 {actions.map((action) => (
                     <button
                         key={action.label}
+                        onClick={() => router.push(action.href)}
                         className="group flex w-full items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-3 text-sm font-medium text-neutral-700 shadow-sm transition-all hover:border-[#00bae2]/30 hover:bg-white hover:text-neutral-900 hover:shadow-lg hover:shadow-[#00bae2]/10 hover:-translate-y-0.5"
                     >
                         <div className="flex items-center gap-3">
