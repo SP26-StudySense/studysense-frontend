@@ -7,6 +7,7 @@ import { RoadmapTemplate, UserLearningRoadmap } from '../types';
 import { cn } from '@/shared/lib/utils';
 import { useStartLearning } from '../hooks/useStartLearning';
 import { useSessionStore } from '@/store/session.store';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
 import { SurveyTriggerType } from '@/features/survey/api/types';
 import { SurveyTriggerReason } from '@/features/survey/types';
@@ -27,6 +28,7 @@ const difficultyColors = {
 
 export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
     const router = useRouter();
+    const { isAuthenticated } = useAuth();
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
 
     // Check if this roadmap already has a study plan
@@ -50,6 +52,12 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
             setActiveStudyPlanId(roadmap.studyPlanId);
             router.push(`/dashboard/${roadmap.studyPlanId}`);
         } else {
+            if (!isAuthenticated) {
+                const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                router.push(`/login?callbackUrl=${callbackUrl}`);
+                return;
+            }
+
             // Check if roadmap already has a study plan, redirect to dashboard instead of survey
             if (hasExistingPlan && roadmapToStudyPlanMap) {
                 const existingStudyPlanId = roadmapToStudyPlanMap.get(Number(roadmap.id));
