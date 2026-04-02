@@ -102,6 +102,12 @@ export const queryKeys = {
     history: (conversationId: string) => ['chat', 'history', conversationId] as const,
   },
 
+  // Dashboard
+  dashboard: {
+    all: ['dashboard'] as const,
+    overview: (studyPlanId: string) => ['dashboard', 'overview', studyPlanId] as const,
+  },
+
   // Notifications
   notifications: {
     all: ['notifications'] as const,

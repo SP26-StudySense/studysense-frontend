@@ -129,6 +129,16 @@ export const endpoints = {
     createTaskItems: '/ai/create-task-items',
   },
 
+  // Dashboard
+  dashboard: {
+    overview: (studyPlanId: string) => `/dashboard/${studyPlanId}`,
+  },
+
+  // User gamification
+  userGamifications: {
+    recordDailyLogin: '/gamification/record-login',
+  },
+
   // Notifications
   notifications: {
     my: '/notifications/me',

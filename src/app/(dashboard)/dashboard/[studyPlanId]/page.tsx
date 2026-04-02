@@ -26,19 +26,19 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
         <WelcomeBanner studyPlanId={studyPlanId} />
 
         {/* Stats Grid */}
-        <StatsOverview />
+        <StatsOverview studyPlanId={studyPlanId} />
 
         {/* Main Content Layout */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Left Column (2/3 width) */}
           <div className="space-y-8 lg:col-span-2">
-            <TodaysPlan />
-            <RecentSessions />
+            <TodaysPlan studyPlanId={studyPlanId} />
+            <RecentSessions studyPlanId={studyPlanId} />
           </div>
 
           {/* Right Column (1/3 width) */}
           <div className="space-y-8">
-            <QuickActions />
+            <QuickActions studyPlanId={studyPlanId} />
           </div>
         </div>
       </div>
