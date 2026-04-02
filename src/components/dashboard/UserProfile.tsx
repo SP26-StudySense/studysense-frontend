@@ -2,23 +2,12 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { useUserMembership } from '@/features/membership/api/queries';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Settings, LogOut, Crown, Zap } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-
-function hasPaidSubscription(subscriptionType: unknown): boolean {
-    if (typeof subscriptionType === 'number') {
-        return subscriptionType > 1;
-    }
-
-    const normalized = String(subscriptionType ?? '').toLowerCase();
-    return normalized.includes('premium') || normalized.includes('pro');
-}
 
 export function UserProfile() {
     const { user, isLoading, logout, isLoggingOut } = useAuth();
-    const { data: membership } = useUserMembership(!!user);
 
     if (isLoading) {
         return (
@@ -33,10 +22,9 @@ export function UserProfile() {
 
     const initials = `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
 
+    // Helper to capitalize first letter
     const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
     const fullName = `${capitalize(user.firstName ?? '')} ${capitalize(user.lastName ?? '')}`.trim() || user.email;
-
-    const isPremium = hasPaidSubscription(membership?.subscriptionType ?? user?.subscriptionType);
 
     return (
         <div className="relative group">
@@ -60,7 +48,7 @@ export function UserProfile() {
 
             {/* Hover Dropdown */}
             <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <div className="min-w-[210px] rounded-xl border border-neutral-200 bg-white p-2 shadow-xl shadow-neutral-900/10">
+                <div className="min-w-[200px] rounded-xl border border-neutral-200 bg-white p-2 shadow-xl shadow-neutral-900/10">
                     {/* User Info */}
                     <div className="px-3 py-2 border-b border-neutral-100 mb-2">
                         <p className="text-sm font-medium text-neutral-900 truncate">
@@ -69,40 +57,7 @@ export function UserProfile() {
                         <p className="text-xs text-neutral-500 truncate">
                             {user.email}
                         </p>
-                        {/* Subscription badge */}
-                        <div className="mt-1.5">
-                            {isPremium ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#fec5fb]/30 to-[#00bae2]/30 px-2 py-0.5 text-[10px] font-semibold text-neutral-700 border border-[#00bae2]/20">
-                                    <Crown className="h-2.5 w-2.5 text-amber-500" />
-                                    Premium
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-500">
-                                    <Crown className="h-2.5 w-2.5 text-neutral-400" />
-                                    Free Plan
-                                </span>
-                            )}
-                        </div>
                     </div>
-
-                    {/* Membership Link */}
-                    <Link
-                        href="/membership"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
-                    >
-                        <Crown className="h-4 w-4 text-amber-500" />
-                        Membership
-                    </Link>
-
-                    {/* {!isPremium && ( */}
-                    <Link
-                        href="/upgrade-plan"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
-                    >
-                        <Zap className="h-4 w-4 text-[#00bae2]" />
-                        Upgrade Plan
-                    </Link>
-                    {/* )} */}
 
                     {/* Profile Link */}
                     <Link

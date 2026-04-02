@@ -10,14 +10,6 @@ export const routes = {
     about: '/about',
     pricing: '/pricing',
     contact: '/contact',
-    upgradePlan: '/upgrade-plan',
-    membership: '/membership',
-  },
-
-  // Payment routes (can be grouped in public or separated)
-  payment: {
-    success: '/payment/success',
-    failed: '/payment/fail',
   },
 
   // Auth routes
@@ -129,9 +121,6 @@ export const publicRoutes = [
   routes.public.about,
   routes.public.pricing,
   routes.public.contact,
-  routes.public.upgradePlan,
-  routes.payment.success,
-  routes.payment.failed,
 ];
 
 export const authRoutes = [
@@ -142,7 +131,7 @@ export const authRoutes = [
   routes.auth.verifyEmail,
 ];
 
-export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings', '/membership'];
+export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings'];
 
 export const adminRoutes = ['/admin-dashboard', '/admin-users', '/admin-categories', '/admin-transactions'];
 

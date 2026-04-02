@@ -66,7 +66,7 @@ export const CTA = () => {
                         <Button
                             variant="brandSecondary"
                             size="xl"
-                            onClick={() => navigateWithTransition('/roadmaps')}
+                            onClick={() => navigateWithTransition('/register')}
                         >
                             Get Started for Free
                         </Button>

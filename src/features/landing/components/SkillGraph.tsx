@@ -69,7 +69,7 @@ export const SkillGraph = () => {
                             to focus next.
                         </p>
                         <button
-                            onClick={() => navigateWithTransition('/roadmaps')}
+                            onClick={() => navigateWithTransition('/register')}
                             className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-6 py-3 text-sm font-semibold text-neutral-900 transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,186,226,0.4)] cursor-pointer"
                         >
                             Create Profile
