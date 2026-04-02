@@ -9,6 +9,7 @@ import type {
   // Request types
   GetRoadmapsParams,
   GetManagerRoadmapsParams,
+  GetContentManagerStatsParams,
   CreateRoadmapRequest,
   GetNodeContentsRequest,
   CreateRoadmapGraphRequest,
@@ -31,6 +32,7 @@ import type {
   // Response types
   GetRoadmapsResponse,
   GetManagerSubjectsResponse,
+  GetContentManagerStatsResponse,
   CreateRoadmapResponse,
   RoadmapDetail,
   NodeContent,
@@ -86,6 +88,8 @@ export const cmQueryKeys = {
   managerRoadmaps: (params: GetManagerRoadmapsParams) =>
     [...cmQueryKeys.roadmaps(), 'manager', params] as const,
   managerSubjects: () => [...cmQueryKeys.all, 'manager-subjects'] as const,
+  managerStats: (params?: GetContentManagerStatsParams) =>
+    [...cmQueryKeys.all, 'manager-stats', params ?? {}] as const,
   nodeContents: (roadmapId: number, nodeId: number) =>
     [...cmQueryKeys.all, 'contents', roadmapId, nodeId] as const,
   quizzes: () => [...cmQueryKeys.all, 'quizzes'] as const,
@@ -132,6 +136,13 @@ export async function getManagerRoadmaps(
 
 export async function getSubjectsByContentManager(): Promise<GetManagerSubjectsResponse> {
   return get<GetManagerSubjectsResponse>('/learning-subjects/manager');
+}
+
+export async function getContentManagerStats(
+  params?: GetContentManagerStatsParams
+): Promise<GetContentManagerStatsResponse> {
+  const queryString = buildQueryString(params ?? {});
+  return get<GetContentManagerStatsResponse>(`/content-manager/stats${queryString}`);
 }
 
 export async function deleteRoadmap(

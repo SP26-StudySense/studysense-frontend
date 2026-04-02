@@ -9,8 +9,10 @@ import { cmQueryKeys } from './api';
 import type {
   GetRoadmapsParams,
   GetManagerRoadmapsParams,
+  GetContentManagerStatsParams,
   GetRoadmapsResponse,
   GetManagerSubjectsResponse,
+  GetContentManagerStatsResponse,
   RoadmapDetail,
   NodeContent,
   GenerateRoadmapResponse,
@@ -105,6 +107,18 @@ export function useSubjectsByContentManager(
     queryKey: cmQueryKeys.managerSubjects(),
     queryFn: () => api.getSubjectsByContentManager(),
     staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+export function useContentManagerStats(
+  params?: GetContentManagerStatsParams,
+  options?: Omit<UseQueryOptions<GetContentManagerStatsResponse>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: cmQueryKeys.managerStats(params),
+    queryFn: () => api.getContentManagerStats(params),
+    staleTime: 2 * 60 * 1000,
     ...options,
   });
 }

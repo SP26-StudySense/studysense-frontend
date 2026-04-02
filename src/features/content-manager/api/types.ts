@@ -173,6 +173,54 @@ export interface GetManagerSubjectsResponse {
 }
 
 /**
+ * Get content manager dashboard stats params
+ * GET /api/content-manager/stats
+ */
+export interface GetContentManagerStatsParams {
+  subjectId?: number;
+}
+
+export interface MonthlyCompletedUsersDto {
+  year: number;
+  month: number;
+  completedUsers: number;
+}
+
+export interface TopRoadmapStatsDto {
+  roadmapId: number;
+  title: string;
+  subjectId: number;
+  studyPlanCount: number;
+  nodeCount: number;
+}
+
+export interface QuizLeaderboardItemDto {
+  quizId: number;
+  quizTitle: string | null;
+  roadmapId: number;
+  roadmapTitle: string;
+  count: number;
+}
+
+export interface ContentManagerStatsDto {
+  totalRoadmapsCreated: number;
+  totalNodesAdded: number;
+  totalNodeContentsCreated: number;
+  totalQuizzesCreated: number;
+  totalUsersCompletedRoadmaps: number;
+  totalUsersInProgressRoadmaps: number;
+  topRoadmapMostLearned: TopRoadmapStatsDto | null;
+  completedUsersByMonth: MonthlyCompletedUsersDto[];
+  mostAttemptedQuiz: QuizLeaderboardItemDto | null;
+  mostPassedQuiz: QuizLeaderboardItemDto | null;
+  mostFailedQuiz: QuizLeaderboardItemDto | null;
+}
+
+export interface GetContentManagerStatsResponse {
+  stats: ContentManagerStatsDto;
+}
+
+/**
  * Create roadmap request
  * POST /api/roadmaps
  */
