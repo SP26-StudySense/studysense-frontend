@@ -85,8 +85,8 @@ export const Header = () => {
                     >
                         About Us
                     </Link>
+                    <UpgradePlanNavLink />
                     <MembershipNavLink isPremium={isSubscribed} />
-                    {(!isAuthenticated || !isSubscribed) && <UpgradePlanNavLink />}
                 </nav>
 
                 <div className="flex items-center gap-x-4">

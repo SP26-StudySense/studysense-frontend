@@ -8,10 +8,22 @@ function normalizePaymentsResponse(raw: unknown): GetUserPaymentsResponse {
   const obj = (raw ?? {}) as Record<string, unknown>;
   const payments = (obj.payments ?? obj.Payments ?? []) as GetUserPaymentsResponse['payments'];
   const totalCountRaw = obj.totalCount ?? obj.TotalCount;
+  const pageIndexRaw = obj.pageIndex ?? obj.PageIndex;
+  const pageSizeRaw = obj.pageSize ?? obj.PageSize;
+  const totalPagesRaw = obj.totalPages ?? obj.TotalPages;
+  const safePayments = Array.isArray(payments) ? payments : [];
+  const safeTotalCount = typeof totalCountRaw === 'number' ? totalCountRaw : safePayments.length;
+  const safePageSize = typeof pageSizeRaw === 'number' && pageSizeRaw > 0 ? pageSizeRaw : 10;
 
   return {
-    payments: Array.isArray(payments) ? payments : [],
-    totalCount: typeof totalCountRaw === 'number' ? totalCountRaw : (Array.isArray(payments) ? payments.length : 0),
+    payments: safePayments,
+    totalCount: safeTotalCount,
+    pageIndex: typeof pageIndexRaw === 'number' && pageIndexRaw > 0 ? pageIndexRaw : 1,
+    pageSize: safePageSize,
+    totalPages:
+      typeof totalPagesRaw === 'number' && totalPagesRaw > 0
+        ? totalPagesRaw
+        : Math.max(1, Math.ceil(safeTotalCount / safePageSize)),
   };
 }
 
@@ -29,11 +41,11 @@ function normalizeMembershipResponse(raw: unknown): UserMembershipResponse {
   };
 }
 
-export function useUserPayments(enabled = true) {
+export function useUserPayments(enabled = true, pageIndex = 1, pageSize = 10) {
   return useQuery({
-    queryKey: ['membership', 'payments'],
+    queryKey: ['membership', 'payments', pageIndex, pageSize],
     queryFn: async () => {
-      const raw = await get<unknown>(endpoints.payments.userPayments);
+      const raw = await get<unknown>(`${endpoints.payments.userPayments}?pageIndex=${pageIndex}&pageSize=${pageSize}`);
       return normalizePaymentsResponse(raw);
     },
     enabled,

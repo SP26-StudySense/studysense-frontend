@@ -14,6 +14,7 @@ import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
 import { SurveyTriggerType } from '@/features/survey/api/types';
 import { SurveyTriggerReason } from '@/features/survey/types';
 import { showInfo, showWarning } from '@/shared/lib/toast';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 interface RoadmapPreviewPageProps {
     roadmapId: string;
@@ -29,6 +30,7 @@ type TabType = 'overview' | 'roadmap';
 
 export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const router = useRouter();
+    const { isAuthenticated } = useAuth();
     const [roadmap, setRoadmap] = useState<RoadmapTemplate | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -99,6 +101,12 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
 
     const handleStartLearning = async () => {
         if (!roadmap || isCheckingSurvey || isLoading) return;
+
+        if (!isAuthenticated) {
+            const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            router.push(`/login?callbackUrl=${callbackUrl}`);
+            return;
+        }
 
         setIsCheckingSurvey(true);
         try {

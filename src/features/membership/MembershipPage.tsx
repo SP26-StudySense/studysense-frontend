@@ -5,7 +5,7 @@ import {
     XCircle, ArrowUpRight, Zap, AlertCircle, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -40,12 +40,40 @@ const statusConfig = {
     },
 };
 
+function parseUtcDate(dateStr: string): Date | null {
+    if (!dateStr) return null;
+
+    // If backend omits timezone suffix, force UTC interpretation.
+    const hasTimeZone = /(?:[zZ]|[+-]\d{2}:\d{2})$/.test(dateStr);
+    const normalized = hasTimeZone ? dateStr : `${dateStr}Z`;
+    const parsed = new Date(normalized);
+
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    const parsed = parseUtcDate(dateStr);
+    if (!parsed) return 'Invalid date';
+
+    return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-    });
+    }).format(parsed);
+}
+
+function formatDateTimeLocal(dateStr: string) {
+    const parsed = parseUtcDate(dateStr);
+    if (!parsed) return 'Invalid date';
+
+    return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    }).format(parsed);
 }
 
 function getDaysRemainingLabel(days: number) {
@@ -99,7 +127,13 @@ function addMonths(date: Date, months: number) {
 export function MembershipPage() {
     const { data: user, isLoading: isUserLoading } = useCurrentUser();
     const { data: membership, isLoading: isMembershipLoading, refetch: refetchMembership } = useUserMembership(!!user);
-    const { data: paymentsResponse, isLoading: isPaymentsLoading } = useUserPayments(!!user);
+    const [paymentsPageIndex, setPaymentsPageIndex] = useState(1);
+    const paymentsPageSize = 10;
+    const { data: paymentsResponse, isLoading: isPaymentsLoading } = useUserPayments(
+        !!user,
+        paymentsPageIndex,
+        paymentsPageSize
+    );
     const [isCanceling, setIsCanceling] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
 
@@ -120,6 +154,16 @@ export function MembershipPage() {
     };
 
     const payments = paymentsResponse?.payments ?? [];
+    const totalPaymentPages = paymentsResponse?.totalPages ?? 1;
+    const totalPaymentCount = paymentsResponse?.totalCount ?? 0;
+    const canGoToPrevPaymentsPage = paymentsPageIndex > 1;
+    const canGoToNextPaymentsPage = paymentsPageIndex < totalPaymentPages;
+
+    useEffect(() => {
+        if (paymentsPageIndex > totalPaymentPages && totalPaymentPages > 0) {
+            setPaymentsPageIndex(totalPaymentPages);
+        }
+    }, [paymentsPageIndex, totalPaymentPages]);
 
     const successfulPayments = useMemo(
         () => payments.filter((p) => normalizePaymentStatus(p.status) === 'success'),
@@ -352,7 +396,7 @@ export function MembershipPage() {
 
                                     {/* Date & Method */}
                                     <div>
-                                        <p className="text-sm text-neutral-700">{formatDate(txn.date)}</p>
+                                        <p className="text-sm text-neutral-700">{formatDateTimeLocal(txn.date)}</p>
                                         <p className="text-xs text-neutral-400 flex items-center gap-1 mt-0.5">
                                             <CreditCard className="h-3 w-3" />
                                             {txn.method}
@@ -374,6 +418,30 @@ export function MembershipPage() {
                                 </div>
                             );
                         })}
+                    </div>
+
+                    <div className="flex flex-col gap-3 border-t border-neutral-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-neutral-500">
+                            Showing page {paymentsResponse?.pageIndex ?? paymentsPageIndex} of {totalPaymentPages} · {totalPaymentCount} total transactions
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setPaymentsPageIndex((current) => Math.max(1, current - 1))}
+                                disabled={!canGoToPrevPaymentsPage || isPaymentsLoading}
+                                className="inline-flex items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPaymentsPageIndex((current) => Math.min(totalPaymentPages, current + 1))}
+                                disabled={!canGoToNextPaymentsPage || isPaymentsLoading}
+                                className="inline-flex items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
                 </div>
 
