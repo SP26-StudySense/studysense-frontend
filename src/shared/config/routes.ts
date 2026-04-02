@@ -10,6 +10,14 @@ export const routes = {
     about: '/about',
     pricing: '/pricing',
     contact: '/contact',
+    upgradePlan: '/upgrade-plan',
+    membership: '/membership',
+  },
+
+  // Payment routes (can be grouped in public or separated)
+  payment: {
+    success: '/payment/success',
+    failed: '/payment/fail',
   },
 
   // Auth routes
@@ -121,6 +129,10 @@ export const publicRoutes = [
   routes.public.about,
   routes.public.pricing,
   routes.public.contact,
+  routes.public.upgradePlan,
+  routes.public.membership,
+  routes.payment.success,
+  routes.payment.failed,
 ];
 
 export const authRoutes = [

@@ -8,6 +8,27 @@ import { NotificationBell } from '@/features/notification';
 import { Button } from '@/shared/ui/button';
 import { UserProfile } from '@/components/dashboard/UserProfile';
 
+// Smart membership nav link: free → upgrade plan, premium → /membership
+function MembershipNavLink({ isAuthenticated }: { isAuthenticated: boolean }) {
+    const { user } = useAuth();
+
+    // Determine href based on subscription type
+    // If not authenticated yet or free plan → go to upgrade-plan
+    // If premium → go to membership detail page
+    const membershipHref = isAuthenticated && (user as any)?.subscriptionType === 'premium'
+        ? '/membership'
+        : '/upgrade-plan';
+
+    return (
+        <Link
+            href={membershipHref}
+            className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+        >
+            Membership
+        </Link>
+    );
+}
+
 export const Header = () => {
     const { navigateWithTransition } = useTransitionRouter();
     const { isAuthenticated, isLoading } = useAuth();
@@ -37,12 +58,19 @@ export const Header = () => {
                     >
                         Roadmaps
                     </Link>
-                    <Link
+                    {/* <Link
                         href="#community"
                         className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
                     >
                         Community
+                    </Link> */}
+                    <Link
+                        href="/about"
+                        className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+                    >
+                        About Us
                     </Link>
+                    <MembershipNavLink isAuthenticated={isAuthenticated} />
                 </nav>
 
                 <div className="flex items-center gap-x-4">
