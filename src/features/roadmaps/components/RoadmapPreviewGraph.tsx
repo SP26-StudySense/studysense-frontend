@@ -8,6 +8,7 @@ import { useRoadmapGraph, useNodeContents, NodeDifficulty, RoadmapNodeDTO, Roadm
 interface RoadmapPreviewGraphProps {
     roadmapId: number | string;
     className?: string;
+    disableContentLinks?: boolean;
 }
 
 // Simple layout algorithm for nodes
@@ -128,7 +129,7 @@ const difficultyConfig = {
     },
 };
 
-export function RoadmapPreviewGraph({ roadmapId, className }: RoadmapPreviewGraphProps) {
+export function RoadmapPreviewGraph({ roadmapId, className, disableContentLinks = false }: RoadmapPreviewGraphProps) {
     const { data: graph, isLoading, error } = useRoadmapGraph(roadmapId);
     const [scale, setScale] = useState(0.9);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -138,7 +139,12 @@ export function RoadmapPreviewGraph({ roadmapId, className }: RoadmapPreviewGrap
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Fetch node content when a node is selected
-    const { data: nodeContents, isLoading: isContentLoading } = useNodeContents(roadmapId, selectedNode?.id ?? null);
+    const { data: nodeContents, isLoading: isContentLoading } = useNodeContents(
+        roadmapId,
+        selectedNode?.id ?? null,
+        { sanitizeUrls: disableContentLinks }
+    );
+    const visibleNodeContents = useMemo(() => nodeContents ?? [], [nodeContents]);
 
     const NODE_WIDTH = 180;
     const NODE_HEIGHT = 70;
@@ -342,9 +348,9 @@ export function RoadmapPreviewGraph({ roadmapId, className }: RoadmapPreviewGrap
                             )}>
                                 {difficultyConfig[normalizeDifficulty(selectedNode.difficulty)].label}
                             </span>
-                            {nodeContents && nodeContents.length > 0 && (
+                            {visibleNodeContents.length > 0 && (
                                 <span className="text-xs text-neutral-500">
-                                    {nodeContents.length} content{nodeContents.length > 1 ? 's' : ''}
+                                    {visibleNodeContents.length} content{visibleNodeContents.length > 1 ? 's' : ''}
                                 </span>
                             )}
                         </div>
@@ -356,7 +362,7 @@ export function RoadmapPreviewGraph({ roadmapId, className }: RoadmapPreviewGrap
                             <div className="flex items-center justify-center py-8">
                                 <Loader2 className="h-6 w-6 animate-spin text-[#00bae2]" />
                             </div>
-                        ) : nodeContents && nodeContents.length > 0 ? (
+                        ) : visibleNodeContents.length > 0 ? (
                             <>
                                 {/* Description from node */}
                                 {selectedNode.description && (
@@ -371,7 +377,7 @@ export function RoadmapPreviewGraph({ roadmapId, className }: RoadmapPreviewGrap
                                 <div>
                                     <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Learning Contents</h4>
                                     <div className="space-y-2">
-                                        {nodeContents.map((content: NodeContentItemDTO) => {
+                                        {visibleNodeContents.map((content: NodeContentItemDTO) => {
                                             const ContentTypeIcons: Record<string, typeof FileText> = {
                                                 Course: BookOpen,
                                                 Exercise: Dumbbell,
@@ -384,8 +390,15 @@ export function RoadmapPreviewGraph({ roadmapId, className }: RoadmapPreviewGrap
                                             return (
                                                 <div
                                                     key={content.id}
-                                                    className="flex items-start gap-3 rounded-xl bg-neutral-50 p-3 hover:bg-neutral-100 transition-colors cursor-pointer"
-                                                    onClick={() => content.url && window.open(content.url, '_blank')}
+                                                    className={cn(
+                                                        "flex items-start gap-3 rounded-xl bg-neutral-50 p-3 transition-colors",
+                                                        disableContentLinks ? "cursor-default" : "cursor-pointer hover:bg-neutral-100"
+                                                    )}
+                                                    onClick={() => {
+                                                        if (!disableContentLinks && content.url) {
+                                                            window.open(content.url, '_blank');
+                                                        }
+                                                    }}
                                                 >
                                                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-sm shrink-0">
                                                         <Icon className="h-5 w-5 text-neutral-600" />

@@ -1,35 +1,48 @@
 'use client';
 
-import { Search, Filter, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useRoadmapGraph } from './api';
 import { RoadmapPreviewGraph } from './components/RoadmapPreviewGraph';
 import { useStudyPlan } from '@/features/study-plan/api';
 
 export interface RoadmapDetailPageProps {
-    studyPlanId: number;
+    studyPlanId?: number;
+    roadmapId?: number;
 }
 
-export function RoadmapDetailPage({ studyPlanId }: RoadmapDetailPageProps) {
+export function RoadmapDetailPage({ studyPlanId, roadmapId }: RoadmapDetailPageProps) {
     const router = useRouter();
+    const pathname = usePathname();
+    const shouldDisableContentLinks = pathname?.startsWith('/roadmaps/') ?? false;
+    const isStudyPlanMode = typeof studyPlanId === 'number' && !Number.isNaN(studyPlanId);
 
     // Fetch study plan to get roadmapId
-    const { data: studyPlan, isLoading: isLoadingStudyPlan, error: studyPlanError } = useStudyPlan(
-        studyPlanId.toString()
-    );
+    const {
+        data: studyPlan,
+        isLoading: isLoadingStudyPlan,
+        error: studyPlanError,
+    } = useStudyPlan(isStudyPlanMode ? studyPlanId.toString() : undefined, {
+        enabled: isStudyPlanMode,
+    });
+
+    const resolvedRoadmapId = roadmapId ?? studyPlan?.roadmapId;
+    const { data: roadmapGraph } = useRoadmapGraph(shouldDisableContentLinks ? resolvedRoadmapId ?? null : null);
+    const roadmapTitle = roadmapGraph?.roadmap?.title ?? studyPlan?.roadmapName ?? 'Detail';
 
     // Update document title with roadmap name
     useEffect(() => {
-        if (studyPlan?.roadmapName) {
+        if (isStudyPlanMode && studyPlan?.roadmapName) {
             document.title = `${studyPlan.roadmapName} - My Roadmap | StudySense`;
         }
         return () => {
             document.title = 'My Roadmap | StudySense';
         };
-    }, [studyPlan?.roadmapName]);
+    }, [isStudyPlanMode, studyPlan?.roadmapName]);
 
     // Loading state
-    if (isLoadingStudyPlan) {
+    if (isStudyPlanMode && isLoadingStudyPlan) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-160px)]">
                 <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
@@ -38,7 +51,7 @@ export function RoadmapDetailPage({ studyPlanId }: RoadmapDetailPageProps) {
     }
 
     // Error state
-    if (studyPlanError) {
+    if (isStudyPlanMode && studyPlanError) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-160px)] gap-4">
                 <div className="text-center">
@@ -60,7 +73,7 @@ export function RoadmapDetailPage({ studyPlanId }: RoadmapDetailPageProps) {
     }
 
     // No data state
-    if (!studyPlan || !studyPlan.roadmapId) {
+    if (!resolvedRoadmapId) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-160px)] gap-4">
                 <h2 className="text-xl font-semibold text-neutral-900">No roadmap data found</h2>
@@ -75,32 +88,42 @@ export function RoadmapDetailPage({ studyPlanId }: RoadmapDetailPageProps) {
     }
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-160px)]">
-            {/* Left - Graph */}
-            <div className="flex-1 flex flex-col gap-4 min-w-0">
-                {/* Search & Filter Bar */}
-                <div className="flex items-center gap-3 lg:gap-4">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                        <input
-                            type="text"
-                            placeholder="Search topics..."
-                            className="w-full rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur-xl py-3 pl-11 pr-4 text-sm outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
-                        />
-                    </div>
-                    <button className="flex items-center gap-2 rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur-xl px-5 py-3 text-sm font-medium text-neutral-700 hover:bg-white transition-all">
-                        <Filter className="h-4 w-4" />
-                        Filters
+        <div className="space-y-3">
+            {shouldDisableContentLinks ? (
+                <div className="mx-auto flex w-full items-center justify-between gap-3 px-1">
+                    <button
+                        onClick={() => router.back()}
+                        className="inline-flex items-center gap-2 px-1 py-1 text-sm font-medium text-neutral-700 transition-colors hover:text-neutral-900"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
                     </button>
-                </div>
 
+                    <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-500">
+                        <button
+                            onClick={() => router.push('/roadmaps')}
+                            className="font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+                        >
+                            Roadmaps
+                        </button>
+                        <span>/</span>
+                        <span className="font-medium text-neutral-700">{roadmapTitle}</span>
+                    </div>
+                </div>
+            ) : null}
+
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-200px)]">
+            {/* Left - Graph */}
+            <div className="flex-1 flex flex-col min-w-0">
                 {/* Graph Container */}
                 <div className="flex-1 min-h-0 rounded-2xl border border-neutral-200 bg-white/50 backdrop-blur-xl overflow-hidden">
                     <RoadmapPreviewGraph
-                        roadmapId={studyPlan.roadmapId}
+                        roadmapId={resolvedRoadmapId}
+                        disableContentLinks={shouldDisableContentLinks}
                         className="h-full"
                     />
                 </div>
+            </div>
             </div>
         </div>
     );

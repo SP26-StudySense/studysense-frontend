@@ -77,21 +77,21 @@ export function RoadmapTimeline({ modules, selectedModuleId, onModuleClick, clas
                                         {module.title}
                                     </h4>
 
-                                    {module.status === 'completed' && module.completedDate && (
+                                    {module.status === 'completed' && (
                                         <p className="text-xs text-[#00889e] font-medium mt-0.5">
-                                            ✓ Completed on {module.completedDate}
+                                            Completed
                                         </p>
                                     )}
 
                                     {module.status === 'in_progress' && (
                                         <p className="text-xs text-violet-600 font-medium mt-0.5">
-                                            In Progress {module.dueDate && `• Due ${module.dueDate}`}
+                                            In progress
                                         </p>
                                     )}
 
                                     {module.status === 'not_started' && (
                                         <p className="text-xs text-neutral-400 mt-0.5">
-                                            {module.taskCount ? `${module.taskCount} tasks` : 'Not started'}
+                                            Not started
                                         </p>
                                     )}
 
