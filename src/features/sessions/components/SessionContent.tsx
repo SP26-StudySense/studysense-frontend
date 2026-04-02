@@ -29,7 +29,6 @@ export function SessionContent({ className }: SessionContentProps) {
     const { trackEvent } = useAnalytics();
 
     const studyPlanId = toPositiveNumber(selectedNode?.planId ?? activeStudyPlanId);
-    const nodeId = selectedNode?.roadmapNodeId ?? toPositiveNumber(selectedNode?.id);
     const studyPlanModuleId = toPositiveNumber(selectedNode?.id);
 
     const { data: studyPlan, isLoading: isPlanLoading } = useStudyPlan(
@@ -37,6 +36,9 @@ export function SessionContent({ className }: SessionContentProps) {
     );
 
     const roadmapId = studyPlan?.roadmapId ?? null;
+    const nodeIdFromModule =
+        studyPlan?.modules?.find((module) => module.id === studyPlanModuleId)?.roadmapNodeId ?? null;
+    const nodeId = selectedNode?.roadmapNodeId ?? nodeIdFromModule;
 
     const {
         data: nodeContents = [],
@@ -46,7 +48,7 @@ export function SessionContent({ className }: SessionContentProps) {
     } = useNodeContents(roadmapId, nodeId ?? null);
 
     const isLoading = isPlanLoading || (Boolean(roadmapId) && isContentsLoading);
-    const hasContext = Boolean(selectedNode && nodeId && studyPlanId);
+    const hasContext = Boolean(studyPlanId && studyPlanModuleId && nodeId);
     const errorMessage = contentsError instanceof Error
         ? contentsError.message
         : 'Failed to load module contents';

@@ -6,6 +6,7 @@ import { ToastProvider } from './toast-provider';
 import { CSPostHogProvider } from './posthog-provider';
 import { PostHogPageView } from './PostHogPageView';
 import { OneSignalBootstrap } from '@/features/notification';
+import { DailyLoginBootstrap } from '@/features/gamification/DailyLoginBootstrap';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ export function Providers({ children }: ProvidersProps) {
       <PostHogPageView />
       <OneSignalBootstrap />
       <QueryProvider>
+        <DailyLoginBootstrap />
         <ThemeProvider>
           {children}
           <ToastProvider />

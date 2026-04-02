@@ -1,7 +1,18 @@
-import { Calendar, Clock, Flame, Target } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+'use client';
 
-export const StatsOverview = () => {
+import { Calendar, Flame, Sparkles, Target } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useDashboardOverview } from "../api/queries";
+
+interface StatsOverviewProps {
+    studyPlanId?: string;
+}
+
+export const StatsOverview = ({ studyPlanId }: StatsOverviewProps) => {
+    const { data } = useDashboardOverview(studyPlanId);
+    const focus = data?.todaysFocus;
+    const progress = Math.max(0, Math.min(100, Number(data?.progressPercentage ?? 0)));
+
     return (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* Card 1: Today's Focus */}
@@ -13,8 +24,8 @@ export const StatsOverview = () => {
                     </div>
                 </div>
                 <div className="mt-4">
-                    <h3 className="text-lg font-bold text-neutral-900">State & Hooks</h3>
-                    <p className="mt-1 text-xs font-medium text-neutral-500">45 min estimated</p>
+                    <h3 className="text-lg font-bold text-neutral-900 line-clamp-1">{focus?.taskTitle || 'No task selected'}</h3>
+                    <p className="mt-1 text-xs font-medium text-neutral-500">{focus ? `${focus.estimatedMinutes} min estimated` : 'Choose tasks in Schedule'}</p>
                 </div>
             </div>
 
@@ -27,8 +38,8 @@ export const StatsOverview = () => {
                     </div>
                 </div>
                 <div className="mt-4 w-full">
-                    <div className="mb-2 text-2xl font-bold text-neutral-900">23%</div>
-                    <Progress value={23} className="h-2 bg-neutral-100" indicatorClassName="bg-gradient-to-r from-[#fec5fb] to-[#00bae2]" />
+                    <div className="mb-2 text-2xl font-bold text-neutral-900">{Math.round(progress)}%</div>
+                    <Progress value={progress} className="h-2 bg-neutral-100" indicatorClassName="bg-gradient-to-r from-[#fec5fb] to-[#00bae2]" />
                 </div>
             </div>
 
@@ -41,22 +52,22 @@ export const StatsOverview = () => {
                     </div>
                 </div>
                 <div className="mt-4">
-                    <h3 className="text-2xl font-bold text-neutral-900">2 days</h3>
+                    <h3 className="text-2xl font-bold text-neutral-900">{data?.studyStreakDays ?? 0} days</h3>
                     <p className="mt-1 text-xs font-medium text-neutral-500">Keep it going!</p>
                 </div>
             </div>
 
-            {/* Card 4: Focus Time */}
+            {/* Card 4: XP */}
             <div className="glass-panel flex flex-col justify-between rounded-3xl border border-white/60 bg-white/40 p-6 shadow-xl backdrop-blur-xl transition-all hover:-translate-y-1 hover:border-[#00bae2]/30 hover:shadow-2xl hover:shadow-[#00bae2]/10">
                 <div className="flex items-start justify-between">
-                    <span className="text-sm font-medium text-neutral-500">Focus Time</span>
+                    <span className="text-sm font-medium text-neutral-500">XP</span>
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#fec5fb]/20 to-[#00bae2]/20 text-[#00bae2]">
-                        <Clock className="h-4 w-4" />
+                        <Sparkles className="h-4 w-4" />
                     </div>
                 </div>
                 <div className="mt-4">
-                    <h3 className="text-2xl font-bold text-neutral-900">105h</h3>
-                    <p className="mt-1 text-xs font-medium text-neutral-500">of 10h weekly goal</p>
+                    <h3 className="text-2xl font-bold text-neutral-900">{data?.totalXpEarned ?? 0}</h3>
+                    <p className="mt-1 text-xs font-medium text-neutral-500">Total XP earned</p>
                 </div>
             </div>
         </div>
