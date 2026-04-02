@@ -61,6 +61,20 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
         targetUrl,
     });
 
+    // Handle OPTIONS requests natively
+    if (request.method === 'OPTIONS') {
+        const origin = request.headers.get('origin') || '*';
+        return new NextResponse(null, {
+            status: 204,
+            headers: {
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Max-Age': '86400',
+            },
+        });
+    }
+
     // Get access token from cookies
     const accessToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
     const refreshToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_REFRESH_KEY)?.value;
@@ -143,10 +157,15 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
         }
 
         // Return proxied response
+        const proxyResponseHeaders = new Headers(response.headers);
+        const requestOrigin = request.headers.get('origin') || '*';
+        proxyResponseHeaders.set('Access-Control-Allow-Origin', requestOrigin);
+        proxyResponseHeaders.set('Access-Control-Allow-Credentials', 'true');
+
         return new NextResponse(response.body, {
             status: response.status,
             statusText: response.statusText,
-            headers: response.headers,
+            headers: proxyResponseHeaders,
         });
     } catch (error) {
         console.error('[Proxy Error]', error);

@@ -1,9 +1,24 @@
 'use client';
 
-import { XCircle, RefreshCcw, Home } from 'lucide-react';
+import { XCircle, RefreshCcw, Home, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { usePaymentStatus } from './hooks/usePaymentStatus';
 
 export function PaymentFailedPage() {
+    const searchParams = useSearchParams();
+    const orderCode = searchParams.get('orderCode') || searchParams.get('id');
+    const { status, isLoading } = usePaymentStatus(orderCode);
+
+    if (isLoading || status === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-[#00bae2] mb-4" />
+                <h1 className="text-2xl font-bold text-neutral-900">Confirming status...</h1>
+                <p className="text-neutral-500 mt-2">Please wait while we verify your transaction status.</p>
+            </div>
+        );
+    }
     return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 text-center animate-in fade-in zoom-in duration-500">
             {/* Error Icon */}

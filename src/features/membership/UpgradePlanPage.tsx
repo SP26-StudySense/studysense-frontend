@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Zap, Crown, ArrowRight, Star, Sparkles } from 'lucide-react';
+import { Check, Zap, Crown, ArrowRight, Star, Sparkles, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { post } from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
 
 const freePlanFeatures = [
     'Access to all public roadmaps',
@@ -65,7 +67,30 @@ const pricingConfig: Record<BillingCycle, { label: string; price: string; perMon
 
 export function UpgradePlanPage() {
     const [billing, setBilling] = useState<BillingCycle>('monthly');
+    const [isLoading, setIsLoading] = useState(false);
     const currentPricing = pricingConfig[billing];
+
+    const handleUpgrade = async () => {
+        setIsLoading(true);
+        try {
+            const data = await post<{ checkoutUrl: string }>(endpoints.payments.createPayment, {
+                subscriptionType: 2, // Premium
+                subscriptionDuration: billing === 'sixmonths' ? 6 : 1,
+                returnUrl: window.location.origin + '/payment/success',
+                cancelUrl: window.location.origin + '/payment/fail'
+            });
+            
+            if (data?.checkoutUrl) {
+                window.location.href = data.checkoutUrl;
+            } else {
+                throw new Error("No checkout URL returned");
+            }
+        } catch (error) {
+            console.error('Failed to create payment link:', error);
+            alert('Something went wrong initiating the payment. Please try again.');
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="space-y-20 pb-16">
@@ -204,10 +229,14 @@ export function UpgradePlanPage() {
                         ))}
                     </ul>
 
-                    <button className="relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#00bae2] to-[#0097c7] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#00bae2]/25 transition-all hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 active:translate-y-0">
-                        <Crown className="h-4 w-4" />
-                        Upgrade to Premium
-                        <ArrowRight className="h-4 w-4" />
+                    <button 
+                        onClick={handleUpgrade}
+                        disabled={isLoading}
+                        className="relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#00bae2] to-[#0097c7] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#00bae2]/25 transition-all hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-75 disabled:hover:translate-y-0"
+                    >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
+                        {isLoading ? 'Processing...' : 'Upgrade to Premium'}
+                        {!isLoading && <ArrowRight className="h-4 w-4" />}
                     </button>
                 </div>
             </section>
@@ -304,10 +333,14 @@ export function UpgradePlanPage() {
                     <p className="text-neutral-400 text-sm max-w-md mx-auto">
                         Join thousands of learners who've already unlocked a smarter way to learn.
                     </p>
-                    <Link href="#" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00bae2] to-[#0097c7] px-8 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-[#00bae2]/30 hover:shadow-xl hover:-translate-y-0.5">
-                        <Sparkles className="h-4 w-4" />
-                        Upgrade Now — {currentPricing.price} ₫ / {billing === 'monthly' ? 'month' : '6 months'}
-                    </Link>
+                    <button 
+                        onClick={handleUpgrade}
+                        disabled={isLoading}
+                        className="mt-2 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00bae2] to-[#0097c7] px-8 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-[#00bae2]/30 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-75 disabled:hover:translate-y-0"
+                    >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        {isLoading ? 'Processing...' : `Upgrade Now — ${currentPricing.price} ₫ / ${billing === 'monthly' ? 'month' : '6 months'}`}
+                    </button>
                 </div>
             </section>
         </div>

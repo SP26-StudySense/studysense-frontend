@@ -1,9 +1,34 @@
 'use client';
 
-import { CheckCircle2, ArrowRight, Receipt } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Receipt, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { usePaymentStatus } from './hooks/usePaymentStatus';
 
 export function PaymentSuccessPage() {
+    const searchParams = useSearchParams();
+    const orderCode = searchParams.get('orderCode') || searchParams.get('id');
+    const { status, isLoading } = usePaymentStatus(orderCode);
+
+    if (isLoading || status === 0) { // 0 = Pending
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-[#00bae2] mb-4" />
+                <h1 className="text-2xl font-bold text-neutral-900">Verifying your payment...</h1>
+                <p className="text-neutral-500 mt-2">Please wait while we confirm your transaction securely with the bank.</p>
+            </div>
+        );
+    }
+
+    if (status === 2) { // 2 = Failed
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 text-center">
+                <h1 className="text-2xl font-bold text-red-600">Payment Unsuccessful</h1>
+                <p className="text-neutral-500 mt-2">Your payment was not successful based on our systems.</p>
+                <Link href="/" className="mt-6 text-[#00bae2] hover:underline">Return to Home</Link>
+            </div>
+        );
+    }
     return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 text-center animate-in fade-in zoom-in duration-500">
             {/* Success Icon */}
