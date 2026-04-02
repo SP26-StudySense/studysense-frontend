@@ -18,9 +18,9 @@ import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
   sendTestNotification,
-} from './api';
-import type { NotificationItem, RealtimeNotification } from './types';
-import { toNotificationTimestamp } from './date-utils';
+} from '../api/api';
+import type { NotificationItem, RealtimeNotification } from '../types';
+import { toNotificationTimestamp } from '../api/date-utils';
 
 const SIGNALR_EVENT = 'notification.received';
 
