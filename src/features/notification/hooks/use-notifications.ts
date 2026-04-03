@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   HubConnection,
@@ -19,7 +20,7 @@ import {
   markNotificationAsRead,
   sendTestNotification,
 } from '../api/api';
-import type { NotificationItem, RealtimeNotification } from '../types';
+import type { NotificationItem, RealtimeNotification, NotificationType, NotificationRelatedType } from '../types';
 import { toNotificationTimestamp } from '../api/date-utils';
 
 const SIGNALR_EVENT = 'notification.received';
@@ -49,21 +50,45 @@ function upsertNotification(list: NotificationItem[], item: NotificationItem): N
 }
 
 function toNotificationItem(item: RealtimeNotification): NotificationItem {
+  // Map numerical enums to strings if they come as numbers from SignalR
+  const typeMap: Record<number, NotificationType> = {
+    0: 'System',
+    1: 'Reminder',
+    2: 'Achievement',
+    3: 'Resurvey',
+    4: 'AiRecommendation'
+  };
+
+  const relatedTypeMap: Record<number, NotificationRelatedType> = {
+    0: 'None',
+    1: 'Task',
+    2: 'Module',
+    3: 'Plan',
+    4: 'Node',
+    5: 'Session',
+    6: 'Roadmap'
+  };
+
   return {
     id: item.id,
     title: item.title,
     content: item.content,
-    type: item.type,
-    relatedType: item.relatedType,
+    // Use the map if it's a number, otherwise use the value (if already a string)
+    type: typeof item.type === 'number' ? typeMap[item.type] || 'System' : item.type,
+    relatedType: typeof item.relatedType === 'number' ? relatedTypeMap[item.relatedType] || 'None' : item.relatedType,
     relatedId: item.relatedId,
     relatedSessionId: item.relatedSessionId,
     isRead: item.isRead,
     readAt: null,
     createdAt: item.createdAt,
+    status: item.status,
+    actionUrl: item.actionUrl,
+    dedupeKey: item.dedupeKey,
   };
 }
 
 export function useNotifications(page = 1, pageSize = 20) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -96,12 +121,30 @@ export function useNotifications(page = 1, pageSize = 20) {
       .build();
 
     connection.on(SIGNALR_EVENT, (payload: RealtimeNotification) => {
+      // 1. Cross-tab deduplication for toasts
+      if (payload.dedupeKey) {
+        const storageKey = `studysense_toast_${payload.dedupeKey}`;
+        if (localStorage.getItem(storageKey)) return;
+        localStorage.setItem(storageKey, '1');
+        // Clean up after 1 minute
+        setTimeout(() => localStorage.removeItem(storageKey), 60000);
+      }
+
       const normalized = toNotificationItem(payload);
       setItems((prev) => upsertNotification(prev, normalized));
       setUnreadCount((prev) => prev + 1);
 
+      // 2. Interactive toast
       toast.info(payload.title, {
         description: payload.content,
+        action: payload.actionUrl ? {
+          label: 'View',
+          onClick: () => {
+            if (payload.actionUrl) {
+              window.location.href = payload.actionUrl;
+            }
+          }
+        } : undefined,
       });
     });
 

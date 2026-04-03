@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import { GitFork, ChevronRight, Crown } from 'lucide-react';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -43,9 +44,15 @@ function UpgradePlanNavLink() {
 }
 
 export const Header = () => {
+    const [mounted, setMounted] = useState(false);
     const { navigateWithTransition } = useTransitionRouter();
     const { isAuthenticated, isLoading, user } = useAuth();
     const { data: membership } = useUserMembership(isAuthenticated);
+    
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const isSubscribed = hasPaidSubscription(membership?.subscriptionType ?? user?.subscriptionType);
 
     return (
@@ -90,7 +97,7 @@ export const Header = () => {
                 </nav>
 
                 <div className="flex items-center gap-x-4">
-                    {isLoading ? (
+                    {!mounted || isLoading ? (
                         <div className="h-8 w-8 rounded-full bg-neutral-200 animate-pulse" />
                     ) : isAuthenticated ? (
                         <>
