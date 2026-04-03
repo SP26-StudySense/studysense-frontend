@@ -8,6 +8,7 @@ import { UserProfile } from '@/components/dashboard/UserProfile';
 import { ChatProvider, ChatPopup, ChatToggleButton } from '@/features/chat';
 import { NotificationBell } from '@/features/notification';
 import { SessionTimerBadge } from '@/features/sessions/components/SessionTimerBadge';
+import { StreakBadge } from '@/features/gamification/StreakBadge';
 import { Search } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -85,7 +86,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   />
                 </div> */}
 
-                <NotificationBell />
+                <div className="flex items-center gap-3">
+                  <StreakBadge />
+                  <NotificationBell />
+                </div>
 
                 <div className="h-8 w-px bg-neutral-200"></div>
 

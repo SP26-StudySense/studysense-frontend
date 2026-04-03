@@ -9,6 +9,7 @@ import { NotificationBell } from '@/features/notification';
 import { useUserMembership } from '@/features/membership/api/queries';
 import { Button } from '@/shared/ui/button';
 import { UserProfile } from '@/components/dashboard/UserProfile';
+import { StreakBadge } from '@/features/gamification/StreakBadge';
 
 function hasPaidSubscription(subscriptionType: unknown): boolean {
     if (typeof subscriptionType === 'number') {
@@ -101,6 +102,7 @@ export const Header = () => {
                         <div className="h-8 w-8 rounded-full bg-neutral-200 animate-pulse" />
                     ) : isAuthenticated ? (
                         <>
+                            <StreakBadge />
                             <NotificationBell />
                             <UserProfile />
                         </>
