@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as LucideIcons from 'lucide-react';
 import { RoadmapTemplate, UserLearningRoadmap } from '../types';
 import { cn } from '@/shared/lib/utils';
@@ -28,8 +28,10 @@ const difficultyColors = {
 
 export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { isAuthenticated } = useAuth();
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
+    const [autoTriggered, setAutoTriggered] = useState(false);
 
     // Check if this roadmap already has a study plan
     const hasExistingPlan = existingRoadmapIds?.has(Number(roadmap.id)) ?? false;
@@ -44,7 +46,22 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
         return 'progress' in r;
     };
 
+    // Auto-trigger if startRoadmapId query param matches this card's roadmap
+    useEffect(() => {
+        const startRoadmapId = searchParams.get('startRoadmapId');
+        if (startRoadmapId && !autoTriggered && variant === 'template' && Number(roadmap.id) === parseInt(startRoadmapId, 10)) {
+            console.log(`🎯 Auto-triggering startLearning for roadmap #${roadmap.id}`);
+            setAutoTriggered(true);
+            // Delay slightly to ensure component is ready
+            setTimeout(() => handleClickInternal(), 100);
+        }
+    }, [searchParams, autoTriggered, variant, roadmap.id]);
+
     const handleClick = async () => {
+        await handleClickInternal();
+    };
+
+    const handleClickInternal = async () => {
         if (isCheckingSurvey || isLoading) return;
 
         if (variant === 'learning' && isLearningRoadmap(roadmap)) {
@@ -72,26 +89,39 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
             // Check for pending ON_START_ROADMAP survey before creating study plan
             setIsCheckingSurvey(true);
             try {
-                const pending = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
-                if (pending.hasPendingSurvey && pending.surveyCode) {
-                    // Redirect user to survey first; after submission, come back with startRoadmapId
+                 // 1. Check ON_REGISTER (global)
+                const registerSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_REGISTER);
+
+                if (registerSurvey.hasPendingSurvey && registerSurvey.surveyCode) {
                     const params = new URLSearchParams({
-                        triggerReason: SurveyTriggerReason.RESURVEY,
+                        triggerReason: SurveyTriggerReason.INITIAL,
                         returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
-                        roadmapId: roadmap.id.toString(),
                     });
-                    router.push(`/surveys/${pending.surveyCode}?${params.toString()}`);
+                    router.push(`/surveys/${registerSurvey.surveyCode}?${params.toString()}`);
                     return;
                 }
 
-                // Survey exists but user is blocked — show informative message
-                if (pending.blockedReason === 'MaxAttemptsExceeded') {
+                // 2. Check ON_START_ROADMAP (contextual)
+                const roadmapSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
+
+                if (roadmapSurvey.hasPendingSurvey && roadmapSurvey.surveyCode) {
+                    const params = new URLSearchParams({
+                    triggerReason: SurveyTriggerReason.RESURVEY,
+                    returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                    roadmapId: roadmap.id.toString(),
+                    });
+
+                    router.push(`/surveys/${roadmapSurvey.surveyCode}?${params.toString()}`);
+                    return;
+                }
+                                // Survey exists but user is blocked — show informative message
+                if (roadmapSurvey.blockedReason === 'MaxAttemptsExceeded') {
                     showInfo(
-                        `You have already completed this survey ${pending.completedAttempts} time${pending.completedAttempts !== 1 ? 's' : ''} (max ${pending.maxAttempts}). Proceeding to start learning.`,
+                        `You have already completed this survey ${roadmapSurvey.completedAttempts} time${roadmapSurvey.completedAttempts !== 1 ? 's' : ''} (max ${roadmapSurvey.maxAttempts}). Proceeding to start learning.`,
                         { duration: 5000 }
                     );
-                } else if (pending.blockedReason === 'CooldownActive' && pending.cooldownEndsAt) {
-                    const endsAt = new Date(pending.cooldownEndsAt);
+                } else if (roadmapSurvey.blockedReason === 'CooldownActive' && roadmapSurvey.cooldownEndsAt) {
+                    const endsAt = new Date(roadmapSurvey.cooldownEndsAt);
                     const diffMs = endsAt.getTime() - Date.now();
                     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
                     showWarning(
@@ -228,7 +258,7 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
                         </>
                     ) : (
                         <>
-                            {variant === 'template' ? 'Start Learning' : 'Continue'}
+                            {!hasExistingPlan? 'Start Learning' : 'Continue'}
                             <LucideIcons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                         </>
                     )}
