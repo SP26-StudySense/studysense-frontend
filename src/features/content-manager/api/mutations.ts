@@ -307,10 +307,7 @@ export function useSyncRoadmapGraph(
 
   return useMutation({
     mutationFn: api.syncRoadmapGraph,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: cmQueryKeys.roadmapDetail(variables.roadmapId),
-      });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cmQueryKeys.roadmaps() });
     },
     ...options,

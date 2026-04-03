@@ -268,7 +268,7 @@ export interface CreateRoadmapGraphRequest {
  * Sync Logic:
  * - id is number: Update existing
  * - id is null: Create new
- * - Not in payload: Delete
+ * - Content delete is explicit via deleteContents
  */
 export interface SyncRoadmapGraphRequest {
   roadmapId: number;
@@ -280,7 +280,8 @@ export interface SyncRoadmapGraphRequest {
   };
   nodes: RoadmapNode[]; // Include all nodes you want to keep
   edges: RoadmapEdge[]; // Include all edges you want to keep
-  contents: NodeContent[]; // Include all contents you want to keep
+  contents: NodeContent[]; // Create + update only
+  deleteContents?: number[]; // Explicit content IDs to delete
 }
 
 /**
