@@ -7,6 +7,7 @@ import { CSPostHogProvider } from './posthog-provider';
 import { PostHogPageView } from './PostHogPageView';
 import { OneSignalBootstrap } from '@/features/notification';
 import { DailyLoginBootstrap } from '@/features/gamification/DailyLoginBootstrap';
+import { GamificationRealtimeBootstrap } from '@/features/gamification/GamificationRealtimeBootstrap';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export function Providers({ children }: ProvidersProps) {
       <OneSignalBootstrap />
       <QueryProvider>
         <DailyLoginBootstrap />
+        <GamificationRealtimeBootstrap />
         <ThemeProvider>
           {children}
           <ToastProvider />
