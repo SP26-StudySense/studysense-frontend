@@ -21,6 +21,8 @@ interface RoadmapTimelineProps {
 }
 
 export function RoadmapTimeline({ modules, selectedModuleId, onModuleClick, className }: RoadmapTimelineProps) {
+    const shouldScroll = modules.length > 5;
+
     return (
         <div className={cn(
             "rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-6 shadow-xl shadow-neutral-900/5",
@@ -31,7 +33,12 @@ export function RoadmapTimeline({ modules, selectedModuleId, onModuleClick, clas
                 <p className="text-sm text-neutral-500">Click a module to view tasks</p>
             </div>
 
-            <div className="relative">
+            <div
+                className={cn(
+                    "relative",
+                    shouldScroll && "max-h-[30rem] overflow-y-auto pr-1"
+                )}
+            >
                 {/* Timeline line */}
                 <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-[#00bae2]/50 via-violet-300/50 to-neutral-200" />
 
