@@ -5,28 +5,34 @@ import Link from 'next/link';
 
 const team = [
     {
-        name: 'Nguyen Anh Tuan',
+        name: 'Nguyen Truong Giang',
         role: 'Project Lead & Backend Developer',
-        avatar: 'NAT',
+        avatar: 'NTG',
         color: 'from-[#00bae2] to-[#0088cc]',
     },
     {
-        name: 'Le Thi Bich Ngoc',
+        name: 'Tran Chi Minh',
         role: 'Frontend Developer & UI/UX',
-        avatar: 'LBN',
+        avatar: 'TCM',
         color: 'from-[#fec5fb] to-[#d490d4]',
     },
     {
-        name: 'Tran Minh Khoa',
+        name: 'Truong Quy Loi',
         role: 'Full Stack Developer',
-        avatar: 'TMK',
+        avatar: 'TQL',
         color: 'from-[#00bae2]/70 to-[#fec5fb]/70',
     },
     {
-        name: 'Pham Duc Huy',
+        name: 'Nguyen Van Duy Thang',
         role: 'Backend Developer & DevOps',
-        avatar: 'PDH',
+        avatar: 'NDT',
         color: 'from-emerald-400 to-teal-500',
+    },
+    {
+        name: 'Nguyen Thai Phuc',
+        role: 'Frontend Developer',
+        avatar: 'NTP',
+        color: 'from-indigo-400 to-cyan-500',
     },
 ];
 
