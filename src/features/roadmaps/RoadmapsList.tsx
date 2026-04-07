@@ -117,6 +117,7 @@ function useStudyPlanModuleStats(studyPlanIds: number[]) {
 
 export function RoadmapsList() {
     const { isAuthenticated } = useAuth();
+    const [hasMounted, setHasMounted] = useState(false);
     const [activeTab, setActiveTab] = useState<'explore' | 'my-roadmap'>('explore');
     const [exploreFilters, setExploreFilters] = useState<RoadmapFilters>({
         search: '',
@@ -135,6 +136,10 @@ export function RoadmapsList() {
         isLoading: isLoadingStudyPlans, 
         error: studyPlansError 
     } = useStudyPlans(isAuthenticated);
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
 
     useEffect(() => {
         if (!isAuthenticated && activeTab === 'my-roadmap') {
@@ -263,7 +268,7 @@ export function RoadmapsList() {
                         </span>
                     </button>
 
-                    {isAuthenticated && (
+                    {hasMounted && isAuthenticated && (
                         <button
                             onClick={() => setActiveTab('my-roadmap')}
                             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-semibold transition-colors ${

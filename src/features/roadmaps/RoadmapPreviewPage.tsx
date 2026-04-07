@@ -15,6 +15,11 @@ import { SurveyTriggerType } from '@/features/survey/api/types';
 import { SurveyTriggerReason } from '@/features/survey/types';
 import { showInfo, showWarning } from '@/shared/lib/toast';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useStudyPlans } from '@/features/study-plan/api';
+import { useSessionStore } from '@/store/session.store';
+import { get as apiGet } from '@/shared/api/client';
+import { STUDY_PLAN } from '@/shared/lib/constants';
+import { useUserMembership } from '@/features/membership/api/queries';
 
 interface RoadmapPreviewPageProps {
     roadmapId: string;
@@ -28,15 +33,43 @@ const difficultyColors = {
 
 type TabType = 'overview' | 'roadmap';
 
+function isFreePlan(subscriptionType: unknown): boolean {
+    if (typeof subscriptionType === 'number') {
+        return subscriptionType <= 1;
+    }
+
+    const raw = String(subscriptionType ?? '').trim().toLowerCase();
+    if (!raw) return true;
+
+    const asNumber = Number(raw);
+    if (!Number.isNaN(asNumber)) {
+        return asNumber <= 1;
+    }
+
+    if (raw.includes('premium') || raw.includes('pro') || raw.includes('paid')) {
+        return false;
+    }
+
+    return raw.includes('free');
+}
+
 export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
+    const { data: studyPlans = [] } = useStudyPlans(isAuthenticated);
+    const { data: membership } = useUserMembership(isAuthenticated);
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
     const [roadmap, setRoadmap] = useState<RoadmapTemplate | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>('overview');
+    const [isCheckingLimit, setIsCheckingLimit] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
     const { startLearning, isLoading } = useStartLearning();
+    const isFreeUser = isFreePlan(membership?.subscriptionType ?? user?.subscriptionType);
+    const existingStudyPlanId = roadmap
+        ? studyPlans.find((plan) => plan.roadmapId === Number(roadmap.id))?.id
+        : undefined;
 
     useEffect(() => {
         const fetchRoadmap = async () => {
@@ -100,7 +133,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     }, []);
 
     const handleStartLearning = async () => {
-        if (!roadmap || isCheckingSurvey || isLoading) return;
+        if (!roadmap || isCheckingLimit || isCheckingSurvey || isLoading) return;
 
         if (!isAuthenticated) {
             const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
@@ -108,26 +141,73 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
             return;
         }
 
+        if (existingStudyPlanId) {
+            setActiveStudyPlanId(String(existingStudyPlanId));
+            router.push(`/dashboard/${existingStudyPlanId}`);
+            return;
+        }
+
+        if (isFreeUser) {
+            setIsCheckingLimit(true);
+            try {
+                const limitCheck = await apiGet<{
+                    maxRoadmaps: number;
+                    joinedRoadmaps: number;
+                    hasReachedLimit: boolean;
+                }>(endpoints.studyPlans.checkRoadmapLimit);
+
+                const reachedLimit = limitCheck.hasReachedLimit;
+                const maxRoadmaps = limitCheck.maxRoadmaps || STUDY_PLAN.MAX_JOINED_ROADMAPS;
+
+                if (reachedLimit) {
+                    showWarning(
+                        `Free plan allows up to ${maxRoadmaps} joined roadmaps. Please upgrade to continue.`,
+                        { duration: 5000 }
+                    );
+                    router.push('/membership');
+                    return;
+                }
+            } catch {
+                showWarning('Cannot verify your free-plan roadmap limit right now. Please try again.', {
+                    duration: 4000,
+                });
+                return;
+            } finally {
+                setIsCheckingLimit(false);
+            }
+        }
+
         setIsCheckingSurvey(true);
         try {
-            const pending = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
-            if (pending.hasPendingSurvey && pending.surveyCode) {
+            const registerSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_REGISTER);
+
+            if (registerSurvey.hasPendingSurvey && registerSurvey.surveyCode) {
+                const params = new URLSearchParams({
+                    triggerReason: SurveyTriggerReason.INITIAL,
+                    returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                });
+                router.push(`/surveys/${registerSurvey.surveyCode}?${params.toString()}`);
+                return;
+            }
+
+            const roadmapSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
+            if (roadmapSurvey.hasPendingSurvey && roadmapSurvey.surveyCode) {
                 const params = new URLSearchParams({
                     triggerReason: SurveyTriggerReason.RESURVEY,
                     returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
                     roadmapId: roadmap.id.toString(),
                 });
-                router.push(`/surveys/${pending.surveyCode}?${params.toString()}`);
+                router.push(`/surveys/${roadmapSurvey.surveyCode}?${params.toString()}`);
                 return;
             }
 
-            if (pending.blockedReason === 'MaxAttemptsExceeded') {
+            if (roadmapSurvey.blockedReason === 'MaxAttemptsExceeded') {
                 showInfo(
-                    `You have already completed this survey ${pending.completedAttempts} time${pending.completedAttempts !== 1 ? 's' : ''} (max ${pending.maxAttempts}). Proceeding to start learning.`,
+                    `You have already completed this survey ${roadmapSurvey.completedAttempts} time${roadmapSurvey.completedAttempts !== 1 ? 's' : ''} (max ${roadmapSurvey.maxAttempts}). Proceeding to start learning.`,
                     { duration: 5000 }
                 );
-            } else if (pending.blockedReason === 'CooldownActive' && pending.cooldownEndsAt) {
-                const endsAt = new Date(pending.cooldownEndsAt);
+            } else if (roadmapSurvey.blockedReason === 'CooldownActive' && roadmapSurvey.cooldownEndsAt) {
+                const endsAt = new Date(roadmapSurvey.cooldownEndsAt);
                 const diffMs = endsAt.getTime() - Date.now();
                 const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
                 showWarning(
@@ -323,10 +403,18 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                         </button>
                         <button
                             onClick={handleStartLearning}
-                            disabled={isCheckingSurvey || isLoading}
+                            disabled={isCheckingLimit || isCheckingSurvey || isLoading}
                             className="flex-1 rounded-2xl bg-[#00bae2] px-6 py-3 font-semibold text-white shadow-lg shadow-[#00bae2]/20 transition-colors hover:bg-[#00a8d0] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {isCheckingSurvey || isLoading ? (isCheckingSurvey ? 'Checking...' : 'Starting...') : 'Start Learning'}
+                            {isCheckingLimit || isCheckingSurvey || isLoading
+                                ? isCheckingLimit
+                                    ? 'Checking limit...'
+                                    : isCheckingSurvey
+                                        ? 'Checking...'
+                                        : 'Creating Plan...'
+                                : existingStudyPlanId
+                                    ? 'Continue'
+                                    : 'Start Learning'}
                         </button>
                     </div>
                 </div>
