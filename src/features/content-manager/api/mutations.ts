@@ -16,6 +16,7 @@ import type {
   CreateRoadmapGraphRequest,
   SyncRoadmapGraphRequest,
   CreateQuizRequest,
+  UpdateQuizRequest,
   CreateQuizQuestionRequest,
   CreateAiQuizQuestionsRequest,
   UpdateQuizQuestionRequest,
@@ -30,6 +31,7 @@ import type {
   CreateRoadmapGraphResponse,
   SyncRoadmapGraphResponse,
   CreateQuizResponse,
+  UpdateQuizResponse,
   CreateQuizQuestionResponse,
   CreateAiQuizQuestionsResponse,
   UpdateQuizQuestionDto,
@@ -329,6 +331,30 @@ export function useCreateQuiz(
       queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizzes() });
       queryClient.invalidateQueries({
         queryKey: cmQueryKeys.quizzesByNode(variables.createQuizNode.roadmapNodeId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useUpdateQuiz(
+  options?: UseMutationOptions<
+    UpdateQuizResponse,
+    Error,
+    UpdateQuizRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.updateQuiz,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizzes() });
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizzesByNode(variables.updateQuizNodeDto.roadmapNodeId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizById(variables.id),
       });
     },
     ...options,

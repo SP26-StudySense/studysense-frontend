@@ -19,6 +19,7 @@ import type {
   DeleteEdgeRequest,
   DeleteContentRequest,
   CreateQuizRequest,
+  UpdateQuizRequest,
   CreateQuizQuestionRequest,
   CreateAiQuizQuestionsRequest,
   UpdateQuizQuestionRequest,
@@ -43,6 +44,7 @@ import type {
   DeleteEdgeResponse,
   DeleteContentResponse,
   CreateQuizResponse,
+  UpdateQuizResponse,
   CreateQuizQuestionResponse,
   CreateAiQuizQuestionsResponse,
   UpdateQuizQuestionDto,
@@ -219,6 +221,14 @@ export async function createQuiz(
   request: CreateQuizRequest
 ): Promise<CreateQuizResponse> {
   return post<CreateQuizResponse>('/quiz', request);
+}
+
+export async function updateQuiz(
+  request: UpdateQuizRequest
+): Promise<UpdateQuizResponse> {
+  return put<UpdateQuizResponse>(`/quiz/${request.id}`, {
+    updateQuizNodeDto: request.updateQuizNodeDto,
+  });
 }
 
 export async function createQuizQuestion(
