@@ -157,51 +157,51 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
 
           {/* Main Message */}
           <h1 className="text-2xl font-bold text-neutral-900 mb-6">
-            Đang khởi tạo lộ trình
+            Generating Roadmap
           </h1>
-
+ 
           {/* Status List */}
           <div className="space-y-4 mb-8">
             <div className="space-y-3 bg-neutral-50/80 rounded-2xl p-5 border border-neutral-100">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-500">Phân tích mục tiêu</span>
+                <span className="text-neutral-500">Analyzing Goals</span>
                 <span className="text-green-600 font-bold flex items-center gap-1">
-                  ✓ Xong
+                  ✓ Done
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600 font-medium">Thiết kế lộ trình AI</span>
+                <span className="text-neutral-600 font-medium">AI Roadmap Design</span>
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 text-[#00bae2] animate-spin" />
                   <span className="text-[#00bae2] font-bold">({elapsedSeconds}s)</span>
                 </div>
               </div>
               <div className="flex items-center justify-between text-sm text-neutral-400">
-                <span>Tạo bài học chi tiết</span>
-                <span>Chờ xử lý</span>
+                <span>Generating Detailed Lessons</span>
+                <span>Pending</span>
               </div>
             </div>
-
+ 
             {/* Navigation Options */}
             <div className="grid grid-cols-1 gap-2">
               <button
                 onClick={() => router.push('/roadmaps')}
                 className="w-full px-6 py-3.5 rounded-2xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8d0] shadow-lg shadow-cyan-100 transition-all active:scale-95 text-sm"
               >
-                Quay lại Roadmaps
+                Back to Roadmaps
               </button>
               <button
                 onClick={() => router.push('/')}
                 className="w-full px-6 py-3 rounded-2xl bg-transparent text-neutral-400 font-medium hover:text-neutral-600 transition-all text-xs"
               >
-                Về trang chủ
+                Back to Home
               </button>
             </div>
           </div>
-
+ 
           {/* Minimal Note */}
           <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-medium">
-            Hệ thống sẽ thông báo ngay khi hoàn tất
+            We will notify you once completed
           </p>
         </div>
       </div>
