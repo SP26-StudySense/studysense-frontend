@@ -156,7 +156,7 @@ export function useNodeContents(
   return useQuery({
     queryKey: ['generateRoadmapAI', request],
     queryFn: () => api.generateRoadmapAI(request),
-    enabled: !!request.message,
+      enabled: !!request.message && !!request.subjectId,
     staleTime: 5 * 60 * 1000,
     ...options,
   });

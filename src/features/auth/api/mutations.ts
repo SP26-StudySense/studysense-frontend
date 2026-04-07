@@ -167,6 +167,13 @@ export function useLogin() {
         return;
       }
 
+      // Redirect Admin users directly to admin dashboard
+      const isAdmin = hasNormalizedRole(response.user.roles, 'Admin');
+      if (isAdmin) {
+        router.push(routes.admin.home);
+        return;
+      }
+
       // Redirect Analyst users directly to analyst dashboard
       const isAnalyst = response.user.roles?.includes(UserRole.ANALYST);
       if (isAnalyst) {
@@ -443,6 +450,16 @@ export function useGoogleLogin() {
             popupRef.current.close();
           }
           router.push(routes.contentManager.dashboard);
+          return;
+        }
+
+        // Redirect Admin users directly to admin dashboard
+        const isAdmin = hasNormalizedRole(normalizedUser.roles, 'Admin');
+        if (isAdmin) {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          router.push(routes.admin.home);
           return;
         }
 

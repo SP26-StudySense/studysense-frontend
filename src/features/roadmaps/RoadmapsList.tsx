@@ -153,6 +153,7 @@ export function RoadmapsList() {
         pageSize: 50,
         q: exploreFilters.search || undefined,
         isLatest: true,
+        status: 'Active',
     });
 
     // Get roadmap IDs for fetching node counts
