@@ -156,6 +156,7 @@ export function CMSRoadmapGraph({
   );
 
   const selectedKey = selectedNodeId != null ? String(selectedNodeId) : null;
+  const hasInitializedReformatRef = useRef(false);
 
   // Keep node positions in sync with current node set and place new nodes near selection.
   useEffect(() => {
@@ -308,14 +309,44 @@ export function CMSRoadmapGraph({
   const handleReset = useCallback(() => {
     setScale(0.85);
     setPanPosition({ x: 40, y: 20 });
+    panRef.current = { x: 40, y: 20 };
     // Also re-compute layout
     setNodePositions(computeLayout(nodes, edges));
   }, [nodes, edges]);
 
   useEffect(() => {
     if (reformatSignal == null) return;
+
+    // Do not reformat on initial mount. Reformat only when user clicks Reformat.
+    if (!hasInitializedReformatRef.current) {
+      hasInitializedReformatRef.current = true;
+      return;
+    }
+
     handleReset();
   }, [reformatSignal, handleReset]);
+
+  useEffect(() => {
+    if (!selectedKey) return;
+
+    const pos = nodePositions.get(selectedKey);
+    const container = containerRef.current;
+    if (!pos || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const targetScale = Math.max(1, scaleRef.current);
+    const nodeCenterX = pos.x + NODE_WIDTH / 2;
+    const nodeCenterY = pos.y + NODE_HEIGHT / 2;
+
+    const nextPan = {
+      x: rect.width / 2 - nodeCenterX * targetScale,
+      y: rect.height / 2 - nodeCenterY * targetScale,
+    };
+
+    setScale(targetScale);
+    setPanPosition(nextPan);
+    panRef.current = nextPan;
+  }, [selectedKey, nodePositions]);
 
   // Canvas bounding size
   const canvasSize = useMemo(() => {

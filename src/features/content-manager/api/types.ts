@@ -29,7 +29,8 @@ export enum ContentType {
 export enum RoadmapStatus {
   Draft = 'Draft',
   Active = 'Active',
-  Archived = 'Archived',
+  Disabled = 'Disabled'
+
 }
   
 
@@ -229,6 +230,36 @@ export interface CreateRoadmapRequest {
   title: string;
   description?: string;
   status?: RoadmapStatus;
+}
+
+/**
+ * Partial update roadmap request
+ * PUT /api/roadmaps/{id}
+ */
+export interface UpdateRoadmapRequest {
+  id: number;
+  title?: string | null;
+  description?: string | null;
+  status?: RoadmapStatus;
+}
+
+export interface RoadmapBasicDto {
+  id: number;
+  subjectId: number;
+  title: string;
+  description: string;
+  status: RoadmapStatus | string;
+}
+
+export interface UpdateRoadmapResponse {
+  success?: boolean;
+  message?: string;
+  data?: RoadmapBasicDto;
+  id?: number;
+  subjectId?: number;
+  title?: string;
+  description?: string;
+  status?: RoadmapStatus | string;
 }
 
 /**
@@ -793,6 +824,7 @@ export type NewNodeContent = Omit<NodeContent, 'id' | 'nodeId'> & {
 // Request
 export interface GenerateRoadmapRequest {
   message: string;
+  subjectId: number;
 }
 
 // Roadmap metadata

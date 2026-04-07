@@ -9,6 +9,8 @@ import { cmQueryKeys } from './api';
 import type {
   CreateRoadmapRequest,
   CreateRoadmapResponse,
+  UpdateRoadmapRequest,
+  UpdateRoadmapResponse,
   DeleteRoadmapRequest,
   DeleteNodeRequest,
   DeleteEdgeRequest,
@@ -500,6 +502,20 @@ export function useDeleteQuiz(
           queryKey: cmQueryKeys.quizzesByNode(variables.roadmapNodeId),
         });
       }
+    },
+    ...options,
+  });
+}
+
+export function useUpdateRoadmap(
+  options?: UseMutationOptions<UpdateRoadmapResponse, Error, UpdateRoadmapRequest>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.updateRoadmap,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.roadmaps() });
     },
     ...options,
   });
