@@ -4,6 +4,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  userName?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  roleNames?: string[];
   role: string;
   assignedSubjectId?: number;
   assignedSubjectName?: string;
