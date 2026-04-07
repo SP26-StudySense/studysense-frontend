@@ -72,7 +72,7 @@ export function ProfileInfoCard({ profile, onUpdate, isUpdating }: ProfileInfoCa
 
     // Format date for input
     const formatDateForInput = (dateStr: string | null | undefined) => {
-        return toLocalDateInputValue(dateStr);
+        return toLocalDateInputValue(dateStr ?? undefined);
     };
 
     const getGenderLabel = (value: string | null) => {
