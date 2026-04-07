@@ -7,6 +7,8 @@ import { cn } from '@/shared/lib/utils';
 import { Providers } from '@/providers';
 
 import './globals.css';
+import { WaveTransition } from '@/components/ui/WaveTransition';
+import { TransitionProvider } from '@/shared/context/TransitionContext';
 
 export const metadata: Metadata = {
   title: {
@@ -42,8 +44,8 @@ export const metadata: Metadata = {
     creator: '@studysense',
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
+    icon: ['/favicon.ico', '/icon-32.png'],
+    shortcut: '/icon-32.png',
     apple: '/apple-touch-icon.png',
   },
   manifest: '/site.webmanifest',
@@ -66,13 +68,19 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={cn(
-          'min-h-screen bg-background font-sans antialiased',
+          'min-h-screen bg-background font-sans antialiased overflow-x-hidden',
           GeistSans.variable,
           GeistMono.variable
         )}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <TransitionProvider>
+            <WaveTransition />
+            {children}
+          </TransitionProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -73,4 +73,5 @@ storybook-static/
 
 # Agent/AI tools config
 .agent/
+.agents/
 .shared/

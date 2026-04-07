@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 import { routes } from '@/shared/config/routes';
 import { UserRole } from '@/shared/types';
@@ -15,7 +15,20 @@ interface AuthGuardProps {
 }
 
 interface RoleGuardProps extends AuthGuardProps {
-  allowedRoles: UserRole[];
+  allowedRoles: Array<UserRole | string>;
+  redirectTo?: string;
+}
+
+function hasAllowedRole(roles: string[] | undefined, allowedRoles: Array<UserRole | string>): boolean {
+  if (!roles?.length) {
+    return false;
+  }
+
+  const normalizedAllowedRoles = allowedRoles.map((role) =>
+    role.toString().replace(/\s+/g, '').toLowerCase()
+  );
+
+  return roles.some((role) => normalizedAllowedRoles.includes(role.replace(/\s+/g, '').toLowerCase()));
 }
 
 /**
@@ -24,10 +37,7 @@ interface RoleGuardProps extends AuthGuardProps {
 function DefaultLoading() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#fafafa]">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-[#c1ff72]" />
-        <p className="text-sm text-neutral-500">Loading...</p>
-      </div>
+      <LoadingSpinner size="lg" showText text="Loading..." />
     </div>
   );
 }
@@ -38,15 +48,26 @@ function DefaultLoading() {
  */
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const { data: user, isLoading, error } = useCurrentUser();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && (!user || error)) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasHydrated && !isLoading && (!user || error)) {
       router.push(routes.auth.login);
     }
-  }, [user, isLoading, error, router]);
+  }, [error, hasHydrated, isLoading, router, user]);
 
-  if (isLoading) {
+  // Keep server and first client render consistent to avoid hydration mismatch.
+  if (!hasHydrated || isLoading) {
     return fallback || <DefaultLoading />;
   }
 
@@ -63,23 +84,39 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
  */
 export function GuestGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const { data: user, isLoading } = useCurrentUser({ enabled: true });
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && user) {
-      router.push(routes.dashboard.home);
-    }
-  }, [user, isLoading, router]);
+    setMounted(true);
+  }, []);
 
-  if (isLoading) {
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
+  // TEMPORARY: Disable redirect to allow login
+  // useEffect(() => {
+  //   if (!isLoading && user) {
+  //     console.log('[GuestGuard] User exists, redirecting to dashboard');
+  //     router.push(routes.dashboard.home);
+  //   }
+  // }, [user, isLoading, router]);
+
+  // Keep server and first client render identical.
+  if (!hasHydrated || isLoading) {
     return fallback || <DefaultLoading />;
   }
 
-  if (user) {
-    return fallback || <DefaultLoading />;
-  }
-
+  // TEMPORARY: Always show login page
   return <>{children}</>;
+
+  // if (user) {
+  //   return fallback || <DefaultLoading />;
+  // }
+
+  // return <>{children}</>;
 }
 
 /**
@@ -90,21 +127,22 @@ export function RoleGuard({
   children,
   allowedRoles,
   fallback,
+  redirectTo,
 }: RoleGuardProps) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
+  const destination = redirectTo ?? routes.dashboard.home;
 
   useEffect(() => {
-    if (!isLoading && user && !allowedRoles.includes(user.role)) {
-      router.push(routes.dashboard.home);
+    const userHasAllowedRole = hasAllowedRole(user?.roles, allowedRoles);
+    if (!isLoading && user && !userHasAllowedRole) {
+      router.push(destination);
     }
-  }, [user, isLoading, allowedRoles, router]);
+  }, [user, isLoading, allowedRoles, router, destination]);
 
-  if (isLoading) {
-    return fallback || <DefaultLoading />;
-  }
+  const userHasAllowedRole = hasAllowedRole(user?.roles, allowedRoles);
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user || !userHasAllowedRole) {
     return fallback || <DefaultLoading />;
   }
 
@@ -117,6 +155,52 @@ export function RoleGuard({
 export function AdminGuard({ children, fallback }: AuthGuardProps) {
   return (
     <RoleGuard allowedRoles={[UserRole.ADMIN]} fallback={fallback}>
+      {children}
+    </RoleGuard>
+  );
+}
+
+/**
+ * Analyst Guard - Protects analyst-only routes
+ * Redirects to landing page if user doesn't have Analyst role
+ */
+export function AnalystGuard({ children, fallback }: AuthGuardProps) {
+  return (
+    <RoleGuard
+      allowedRoles={[UserRole.ANALYST]}
+      redirectTo={routes.public.home}
+      fallback={fallback}
+    >
+      {children}
+    </RoleGuard>
+  );
+}
+
+/**
+ * Content Manager Guard - Protects content-manager-only routes
+ */
+export function ContentManagerGuard({ children, fallback }: AuthGuardProps) {
+  return (
+    <RoleGuard
+      allowedRoles={['ContentManager']}
+      redirectTo={routes.public.home}
+      fallback={fallback}
+    >
+      {children}
+    </RoleGuard>
+  );
+}
+
+/**
+ * Study Plan Guard - Limits study-plan routes to regular users
+ */
+export function StudyPlanGuard({ children, fallback }: AuthGuardProps) {
+  return (
+    <RoleGuard
+      allowedRoles={[UserRole.USER]}
+      redirectTo={routes.public.home}
+      fallback={fallback}
+    >
       {children}
     </RoleGuard>
   );

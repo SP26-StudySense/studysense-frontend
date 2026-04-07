@@ -13,6 +13,7 @@ export interface BaseEntity {
 export enum UserRole {
   USER = 'User',
   ADMIN = 'Admin',
+  ANALYST = 'Analyst',
   SYSTEM = 'System',
 }
 
@@ -32,6 +33,14 @@ export enum SessionStatus {
   PAUSED = 'Paused',
   COMPLETED = 'Completed',
   CANCELLED = 'Cancelled',
+}
+
+// Session ended reason
+export enum SessionEndedReason {
+  COMPLETED = 'Completed',
+  TIMED_OUT = 'TimedOut',
+  CANCELLED = 'Cancelled',
+  SYSTEM_TERMINATED = 'SystemTerminated',
 }
 
 // Study event types (matching Backend StudyEvent)

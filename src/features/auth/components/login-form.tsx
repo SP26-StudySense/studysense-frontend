@@ -1,46 +1,74 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import Link from 'next/link';
-import { Github, Chrome } from 'lucide-react';
+import { Chrome, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(1, 'Password is required'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+import { loginSchema, type LoginInput } from '../schema/auth.schema';
+import { useLogin, useGoogleLogin } from '../api/mutations';
+import { useTransitionRouter } from '@/shared/context/TransitionContext';
 
 export const LoginForm = () => {
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormData>({
+  } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      emailOrUserName: '',
+      password: '',
+    },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    console.log(data);
-    // TODO: Implement login logic
+  const loginMutation = useLogin();
+  const { loginWithGoogle } = useGoogleLogin();
+  const { navigateWithTransition } = useTransitionRouter();
+
+  const onSubmit = async (data: LoginInput) => {
+    setApiError(null);
+    try {
+      await loginMutation.mutateAsync({
+        emailOrUserName: data.emailOrUserName,
+        password: data.password,
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      setApiError(errorMessage);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    loginWithGoogle('/dashboard');
   };
 
   return (
-    <div className="glass-panel w-full rounded-2xl border border-neutral-200 bg-white/50 p-8 shadow-sm backdrop-blur-xl">
+    <div className="glass-panel w-full rounded-3xl border border-white/40 bg-white/60 p-8 shadow-xl backdrop-blur-xl">
+      {apiError && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+          <AlertCircle className="h-4 w-4" />
+          {apiError}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-neutral-900">Email</label>
+          <label className="text-sm font-medium text-neutral-900">Email or Username</label>
           <input
-            {...register('email')}
-            type="email"
+            {...register('emailOrUserName')}
+            type="text"
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
           />
-          {errors.email && (
-            <p className="text-xs text-red-500">{errors.email.message}</p>
+          {errors.emailOrUserName && (
+            <p className="text-xs text-red-500">{errors.emailOrUserName.message}</p>
           )}
         </div>
 
@@ -54,12 +82,21 @@ export const LoginForm = () => {
               Forgot password?
             </Link>
           </div>
-          <input
-            {...register('password')}
-            type="password"
-            placeholder="••••••••"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-          />
+          <div className="relative">
+            <input
+              {...register('password')}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && (
             <p className="text-xs text-red-500">{errors.password.message}</p>
           )}
@@ -67,10 +104,19 @@ export const LoginForm = () => {
 
         <Button
           type="submit"
-          className="w-full rounded-lg bg-neutral-900 py-6 text-sm font-semibold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 hover:-translate-y-0.5 transition-all"
-          disabled={isSubmitting}
+          variant="brand"
+          size="xl"
+          className="w-full"
+          disabled={isSubmitting || loginMutation.isPending}
         >
-          {isSubmitting ? 'Signing in...' : 'Sign In'}
+          {isSubmitting || loginMutation.isPending ? (
+            <>
+              <LoadingSpinner size="sm" />
+              Signing in...
+            </>
+          ) : (
+            'Sign In'
+          )}
         </Button>
       </form>
 
@@ -83,22 +129,25 @@ export const LoginForm = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Button variant="outline" className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-5 hover:bg-neutral-50">
-          <Github className="h-4 w-4" />
-          Github
-        </Button>
-        <Button variant="outline" className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-5 hover:bg-neutral-50">
-          <Chrome className="h-4 w-4" />
-          Google
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/50 py-4 text-neutral-800 hover:bg-white hover:text-neutral-900 hover:shadow-md transition-all duration-300"
+        onClick={handleGoogleLogin}
+      >
+        <Chrome className="h-4 w-4 text-neutral-700" />
+        Continue with Google
+      </Button>
 
       <p className="mt-8 text-center text-sm text-neutral-500">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-semibold text-neutral-900 hover:underline">
+        <button
+          type="button"
+          onClick={() => navigateWithTransition('/register')}
+          className="font-semibold text-neutral-900 hover:underline"
+        >
           Sign up
-        </Link>
+        </button>
       </p>
     </div>
   );

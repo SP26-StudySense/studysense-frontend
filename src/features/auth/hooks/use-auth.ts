@@ -6,9 +6,10 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { routes } from '@/shared/config/routes';
 import { queryKeys } from '@/shared/api/query-keys';
-import { clearTokens, isAuthenticated } from '@/shared/api/client';
+import { isAuthenticated } from '@/shared/api/client';
+import { clearAllSurveyDrafts } from '@/features/survey/hooks/useSurveyAutoSave';
 import { useCurrentUser } from '../api/queries';
-import { useLogin, useLogout, useRegister } from '../api/mutations';
+import { useLogin, useLogout, useRegister, useGoogleLogin } from '../api/mutations';
 import type { LoginRequest, RegisterRequest, User } from '../types';
 
 interface UseAuthReturn {
@@ -16,24 +17,25 @@ interface UseAuthReturn {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isLoggingOut: boolean;
 
     // Actions
     login: (data: LoginRequest) => Promise<void>;
     register: (data: RegisterRequest) => Promise<void>;
     logout: () => Promise<void>;
+    loginWithGoogle: (returnUrl?: string) => void;
 
     // Helpers
     checkAuth: () => boolean;
 }
 
 export function useAuth(): UseAuthReturn {
-    const router = useRouter();
-    const queryClient = useQueryClient();
 
     const { data: user, isLoading } = useCurrentUser();
     const loginMutation = useLogin();
     const registerMutation = useRegister();
     const logoutMutation = useLogout();
+    const { loginWithGoogle: googleLogin } = useGoogleLogin();
 
     const login = useCallback(
         async (data: LoginRequest) => {
@@ -50,8 +52,16 @@ export function useAuth(): UseAuthReturn {
     );
 
     const logout = useCallback(async () => {
+        clearAllSurveyDrafts();
         await logoutMutation.mutateAsync();
     }, [logoutMutation]);
+
+    const loginWithGoogle = useCallback(
+        (returnUrl: string = routes.dashboard.home) => {
+            googleLogin(returnUrl);
+        },
+        [googleLogin]
+    );
 
     const checkAuth = useCallback(() => {
         return isAuthenticated();
@@ -61,9 +71,11 @@ export function useAuth(): UseAuthReturn {
         user: user ?? null,
         isAuthenticated: !!user,
         isLoading,
+        isLoggingOut: logoutMutation.isPending,
         login,
         register,
         logout,
+        loginWithGoogle,
         checkAuth,
     };
 }

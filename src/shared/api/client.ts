@@ -1,6 +1,9 @@
 /**
  * API Client using Axios
  * Configured with interceptors for authentication and error handling
+ * 
+ * Note: Token handling is now done by the proxy (src/proxy.ts)
+ * The proxy automatically attaches Authorization header and handles token refresh
  */
 
 import axios, {
@@ -12,52 +15,29 @@ import axios, {
 import Cookies from 'js-cookie';
 
 import { env } from '@/shared/config';
+import { endpoints } from '@/shared/api/endpoints';
 import type { ApiResponse } from '@/shared/types';
-import { ApiException, parseApiError } from './errors';
+import { parseApiError } from './errors';
 
-// Token storage keys
+// Token storage keys (still needed for client-side token management)
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
 const REFRESH_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_REFRESH_KEY;
 
-// Create axios instance
+// Create axios instance - now pointing to proxy endpoint
 const apiClient: AxiosInstance = axios.create({
-  baseURL: env.NEXT_PUBLIC_API_URL,
+  baseURL: '/api/proxy', // Proxy will forward to backend
   timeout: env.NEXT_PUBLIC_API_TIMEOUT,
   headers: {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  withCredentials: true,
+  withCredentials: true, // Send cookies with requests
 });
 
-// Request queue for token refresh
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
-
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else if (token) {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
-// Request interceptor
+// Request interceptor - simplified since proxy handles auth
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get access token from cookies
-    const token = Cookies.get(ACCESS_TOKEN_KEY);
-
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
+    // Proxy will read cookies and add Authorization header
+    // No need to manually attach token here
     return config;
   },
   (error) => {
@@ -65,77 +45,42 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor - simplified since proxy handles token refresh
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
   async (error) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
+    const requestUrl = String(error.config?.url || '');
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const isAuthEndpoint =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/refresh') ||
+      requestUrl.includes('/auth/forgot-password') ||
+      requestUrl.includes('/auth/reset-password') ||
+      requestUrl.includes('/auth/confirm-email');
 
-    // Handle 401 Unauthorized - Token expired
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // Wait for token refresh
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
-            return apiClient(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
-      }
-
+    // Handle 401 by attempting one client-side refresh + retry before redirecting.
+    if (error.response?.status === 401 && !isAuthEndpoint && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
-      isRefreshing = true;
 
       try {
-        const refreshToken = Cookies.get(REFRESH_TOKEN_KEY);
-
-        if (!refreshToken) {
-          throw new ApiException('No refresh token available', 401, 'TOKEN_INVALID');
-        }
-
-        // Call refresh token endpoint
-        const response = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-          `${env.NEXT_PUBLIC_API_URL}/auth/refresh`,
-          { refreshToken },
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-
-        // Store new tokens
-        setTokens(accessToken, newRefreshToken);
-
-        // Process queued requests
-        processQueue(null, accessToken);
-
-        // Retry original request
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        }
+        await apiClient.post(endpoints.auth.refresh, {});
         return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed - clear tokens and redirect to login
-        processQueue(refreshError, null);
-        clearTokens();
+      } catch {
+        // Fall through to forced logout below.
+      }
+    }
 
-        // Redirect to login (client-side only)
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login?expired=true';
-        }
+    // Proxy/client refresh failed, redirect to login.
+    // Skip redirect for auth form endpoints so invalid credentials do not reload the page.
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      // Clear tokens and redirect to login
+      clearTokens();
 
-        return Promise.reject(parseApiError(refreshError));
-      } finally {
-        isRefreshing = false;
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?expired=true';
       }
     }
 
@@ -163,6 +108,7 @@ export function setTokens(accessToken: string, refreshToken: string): void {
 export function clearTokens(): void {
   Cookies.remove(ACCESS_TOKEN_KEY);
   Cookies.remove(REFRESH_TOKEN_KEY);
+  Cookies.remove('refreshToken');
 }
 
 export function getAccessToken(): string | undefined {
@@ -182,8 +128,10 @@ export async function get<T>(
   url: string,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.get<ApiResponse<T>>(url, config);
-  return response.data.data;
+  const response = await apiClient.get<ApiResponse<T> | T>(url, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function post<T, D = unknown>(
@@ -191,8 +139,10 @@ export async function post<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.post<ApiResponse<T>>(url, data, config);
-  return response.data.data;
+  const response = await apiClient.post<ApiResponse<T> | T>(url, data, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function put<T, D = unknown>(
@@ -200,8 +150,10 @@ export async function put<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.put<ApiResponse<T>>(url, data, config);
-  return response.data.data;
+  const response = await apiClient.put<ApiResponse<T> | T>(url, data, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function patch<T, D = unknown>(
@@ -209,16 +161,20 @@ export async function patch<T, D = unknown>(
   data?: D,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.patch<ApiResponse<T>>(url, data, config);
-  return response.data.data;
+  const response = await apiClient.patch<ApiResponse<T> | T>(url, data, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 export async function del<T>(
   url: string,
   config?: AxiosRequestConfig
 ): Promise<T> {
-  const response = await apiClient.delete<ApiResponse<T>>(url, config);
-  return response.data.data;
+  const response = await apiClient.delete<ApiResponse<T> | T>(url, config);
+  // Handle both wrapped { data: T } and direct T response formats
+  const responseData = response.data as ApiResponse<T>;
+  return responseData.data !== undefined ? responseData.data : (response.data as T);
 }
 
 // Export the axios instance for direct use if needed

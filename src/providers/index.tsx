@@ -3,6 +3,11 @@
 import { QueryProvider } from './query-provider';
 import { ThemeProvider } from './theme-provider';
 import { ToastProvider } from './toast-provider';
+import { CSPostHogProvider } from './posthog-provider';
+import { PostHogPageView } from './PostHogPageView';
+import { OneSignalBootstrap } from '@/features/notification';
+import { DailyLoginBootstrap } from '@/features/gamification/DailyLoginBootstrap';
+import { GamificationRealtimeBootstrap } from '@/features/gamification/GamificationRealtimeBootstrap';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -10,11 +15,17 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <QueryProvider>
-      <ThemeProvider>
-        {children}
-        <ToastProvider />
-      </ThemeProvider>
-    </QueryProvider>
+    <CSPostHogProvider>
+      <PostHogPageView />
+      <OneSignalBootstrap />
+      <QueryProvider>
+        <DailyLoginBootstrap />
+        <GamificationRealtimeBootstrap />
+        <ThemeProvider>
+          {children}
+          <ToastProvider />
+        </ThemeProvider>
+      </QueryProvider>
+    </CSPostHogProvider>
   );
 }

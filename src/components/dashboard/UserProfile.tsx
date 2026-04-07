@@ -1,0 +1,151 @@
+'use client';
+
+import Link from 'next/link';
+import { useState } from 'react';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useUserMembership } from '@/features/membership/api/queries';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Settings, LogOut, Crown, Zap } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ConfirmationModal } from '@/shared/ui';
+
+function hasPaidSubscription(subscriptionType: unknown): boolean {
+    if (typeof subscriptionType === 'number') {
+        return subscriptionType > 1;
+    }
+
+    const normalized = String(subscriptionType ?? '').toLowerCase();
+    return normalized.includes('premium') || normalized.includes('pro');
+}
+
+export function UserProfile() {
+    const { user, isLoading, logout, isLoggingOut } = useAuth();
+    const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+    const { data: membership } = useUserMembership(!!user);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center gap-3">
+                <div className="h-10 w-10 animate-pulse rounded-full bg-neutral-200" />
+                <div className="h-4 w-24 animate-pulse rounded bg-neutral-200" />
+            </div>
+        );
+    }
+
+    if (!user) return null;
+
+    const firstName = (user.firstName ?? '').trim();
+    const lastName = (user.lastName ?? '').trim();
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    const fullName = `${firstName} ${lastName}`.trim() || user.email;
+
+    const isPremium = hasPaidSubscription(membership?.subscriptionType ?? user?.subscriptionType);
+
+    return (
+        <div className="relative group">
+            {/* Avatar + Name (trigger) */}
+            <div className="flex items-center gap-3 cursor-pointer rounded-full py-1.5 px-2 transition-colors hover:bg-neutral-100">
+                <div className="text-right hidden sm:block">
+                    <p className="text-sm font-medium text-neutral-900 leading-none">
+                        {fullName}
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                        {user.email}
+                    </p>
+                </div>
+                <Avatar className="h-10 w-10 border border-neutral-200 ring-2 ring-white transition-transform hover:scale-105">
+                    <AvatarImage src={user.avatarUrl ?? ''} alt={fullName} />
+                    <AvatarFallback className="bg-neutral-900 text-white font-medium text-sm">
+                        {initials || 'U'}
+                    </AvatarFallback>
+                </Avatar>
+            </div>
+
+            {/* Hover Dropdown */}
+            <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="min-w-[210px] rounded-xl border border-neutral-200 bg-white p-2 shadow-xl shadow-neutral-900/10">
+                    {/* User Info */}
+                    <div className="px-3 py-2 border-b border-neutral-100 mb-2">
+                        <p className="text-sm font-medium text-neutral-900 truncate">
+                            {fullName}
+                        </p>
+                        <p className="text-xs text-neutral-500 truncate">
+                            {user.email}
+                        </p>
+                        {/* Subscription badge */}
+                        <div className="mt-1.5">
+                            {isPremium ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#fec5fb]/30 to-[#00bae2]/30 px-2 py-0.5 text-[10px] font-semibold text-neutral-700 border border-[#00bae2]/20">
+                                    <Crown className="h-2.5 w-2.5 text-amber-500" />
+                                    Premium
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-500">
+                                    <Crown className="h-2.5 w-2.5 text-neutral-400" />
+                                    Free Plan
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Membership Link */}
+                    <Link
+                        href="/membership"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                    >
+                        <Crown className="h-4 w-4 text-amber-500" />
+                        Membership
+                    </Link>
+
+                    {/* {!isPremium && ( */}
+                    <Link
+                        href="/upgrade-plan"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                    >
+                        <Zap className="h-4 w-4 text-[#00bae2]" />
+                        Upgrade Plan
+                    </Link>
+                    {/* )} */}
+
+                    {/* Profile Link */}
+                    <Link
+                        href="/profile"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                    >
+                        <Settings className="h-4 w-4" />
+                        Profile
+                    </Link>
+
+                    {/* Logout Button */}
+                    <button
+                        onClick={() => setIsLogoutConfirmOpen(true)}
+                        disabled={isLoggingOut}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isLoggingOut ? (
+                            <LoadingSpinner size="sm" />
+                        ) : (
+                            <>
+                                <LogOut className="h-4 w-4" />
+                                Log out
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            <ConfirmationModal
+                isOpen={isLogoutConfirmOpen}
+                onClose={() => setIsLogoutConfirmOpen(false)}
+                onConfirm={() => {
+                    void logout();
+                }}
+                title="Log out"
+                description="Are you sure you want to log out of your account?"
+                confirmText="Log out"
+                cancelText="Stay logged in"
+                variant="danger"
+            />
+        </div>
+    );
+}

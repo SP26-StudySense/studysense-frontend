@@ -53,21 +53,36 @@ export const queryKeys = {
       ['roadmaps', 'detail', roadmapId, 'nodes', nodeId, 'progress'] as const,
   },
 
-  // Sessions
-  sessions: {
-    ...createQueryKeys('sessions'),
-    current: () => ['sessions', 'current'] as const,
-    history: (params?: QueryParams) => ['sessions', 'history', params] as const,
-    summary: (id: string) => ['sessions', 'detail', id, 'summary'] as const,
-    events: (id: string) => ['sessions', 'detail', id, 'events'] as const,
+  // Study Sessions
+  studySessions: {
+    ...createQueryKeys('studySessions'),
+    active: (planId?: number) => {
+      if (typeof planId === 'number') {
+        return ['studySessions', 'active', planId] as const;
+      }
+
+      return ['studySessions', 'active'] as const;
+    },
+    history: (params?: QueryParams) => ['studySessions', 'history', params] as const,
+    recent: (limit?: number) => ['studySessions', 'recent', limit] as const,
+    statistics: (params?: { period?: string; planId?: number; studyPlanId?: number }) =>
+      ['studySessions', 'statistics', params] as const,
+    events: (id: string) => ['studySessions', 'detail', id, 'events'] as const,
   },
 
-  // Surveys
-  surveys: {
-    ...createQueryKeys('surveys'),
-    initial: () => ['surveys', 'initial'] as const,
-    resurvey: () => ['surveys', 'resurvey'] as const,
-    results: (id: string) => ['surveys', 'detail', id, 'results'] as const,
+  // Survey Taking (user-facing survey flow)
+  // Root: 'survey-taking' — distinct from analyst-surveys ('analyst-surveys')
+  surveyTaking: {
+    ...createQueryKeys('survey-taking'),
+    initial: () => ['survey-taking', 'initial'] as const,
+    resurvey: () => ['survey-taking', 'resurvey'] as const,
+    byCode: (code: string) => ['survey-taking', 'code', code] as const,
+    results: (id: string) => ['survey-taking', 'detail', id, 'results'] as const,
+    questions: (id: string) => ['survey-taking', 'detail', id, 'questions'] as const,
+    options: (questionId: string) => ['survey-taking', 'questions', questionId, 'options'] as const,
+    // status lives here so invalidateQueries(surveyTaking.all) covers everything
+    status: () => ['survey-taking', 'status'] as const,
+    pendingTrigger: (triggerType: string) => ['survey-taking', 'pending-trigger', triggerType] as const,
   },
 
   // Recommendations
@@ -79,10 +94,34 @@ export const queryKeys = {
       ['recommendations', 'node', nodeId] as const,
   },
 
+  // Chat
+  chat: {
+    all: ['chat'] as const,
+    conversations: () => ['chat', 'conversations'] as const,
+    conversationsByRoadmap: (roadmapId: string) =>
+      ['chat', 'conversations', roadmapId] as const,
+    history: (conversationId: string) => ['chat', 'history', conversationId] as const,
+  },
+
+  // Dashboard
+  dashboard: {
+    all: ['dashboard'] as const,
+    overview: (studyPlanId: string) => ['dashboard', 'overview', studyPlanId] as const,
+  },
+
+  // Notifications
+  notifications: {
+    all: ['notifications'] as const,
+    list: (page = 1, pageSize = 20) => ['notifications', 'list', page, pageSize] as const,
+  },
+
   // Admin
   admin: {
     users: {
       ...createQueryKeys('admin-users'),
+    },
+    transactions: {
+      ...createQueryKeys('admin-transactions'),
     },
     roadmaps: {
       ...createQueryKeys('admin-roadmaps'),

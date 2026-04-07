@@ -1,54 +1,130 @@
+'use client';
+
 import Link from 'next/link';
-import { GitFork, ChevronRight, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useState } from 'react';
+import { GitFork, ChevronRight, Crown } from 'lucide-react';
+import { useTransitionRouter } from '@/shared/context/TransitionContext';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { NotificationBell } from '@/features/notification';
+import { useUserMembership } from '@/features/membership/api/queries';
+import { Button } from '@/shared/ui/button';
+import { UserProfile } from '@/components/dashboard/UserProfile';
+import { StreakBadge } from '@/features/gamification/StreakBadge';
+
+function hasPaidSubscription(subscriptionType: unknown): boolean {
+    if (typeof subscriptionType === 'number') {
+        return subscriptionType > 1;
+    }
+
+    const normalized = String(subscriptionType ?? '').toLowerCase();
+    return normalized.includes('premium') || normalized.includes('pro');
+}
+
+function MembershipNavLink({ isPremium, mounted }: { isPremium: boolean; mounted: boolean }) {
+
+    return (
+        <Link
+            href="/membership"
+            className="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+        >
+            {mounted && isPremium && <Crown className="h-3.5 w-3.5 text-amber-500" />}
+            Membership
+        </Link>
+    );
+}
+
+function UpgradePlanNavLink() {
+    return (
+        <Link
+            href="/upgrade-plan"
+            className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+        >
+            Upgrade Plan
+        </Link>
+    );
+}
 
 export const Header = () => {
+    const [mounted, setMounted] = useState(false);
+    const { navigateWithTransition } = useTransitionRouter();
+    const { isAuthenticated, isLoading, user } = useAuth();
+    const { data: membership } = useUserMembership(isAuthenticated);
+    
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const isSubscribed = hasPaidSubscription(membership?.subscriptionType ?? user?.subscriptionType);
+
     return (
         <header className="glass-panel fixed left-0 right-0 top-0 z-50 border-b border-neutral-200/60">
-            <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6">
-                <Link href="/" className="group flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-[#c1ff72]">
+            <div className="flex h-16 w-full items-center justify-between px-8 lg:px-16 xl:px-24">
+                <Link href="/" className="group flex items-center gap-2 cursor-pointer">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-white transition-transform duration-300 group-hover:scale-105">
                         <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
                     </div>
                     <span className="text-lg font-semibold tracking-tight text-neutral-900">
-                        Dev<span className="text-neutral-500">Path</span>
+                        Study<span className="text-neutral-500">Sense</span>
                     </span>
                 </Link>
 
                 <nav className="hidden items-center gap-x-8 md:flex">
                     <Link
-                        href="#roadmaps"
-                        className="text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+                        href="/"
+                        className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+                    >
+                        Home
+                    </Link>
+                    <Link
+                        href="/roadmaps"
+                        className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
                     >
                         Roadmaps
                     </Link>
-                    <Link
-                        href="#guides"
-                        className="text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
-                    >
-                        Best Practices
-                    </Link>
-                    <Link
+                    {/* <Link
                         href="#community"
-                        className="text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+                        className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
                     >
                         Community
+                    </Link> */}
+                    <Link
+                        href="/about"
+                        className="link-underline text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+                    >
+                        About Us
                     </Link>
+                    <UpgradePlanNavLink />
+                    <MembershipNavLink isPremium={isSubscribed} mounted={mounted} />
                 </nav>
 
                 <div className="flex items-center gap-x-4">
-                    <Link
-                        href="/login"
-                        className="hidden text-sm font-medium text-neutral-600 hover:text-neutral-900 sm:block"
-                    >
-                        Log in
-                    </Link>
-                    <Link href="/register">
-                        <Button className="flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-neutral-900/10 transition-all hover:bg-neutral-800">
-                            Sign Up Free
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </Link>
+                    {!mounted || isLoading ? (
+                        <div className="h-8 w-8 rounded-full bg-neutral-200 animate-pulse" />
+                    ) : isAuthenticated ? (
+                        <>
+                            <StreakBadge />
+                            <NotificationBell />
+                            <UserProfile />
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => navigateWithTransition('/login')}
+                                className="hidden text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors sm:block cursor-pointer"
+                            >
+                                Log in
+                            </button>
+                            <Button
+                                variant="brand"
+                                size="sm"
+                                onClick={() => navigateWithTransition('/register')}
+                                className="gap-2"
+                            >
+                                Sign Up Free
+                                <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
         </header>

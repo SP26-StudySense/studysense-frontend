@@ -10,6 +10,14 @@ export const routes = {
     about: '/about',
     pricing: '/pricing',
     contact: '/contact',
+    upgradePlan: '/upgrade-plan',
+    membership: '/membership',
+  },
+
+  // Payment routes (can be grouped in public or separated)
+  payment: {
+    success: '/payment/success',
+    failed: '/payment/fail',
   },
 
   // Auth routes
@@ -40,12 +48,30 @@ export const routes = {
       node: (roadmapId: string, nodeId: string) => `/roadmaps/${roadmapId}/nodes/${nodeId}`,
     },
 
+    // My Roadmap (dashboard view)
+    myRoadmap: (id: string) => `/my-roadmap/${id}`,
+
     // Study Sessions
     sessions: {
       list: '/sessions',
+      listByPlan: (studyPlanId: string) => `/sessions/${studyPlanId}`,
       detail: (id: string) => `/sessions/${id}`,
       active: '/sessions/active',
       history: '/sessions/history',
+      historyByPlan: (studyPlanId: string) => `/sessions/${studyPlanId}/history`,
+    },
+
+    // Chat
+    chat: {
+      list: '/chat',
+      roadmap: (roadmapId: string) => `/chat/${roadmapId}`,
+    },
+
+    // Surveys
+    surveys: {
+      list: '/surveys',
+      take: (code: string) => `/surveys/${code}`, // Changed to use code instead of idnp
+      
     },
 
     // Profile & Settings
@@ -70,6 +96,25 @@ export const routes = {
     settings: '/admin/settings',
   },
 
+  // Analyst routes
+  analyst: {
+    home: '/analyst-dashboard',
+    survey: '/analyst-survey',
+    triggerMapping: '/analyst-triggermapping',
+  },
+
+  // Content Manager routes
+  contentManager: {
+    dashboard: '/content-dashboard',
+    roadmaps: {
+      list: '/content-roadmaps',
+      detail: (id: string) => `/content-roadmaps/${id}`,
+      create: '/content-roadmaps/create',
+      quizDetail: (quizId: string | number) => `/content-roadmaps/quizzes/${quizId}`,
+    },
+    profile: '/content-profile',
+  },
+
   // API routes
   api: {
     auth: {
@@ -86,6 +131,9 @@ export const publicRoutes = [
   routes.public.about,
   routes.public.pricing,
   routes.public.contact,
+  routes.public.upgradePlan,
+  routes.payment.success,
+  routes.payment.failed,
 ];
 
 export const authRoutes = [
@@ -96,9 +144,15 @@ export const authRoutes = [
   routes.auth.verifyEmail,
 ];
 
-export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings'];
+export const protectedRoutes = ['/dashboard', '/study-plans', '/sessions', '/profile', '/settings', '/membership'];
 
-export const adminRoutes = ['/admin'];
+export const adminRoutes = ['/admin-dashboard', '/admin-users', '/admin-categories', '/admin-transactions'];
+
+export const analystRoutes = ['/analyst-survey', '/analyst-triggermapping'];
+
+export const contentManagerRoutes = ['/content-dashboard', '/content-roadmaps', '/content-profile'];
+
+export const studyPlanRoutes = ['/study-plans'];
 
 // Helper to check route type
 export function isPublicRoute(pathname: string): boolean {
@@ -115,4 +169,16 @@ export function isProtectedRoute(pathname: string): boolean {
 
 export function isAdminRoute(pathname: string): boolean {
   return adminRoutes.some((route) => pathname.startsWith(route));
+}
+
+export function isAnalystRoute(pathname: string): boolean {
+  return analystRoutes.some((route) => pathname.startsWith(route));
+}
+
+export function isContentManagerRoute(pathname: string): boolean {
+  return contentManagerRoutes.some((route) => pathname.startsWith(route));
+}
+
+export function isStudyPlanRoute(pathname: string): boolean {
+  return studyPlanRoutes.some((route) => pathname.startsWith(route));
 }

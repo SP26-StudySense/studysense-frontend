@@ -6,16 +6,22 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
 
   // API
-  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:5000/api'),
+  NEXT_PUBLIC_API_URL: z.string().url().default('http://localhost:15000/api'),
+  NEXT_PUBLIC_API_URL_HTTP: z.string().url().default('http://localhost:15000/api'),
   NEXT_PUBLIC_API_TIMEOUT: z.coerce.number().default(30000),
 
   // Auth
   NEXT_PUBLIC_AUTH_TOKEN_KEY: z.string().default('sss_access_token'),
   NEXT_PUBLIC_AUTH_REFRESH_KEY: z.string().default('sss_refresh_token'),
 
+  // Analytics
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().default(''),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().default('https://us.i.posthog.com'),
+
   // Feature Flags
   NEXT_PUBLIC_ENABLE_ANALYTICS: z.coerce.boolean().default(false),
   NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS: z.coerce.boolean().default(true),
+  NEXT_PUBLIC_ONESIGNAL_APP_ID: z.string().default(''),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -25,11 +31,15 @@ function getEnv(): Env {
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    NEXT_PUBLIC_API_URL_HTTP: process.env.NEXT_PUBLIC_API_URL_HTTP,
     NEXT_PUBLIC_API_TIMEOUT: process.env.NEXT_PUBLIC_API_TIMEOUT,
     NEXT_PUBLIC_AUTH_TOKEN_KEY: process.env.NEXT_PUBLIC_AUTH_TOKEN_KEY,
     NEXT_PUBLIC_AUTH_REFRESH_KEY: process.env.NEXT_PUBLIC_AUTH_REFRESH_KEY,
+    NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+    NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
     NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS: process.env.NEXT_PUBLIC_ENABLE_AI_RECOMMENDATIONS,
+    NEXT_PUBLIC_ONESIGNAL_APP_ID: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
   });
 
   if (!parsed.success) {
