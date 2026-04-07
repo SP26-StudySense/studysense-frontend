@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ConfirmationModal } from "@/shared/ui";
 import { ApiException } from "@/shared/api/errors";
 import { toast } from "@/shared/lib";
+import { formatDateInUserTimeZone } from "@/shared/lib/date-time";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ContentManagerLoading } from "../components";
 import { useManagerRoadmaps, useSubjectsByContentManager } from "../api/queries";
@@ -555,7 +556,7 @@ export function RoadmapListPage() {
 
               {/* Stats */}
               <div className="mb-4 flex items-center gap-4 text-xs text-neutral-500">
-                <div>Created at {new Date(roadmap.createdAt).toLocaleDateString()}</div>
+                <div>Created at {formatDateInUserTimeZone(roadmap.createdAt)}</div>
               </div>
 
               {/* Actions */}

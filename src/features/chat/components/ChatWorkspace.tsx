@@ -3,6 +3,7 @@
 import { MessageSquare, Plus } from 'lucide-react';
 
 import { useChat } from '@/features/chat/context/ChatContext';
+import { formatDateTimeInUserTimeZone } from '@/shared/lib/date-time';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { AttachmentPicker } from './AttachmentPicker';
@@ -72,7 +73,7 @@ export function ChatWorkspace() {
               >
                 <p className="text-sm font-medium text-neutral-800 truncate">{conversation.title}</p>
                 <p className="text-[11px] text-neutral-500 mt-1">
-                  {new Date(conversation.lastMessageAt).toLocaleString('en-US')}
+                  {formatDateTimeInUserTimeZone(conversation.lastMessageAt)}
                 </p>
               </button>
             );

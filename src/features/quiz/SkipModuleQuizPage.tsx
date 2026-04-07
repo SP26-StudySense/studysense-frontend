@@ -21,7 +21,7 @@ export function SkipModuleQuizPage({ studyPlanId, moduleId, quizAttemptId, modul
       moduleId={moduleId}
       quizAttemptId={quizAttemptId}
       moduleTitle={moduleTitle}
-      level="Advanced"
+      createAttemptLevel="Advanced"
       contextLabel="Skip Module Assessment"
       quizTitle="Advanced Skip Quiz"
       quizDescription={moduleTitle || 'Answer all questions to submit your skip request.'}

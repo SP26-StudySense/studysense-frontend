@@ -15,7 +15,6 @@ import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session
 import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems, useCreateTasksBatch } from '../api/mutations';
 import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
-import type { QuizLevel } from '@/features/quiz/api/types';
 import { useCurrentQuizAttemptByModule } from '@/features/quiz';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { TaskFormModal } from './TaskFormModal';
@@ -64,7 +63,7 @@ interface SkipModuleConfirmDialogProps {
 interface TakeQuizLevelDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (level: QuizLevel) => void;
+    onConfirm: () => void;
     moduleTitle: string;
 }
 
@@ -128,27 +127,14 @@ function TakeQuizLevelDialog({
     moduleTitle,
 }: TakeQuizLevelDialogProps) {
     const [mounted, setMounted] = useState(false);
-    const [level, setLevel] = useState<QuizLevel>('Intermediate');
 
     useEffect(() => {
         setMounted(true);
         return () => setMounted(false);
     }, []);
 
-    useEffect(() => {
-        if (isOpen) {
-            setLevel('Intermediate');
-        }
-    }, [isOpen]);
-
     if (!isOpen) return null;
     if (!mounted) return null;
-
-    const levels: Array<{ value: QuizLevel; label: string; description: string }> = [
-        { value: 'Beginner', label: 'Beginner', description: 'Basic concepts and easy questions.' },
-        { value: 'Intermediate', label: 'Intermediate', description: 'Balanced challenge and practical checks.' },
-        { value: 'Advanced', label: 'Advanced', description: 'Difficult questions for deeper mastery.' },
-    ];
 
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -158,29 +144,8 @@ function TakeQuizLevelDialog({
                 <div className="p-6">
                     <h3 className="text-lg font-bold text-neutral-900">Take module quiz</h3>
                     <p className="text-sm text-neutral-600 mt-1 mb-5">
-                        You completed <span className="font-semibold text-neutral-800">{moduleTitle}</span>. Choose a level to start.
+                        You completed <span className="font-semibold text-neutral-800">{moduleTitle}</span>. Start quiz now?
                     </p>
-
-                    <div className="space-y-2.5 mb-6">
-                        {levels.map((item) => {
-                            const active = level === item.value;
-                            return (
-                                <button
-                                    key={item.value}
-                                    onClick={() => setLevel(item.value)}
-                                    className={cn(
-                                        'w-full text-left rounded-xl border px-4 py-3 transition-all',
-                                        active
-                                            ? 'border-[#00bae2] bg-[#00bae2]/10'
-                                            : 'border-neutral-200 hover:border-neutral-300 bg-white'
-                                    )}
-                                >
-                                    <p className="text-sm font-semibold text-neutral-900">{item.label}</p>
-                                    <p className="text-xs text-neutral-500 mt-1">{item.description}</p>
-                                </button>
-                            );
-                        })}
-                    </div>
 
                     <div className="flex gap-3">
                         <button
@@ -190,7 +155,7 @@ function TakeQuizLevelDialog({
                             Cancel
                         </button>
                         <button
-                            onClick={() => onConfirm(level)}
+                            onClick={onConfirm}
                             className="flex-1 px-4 py-2.5 rounded-xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8cc] transition-all"
                         >
                             Start Quiz
@@ -751,13 +716,11 @@ export function ModuleTasksPanel({
         setIsTakeQuizOpen(true);
     };
 
-    const handleConfirmTakeQuiz = async (level: QuizLevel) => {
+    const handleConfirmTakeQuiz = async () => {
         setIsTakeQuizOpen(false);
-        // Navigate to take quiz with level and attempt ID if available
-        const attemptId = currentQuizAttemptId ? `&attemptId=${currentQuizAttemptId}` : '';
-        router.push(
-            `/study-plans/${studyPlanId}/modules/${module.id}/take-quiz?level=${level}${attemptId}`
-        );
+        // Navigate to take quiz with attempt ID if available
+        const attemptId = currentQuizAttemptId ? `?attemptId=${currentQuizAttemptId}` : '';
+        router.push(`/study-plans/${studyPlanId}/modules/${module.id}/take-quiz${attemptId}`);
     };
 
     const handleContinueQuiz = async () => {

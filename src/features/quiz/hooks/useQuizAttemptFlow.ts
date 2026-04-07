@@ -13,6 +13,7 @@ import {
 import type {
   GetCurrentQuizAttemptByModuleResponse,
   GetQuizQuestionsByAttemptResponse,
+  QuizAttemptQuestionDto,
   QuizLevel,
   SubmitQuizAttemptResponse,
 } from '../api/types';
@@ -33,19 +34,49 @@ function isQuizKeyNotFoundError(error: unknown): boolean {
 
 interface UseQuizAttemptFlowOptions {
   moduleId: number;
-  level?: QuizLevel;
+  createAttemptLevel?: QuizLevel;
   initialQuizAttemptId?: number;
   onSubmitted?: (result: SubmitQuizAttemptResponse) => Promise<void> | void;
 }
 
+interface QuizAnswerValue {
+  optionId: number | null;
+  optionIds: number[];
+  textValue: string;
+}
+
+function createEmptyAnswer(): QuizAnswerValue {
+  return {
+    optionId: null,
+    optionIds: [],
+    textValue: '',
+  };
+}
+
+function isQuestionAnswered(question: QuizAttemptQuestionDto, answer: QuizAnswerValue | undefined): boolean {
+  if (!answer) {
+    return false;
+  }
+
+  if (question.type === 'MultipleChoice') {
+    return answer.optionIds.length > 0;
+  }
+
+  if (question.type === 'ShortAnswer') {
+    return answer.textValue.trim().length > 0;
+  }
+
+  return answer.optionId != null;
+}
+
 export function useQuizAttemptFlow({
   moduleId,
-  level = 'Advanced',
+  createAttemptLevel,
   initialQuizAttemptId,
   onSubmitted,
 }: UseQuizAttemptFlowOptions) {
   const [currentAttemptId, setCurrentAttemptId] = useState<number | null>(initialQuizAttemptId ?? null);
-  const [answers, setAnswers] = useState<Record<number, number | null>>({});
+  const [answers, setAnswers] = useState<Record<number, QuizAnswerValue>>({});
   const [result, setResult] = useState<SubmitQuizAttemptResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isQuizUnavailable, setIsQuizUnavailable] = useState(false);
@@ -96,8 +127,12 @@ export function useQuizAttemptFlow({
     if (!currentAttemptId || !questionsData?.questions) return;
     if (initializedAnswersForAttemptRef.current === currentAttemptId) return;
 
-    const initialAnswers = questionsData.questions.reduce<Record<number, number | null>>((acc, question) => {
-      acc[question.questionId] = question.selectedOptionId ?? null;
+    const initialAnswers = questionsData.questions.reduce<Record<number, QuizAnswerValue>>((acc, question) => {
+      acc[question.questionId] = {
+        optionId: question.selectedOptionId ?? null,
+        optionIds: question.selectedOptionIds ?? [],
+        textValue: question.selectedTextValue ?? '',
+      };
       return acc;
     }, {});
 
@@ -108,13 +143,13 @@ export function useQuizAttemptFlow({
 
   const questionCount = questionsData?.questions.length ?? 0;
   const answeredCount = useMemo(
-    () => Object.values(answers).filter((value) => value != null).length,
-    [answers]
+    () => (questionsData?.questions ?? []).filter((question) => isQuestionAnswered(question, answers[question.questionId])).length,
+    [answers, questionsData?.questions]
   );
 
   const allAnswered = useMemo(() => {
     if (!questionsData) return false;
-    return questionsData.questions.every((question) => answers[question.questionId] != null);
+    return questionsData.questions.every((question) => isQuestionAnswered(question, answers[question.questionId]));
   }, [questionsData, answers]);
 
   const startAttempt = useCallback(async () => {
@@ -155,7 +190,7 @@ export function useQuizAttemptFlow({
       const response = await createAttemptAsync({
         createQuizAttempt: {
           studyPlanModuleId: moduleId,
-          level,
+          ...(createAttemptLevel ? { level: createAttemptLevel } : {}),
         },
       });
 
@@ -169,10 +204,45 @@ export function useQuizAttemptFlow({
         setError(err instanceof Error ? err.message : 'Failed to create quiz attempt.');
       }
     }
-  }, [createAttemptAsync, currentAttemptData?.quizAttempt?.id, level, moduleId]);
+  }, [createAttemptAsync, createAttemptLevel, currentAttemptData?.quizAttempt?.id, moduleId]);
 
-  const setAnswer = useCallback((questionId: number, optionId: number) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+  const setSingleChoiceAnswer = useCallback((questionId: number, optionId: number) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...createEmptyAnswer(),
+        optionId,
+      },
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const toggleMultipleChoiceAnswer = useCallback((questionId: number, optionId: number) => {
+    setAnswers((prev) => {
+      const current = prev[questionId] ?? createEmptyAnswer();
+      const optionIds = current.optionIds.includes(optionId)
+        ? current.optionIds.filter((id) => id !== optionId)
+        : [...current.optionIds, optionId];
+
+      return {
+        ...prev,
+        [questionId]: {
+          ...createEmptyAnswer(),
+          optionIds,
+        },
+      };
+    });
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const setShortAnswer = useCallback((questionId: number, textValue: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...createEmptyAnswer(),
+        textValue,
+      },
+    }));
     setHasUnsavedChanges(true);
   }, []);
 
@@ -185,14 +255,46 @@ export function useQuizAttemptFlow({
 
     const payload = {
       attemptId: currentAttemptId,
-      quizAnswers: questionsData.questions.map((question) => ({
-        attemptId: currentAttemptId,
-        questionId: question.questionId,
-        optionId: answers[question.questionId] ?? null,
-        textValue: null,
-        numberValue: null,
-        answeredAt: new Date().toISOString(),
-      })),
+      quizAnswers: questionsData.questions.map((question) => {
+        const answer = answers[question.questionId] ?? createEmptyAnswer();
+        const normalizedOptionIds = Array.from(new Set(answer.optionIds));
+        const normalizedText = answer.textValue.trim();
+
+        // Type-specific payload mapping per API contract
+        let answerPayload;
+
+        if (question.type === 'MultipleChoice') {
+          // Send all selected options in optionIds array
+          // Include first as optionId for backward compatibility
+          answerPayload = {
+            questionId: question.questionId,
+            optionId: normalizedOptionIds[0] ?? null,
+            optionIds: normalizedOptionIds,
+            textValue: null,
+            answeredAt: new Date().toISOString(),
+          };
+        } else if (question.type === 'ShortAnswer') {
+          // Send text answer, clear options
+          answerPayload = {
+            questionId: question.questionId,
+            optionId: null,
+            optionIds: [],
+            textValue: normalizedText ? answer.textValue : null,
+            answeredAt: new Date().toISOString(),
+          };
+        } else {
+          // SingleChoice: send single optionId
+          answerPayload = {
+            questionId: question.questionId,
+            optionId: answer.optionId ?? null,
+            optionIds: [],
+            textValue: null,
+            answeredAt: new Date().toISOString(),
+          };
+        }
+
+        return answerPayload;
+      }),
     };
 
     try {
@@ -220,10 +322,38 @@ export function useQuizAttemptFlow({
       const payload = {
         submitQuizAttempt: {
           id: currentAttemptId,
-          answers: questionsData.questions.map((question) => ({
-            questionId: question.questionId,
-            optionId: answers[question.questionId] ?? null,
-          })),
+          answers: questionsData.questions.map((question) => {
+            const answer = answers[question.questionId] ?? createEmptyAnswer();
+            const normalizedOptionIds = Array.from(new Set(answer.optionIds));
+            const normalizedText = answer.textValue.trim();
+
+            // Type-specific payload mapping per API contract
+            if (question.type === 'MultipleChoice') {
+              return {
+                questionId: question.questionId,
+                optionId: normalizedOptionIds[0] ?? null,
+                optionIds: normalizedOptionIds,
+                textValue: null,
+              };
+            }
+
+            if (question.type === 'ShortAnswer') {
+              return {
+                questionId: question.questionId,
+                optionId: null,
+                optionIds: [],
+                textValue: normalizedText || null,
+              };
+            }
+
+            // SingleChoice
+            return {
+              questionId: question.questionId,
+              optionId: answer.optionId ?? null,
+              optionIds: [],
+              textValue: null,
+            };
+          }),
         },
       };
 
@@ -270,7 +400,9 @@ export function useQuizAttemptFlow({
     error,
     isQuizUnavailable,
     hasUnsavedChanges,
-    setAnswer,
+    setSingleChoiceAnswer,
+    toggleMultipleChoiceAnswer,
+    setShortAnswer,
     saveAnswers,
     startAttempt,
     resetAttempt,

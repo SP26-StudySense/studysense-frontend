@@ -274,6 +274,10 @@ export async function middleware(request: NextRequest) {
             const response = NextResponse.redirect(new URL(routes.contentManager.dashboard, request.url));
             return applyRefreshedAuthCookies(response, refreshedAuth);
         }
+        if (hasRole(roles, 'Admin')) {
+            const response = NextResponse.redirect(new URL(routes.admin.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
+        }
         const response = NextResponse.redirect(new URL(routes.dashboard.home, request.url));
         return applyRefreshedAuthCookies(response, refreshedAuth);
     }

@@ -82,7 +82,7 @@ export const routes = {
 
   // Admin routes
   admin: {
-    home: '/admin',
+    home: '/admin-dashboard',
     users: {
       list: '/admin/users',
       detail: (id: string) => `/admin/users/${id}`,

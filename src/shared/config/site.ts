@@ -69,7 +69,7 @@ export const navConfig = {
   adminNav: [
     {
       title: 'Overview',
-      href: '/admin',
+      href: '/admin-dashboard',
       icon: 'LayoutDashboard',
     },
     {
