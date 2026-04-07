@@ -31,6 +31,7 @@ function toUiUser(user: UserManagementUserDto): User {
     role,
     assignedSubjectId: user.assignedSubjectId ?? undefined,
     assignedSubjectName: user.assignedSubjectName ?? undefined,
+    assignedSubjects: user.assignedSubjects ?? [],
     status: user.isActive ? "Active" : "Inactive",
     joinDate: "-",
     isLocked: !user.isActive,
@@ -107,6 +108,15 @@ export async function assignSubjectToContentManager(
 
 export async function unassignSubjectFromContentManager(userId: string): Promise<void> {
   await del<void>(endpoints.admin.users.unassignSubject(userId));
+}
+
+export async function unassignSingleSubjectFromContentManager(
+  userId: string,
+  subjectId: number
+): Promise<void> {
+  await del<void>(endpoints.admin.users.unassignSubject(userId), {
+    params: { subjectId },
+  });
 }
 
 export async function createAdminUser(

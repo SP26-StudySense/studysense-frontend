@@ -36,8 +36,8 @@ interface AdminUsersPageProps {
   isCreatingUser?: boolean;
   onLockUser?: (user: User) => void;
   onUnlockUser?: (user: User) => void;
-  onAssignSubject?: (user: User, subjectId: number) => void;
-  onUnassignSubject?: (user: User) => void;
+  onAssignSubject?: (user: User, subjectIds: number[]) => void;
+  onUnassignSubject?: (user: User, subjectId?: number) => void;
   onCreateUser?: (payload: CreateAdminUserRequest) => Promise<void>;
 }
 
@@ -63,7 +63,8 @@ export function AdminUsersPage({
     user: null,
     action: "lock",
   });
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | "">("");
+  const [selectedAssignSubjectIds, setSelectedAssignSubjectIds] = useState<number[]>([]);
+  const [selectedUnassignSubjectId, setSelectedUnassignSubjectId] = useState<number | "">("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [createForm, setCreateForm] = useState<CreateUserFormState>(emptyCreateUserForm);
@@ -189,8 +190,7 @@ export function AdminUsersPage({
   };
 
   const handleAssignClick = (user: User) => {
-    const fallbackSubjectId = subjectOptions[0]?.id ?? "";
-    setSelectedSubjectId(user.assignedSubjectId ?? fallbackSubjectId);
+    setSelectedAssignSubjectIds([]);
     setConfirmModal({
       isOpen: true,
       user,
@@ -199,6 +199,10 @@ export function AdminUsersPage({
   };
 
   const handleUnassignClick = (user: User) => {
+    const assignedSubjectIds = (user.assignedSubjects ?? []).map((subject) => subject.subjectId);
+    const fallbackSubjectId = assignedSubjectIds[0] ?? user.assignedSubjectId ?? "";
+    setSelectedUnassignSubjectId(fallbackSubjectId);
+
     setConfirmModal({
       isOpen: true,
       user,
@@ -224,22 +228,28 @@ export function AdminUsersPage({
     } else if (
       confirmModal.action === "assign" &&
       onAssignSubject &&
-      typeof selectedSubjectId === "number" &&
-      Number.isFinite(selectedSubjectId) &&
-      selectedSubjectId > 0
+      selectedAssignSubjectIds.length > 0
     ) {
-      onAssignSubject(confirmModal.user, selectedSubjectId);
-    } else if (confirmModal.action === "unassign" && onUnassignSubject) {
-      onUnassignSubject(confirmModal.user);
+      onAssignSubject(confirmModal.user, selectedAssignSubjectIds);
+    } else if (
+      confirmModal.action === "unassign" &&
+      onUnassignSubject &&
+      typeof selectedUnassignSubjectId === "number" &&
+      Number.isFinite(selectedUnassignSubjectId) &&
+      selectedUnassignSubjectId > 0
+    ) {
+      onUnassignSubject(confirmModal.user, selectedUnassignSubjectId);
     }
 
     setConfirmModal({ isOpen: false, user: null, action: "lock" });
-    setSelectedSubjectId("");
+    setSelectedAssignSubjectIds([]);
+    setSelectedUnassignSubjectId("");
   };
 
   const handleCloseModal = () => {
     setConfirmModal({ isOpen: false, user: null, action: "lock" });
-    setSelectedSubjectId("");
+    setSelectedAssignSubjectIds([]);
+    setSelectedUnassignSubjectId("");
   };
 
   const columns: TableColumn<User>[] = [
@@ -251,7 +261,9 @@ export function AdminUsersPage({
       label: "Assigned Subject",
       render: (user: User) => (
         <span className="text-sm text-neutral-700">
-          {user.assignedSubjectName || (isContentManager(user) ? "Not assigned" : "-")}
+          {(user.assignedSubjects ?? []).length > 0
+            ? user.assignedSubjects?.map((subject) => subject.subjectName).join(", ")
+            : user.assignedSubjectName || (isContentManager(user) ? "Not assigned" : "-")}
         </span>
       ),
     },
@@ -277,7 +289,9 @@ export function AdminUsersPage({
     const isLocked = user.isLocked || false;
     const isCurrentUser = !!currentUserId && user.id === currentUserId;
     const canAssignSubject = isContentManager(user);
-    const canUnassignSubject = canAssignSubject && !!user.assignedSubjectId;
+    const canUnassignSubject =
+      canAssignSubject &&
+      (((user.assignedSubjects ?? []).length > 0) || !!user.assignedSubjectId);
     const disableAssign = isSubjectOptionsLoading || subjectOptions.length === 0;
     const viewProfileButton = (
       <button
@@ -368,6 +382,14 @@ export function AdminUsersPage({
     const { name, email } = confirmModal.user;
 
     if (isAssign) {
+      const assignedSubjectIds = new Set(
+        (confirmModal.user.assignedSubjects ?? []).map((subject) => subject.subjectId)
+      );
+
+      const availableSubjects = subjectOptions.filter(
+        (subject) => !assignedSubjectIds.has(subject.id)
+      );
+
       return {
         title: "Assign Subject",
         description: (
@@ -380,50 +402,88 @@ export function AdminUsersPage({
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
               Learning Subject
             </label>
+            <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-neutral-200 p-2">
+              {isSubjectOptionsLoading ? (
+                <p className="text-sm text-neutral-500">Loading subjects...</p>
+              ) : availableSubjects.length === 0 ? (
+                <p className="text-sm text-neutral-500">All active subjects are already assigned.</p>
+              ) : (
+                availableSubjects.map((subject) => {
+                  const isChecked = selectedAssignSubjectIds.includes(subject.id);
+
+                  return (
+                    <label key={subject.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-neutral-50">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(event) => {
+                          setSelectedAssignSubjectIds((prev) => {
+                            if (event.target.checked) {
+                              return [...prev, subject.id];
+                            }
+
+                            return prev.filter((id) => id !== subject.id);
+                          });
+                        }}
+                        className="h-4 w-4 rounded border-neutral-300 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span className="text-sm text-neutral-700">{subject.name}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ),
+        confirmText: "Assign Selected",
+        variant: "default" as const,
+      };
+    }
+
+    if (isUnassign) {
+      const assignedSubjects = (confirmModal.user.assignedSubjects ?? []).length > 0
+        ? confirmModal.user.assignedSubjects ?? []
+        : confirmModal.user.assignedSubjectId && confirmModal.user.assignedSubjectName
+          ? [{
+              subjectId: confirmModal.user.assignedSubjectId,
+              subjectName: confirmModal.user.assignedSubjectName,
+            }]
+          : [];
+
+      return {
+        title: "Unassign Subject",
+        description: (
+          <div>
+            <p className="mb-3">Choose a subject to remove from:</p>
+            <div className="rounded-lg bg-neutral-100 p-3">
+              <p className="font-medium text-neutral-900">{name}</p>
+              <p className="text-sm text-neutral-600">{email}</p>
+            </div>
+            <label className="mb-1 mt-3 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Assigned Subject
+            </label>
             <select
-              value={selectedSubjectId}
+              value={selectedUnassignSubjectId}
               onChange={(event) => {
                 const value = event.target.value;
-                setSelectedSubjectId(value ? Number(value) : "");
+                setSelectedUnassignSubjectId(value ? Number(value) : "");
               }}
-              disabled={isSubjectOptionsLoading || subjectOptions.length === 0}
+              disabled={assignedSubjects.length === 0}
               className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-cyan-400"
             >
-              {isSubjectOptionsLoading ? (
-                <option value="">Loading subjects...</option>
-              ) : subjectOptions.length === 0 ? (
-                <option value="">No active subjects</option>
+              {assignedSubjects.length === 0 ? (
+                <option value="">No assigned subject</option>
               ) : (
-                subjectOptions.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
+                assignedSubjects.map((subject) => (
+                  <option key={subject.subjectId} value={subject.subjectId}>
+                    {subject.subjectName}
                   </option>
                 ))
               )}
             </select>
           </div>
         ),
-        confirmText: "Assign",
-        variant: "default" as const,
-      };
-    }
-
-    if (isUnassign) {
-      return {
-        title: "Unassign Subject",
-        description: (
-          <div>
-            <p className="mb-3">Remove current subject assignment for:</p>
-            <div className="rounded-lg bg-neutral-100 p-3">
-              <p className="font-medium text-neutral-900">{name}</p>
-              <p className="text-sm text-neutral-600">{email}</p>
-              <p className="mt-2 text-xs text-neutral-500">
-                Current subject: {confirmModal.user.assignedSubjectName || "-"}
-              </p>
-            </div>
-          </div>
-        ),
-        confirmText: "Unassign",
+        confirmText: "Unassign Subject",
         variant: "danger" as const,
       };
     }
