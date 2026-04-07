@@ -708,7 +708,7 @@ export function RoadmapListPage() {
               return (
               <div
                 key={roadmap.id}
-                className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg"
+                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg"
               >
               {/* Status & Version Badge */}
               <div className="absolute right-4 top-4 flex gap-2">
@@ -723,11 +723,11 @@ export function RoadmapListPage() {
               </div>
 
               {/* Content */}
-              <div className="mb-4 mt-6">
-                <h3 className="mb-2 text-lg font-bold text-neutral-900 group-hover:text-[#00bae2] transition-colors">
+              <div className="mb-4 mt-6 flex-1">
+                <h3 className="mb-2 line-clamp-2 min-h-[3.5rem] text-lg font-bold text-neutral-900 group-hover:text-[#00bae2] transition-colors">
                   {roadmap.title}
                 </h3>
-                <p className="line-clamp-2 text-sm text-neutral-600">
+                <p className="line-clamp-3 min-h-[4.5rem] text-sm text-neutral-600">
                   {roadmap.description || 'No description'}
                 </p>
               </div>
@@ -738,7 +738,7 @@ export function RoadmapListPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="mt-auto flex gap-2">
                 <Link
                   href={`/content-roadmaps/${roadmap.id}`}
                   className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-center text-xs font-medium text-neutral-700 transition-all hover:bg-neutral-50"
