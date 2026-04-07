@@ -34,10 +34,10 @@ export function UserProfile() {
 
     if (!user) return null;
 
-    const initials = `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
-
-    const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
-    const fullName = `${capitalize(user.firstName ?? '')} ${capitalize(user.lastName ?? '')}`.trim() || user.email;
+    const firstName = (user.firstName ?? '').trim();
+    const lastName = (user.lastName ?? '').trim();
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    const fullName = `${firstName} ${lastName}`.trim() || user.email;
 
     const isPremium = hasPaidSubscription(membership?.subscriptionType ?? user?.subscriptionType);
 

@@ -196,10 +196,10 @@ export async function createRoadmapGraph(
 export async function syncRoadmapGraph(
   request: SyncRoadmapGraphRequest
 ): Promise<SyncRoadmapGraphResponse> {
-  const { roadmapId, ...graphData } = request;
+  const { roadmapId } = request;
   return put<SyncRoadmapGraphResponse>(
     `/roadmaps/${roadmapId}/graph`,
-    graphData
+    request
   );
 }
 

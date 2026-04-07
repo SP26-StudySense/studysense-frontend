@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useEffect, useState as _useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, Clock, Calendar } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import {
+    getTodayLocalDateInput,
+    isLocalDateBeforeToday,
+    localDateInputToUtcIso,
+    toLocalDateInputValue,
+} from '@/shared/lib/date-time';
 import { TaskItemInput, TaskStatus } from '../api/types';
 
 export interface TaskFormData {
@@ -42,7 +48,7 @@ export function TaskFormModal({
         title: '',
         description: '',
         estimatedMinutes: 30,
-        scheduledDate: new Date().toISOString().split('T')[0],
+        scheduledDate: getTodayLocalDateInput(),
     });
     const [errors, setErrors] = useState<Partial<Record<keyof TaskFormData, string>>>({});
     const [mounted, setMounted] = useState(false);
@@ -59,14 +65,14 @@ export function TaskFormModal({
                     title: initialData.title,
                     description: initialData.description || '',
                     estimatedMinutes: initialData.estimatedMinutes,
-                    scheduledDate: initialData.scheduledDate.split('T')[0],
+                    scheduledDate: toLocalDateInputValue(initialData.scheduledDate),
                 });
             } else {
                 setFormData({
                     title: '',
                     description: '',
                     estimatedMinutes: 30,
-                    scheduledDate: new Date().toISOString().split('T')[0],
+                    scheduledDate: getTodayLocalDateInput(),
                 });
             }
             setErrors({});
@@ -86,6 +92,8 @@ export function TaskFormModal({
 
         if (!formData.scheduledDate) {
             newErrors.scheduledDate = 'Scheduled date is required';
+        } else if (isLocalDateBeforeToday(formData.scheduledDate)) {
+            newErrors.scheduledDate = 'Scheduled date cannot be in the past';
         }
 
         setErrors(newErrors);
@@ -103,13 +111,14 @@ export function TaskFormModal({
             description: formData.description.trim() || undefined,
             status: TaskStatus.Pending,
             estimatedDurationSeconds: formData.estimatedMinutes * 60,
-            scheduledDate: new Date(formData.scheduledDate).toISOString(),
+            scheduledDate: localDateInputToUtcIso(formData.scheduledDate),
         };
 
         await onSubmit(taskInput);
     };
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen) return null;
+    if (!mounted) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -209,6 +218,7 @@ export function TaskFormModal({
                                 type="date"
                                 value={formData.scheduledDate}
                                 onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
+                                min={getTodayLocalDateInput()}
                                 className={cn(
                                     "w-full px-4 py-3 rounded-xl border bg-white/80 text-neutral-900 transition-all",
                                     "focus:outline-none focus:ring-2 focus:ring-[#00bae2]/30 focus:border-[#00bae2]",

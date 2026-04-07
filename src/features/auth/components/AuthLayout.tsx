@@ -63,7 +63,7 @@ export const AuthLayout = ({ children, subtitle }: AuthLayoutProps) => {
 
             {/* Footer copyright */}
             <div className="relative z-10 mt-8 text-center text-xs text-neutral-400">
-                &copy; {new Date().getFullYear()} StudySense. All rights reserved.
+                &copy; <span suppressHydrationWarning>{new Date().getFullYear()}</span> StudySense. All rights reserved.
             </div>
         </div>
     );

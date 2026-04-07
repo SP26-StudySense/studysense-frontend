@@ -70,10 +70,14 @@ const DIFFICULTY_STYLES: Record<string, string> = {
 interface NodeDetailSectionProps {
   node: RoadmapNode;
   roadmapId: number;
+  deletedContentIds: number[];
+  hasPendingChanges: boolean;
   onUpdate: (
     updates: Partial<RoadmapNode>,
     options?: { markUnsaved?: boolean }
   ) => void;
+  onMarkContentDeleted: (contentId: number) => void;
+  onUnmarkContentDeleted: (contentId: number) => void;
   onDeleteNode: () => void;
   onContentsLoaded?: (nodeId: number) => void;
 }
@@ -81,7 +85,11 @@ interface NodeDetailSectionProps {
 function NodeDetailSection({
   node,
   roadmapId,
+  deletedContentIds,
+  hasPendingChanges,
   onUpdate,
+  onMarkContentDeleted,
+  onUnmarkContentDeleted,
   onDeleteNode,
   onContentsLoaded,
 }: NodeDetailSectionProps) {
@@ -300,6 +308,17 @@ function NodeDetailSection({
   };
 
   const handleDeleteContent = (contentId: number | string) => {
+    const target = contents.find((c) => (c.id ?? c.clientId) === contentId);
+    if (!target) return;
+
+    if (typeof target.id === "number" && target.id > 0) {
+      onMarkContentDeleted(target.id);
+      if (editingContentId === contentId) {
+        handleCancelEditContent();
+      }
+      return;
+    }
+
     const updated = contents.filter((c) => {
       const cId = c.id ?? c.clientId;
       return cId !== contentId;
@@ -517,7 +536,7 @@ function NodeDetailSection({
             <ContentManagerLoading
               variant="inline"
               size="sm"
-              title="Loading contents from server..."
+              title="Loading contents..."
             />
           </div>
         )}
@@ -654,22 +673,26 @@ function NodeDetailSection({
             {contents.map((content) => {
               const cId = content.id ?? content.clientId!;
               const isEditing = editingContentId === cId;
+              const isMarkedDeleted =
+                typeof content.id === "number" &&
+                deletedContentIds.includes(content.id);
               // A content is "unsaved" if it is new (id=null) OR if it was
               // loaded from the server but its fields differ from the server copy.
               const isUnsaved =
-                content.id == null ||
-                (apiContents != null &&
-                  apiContents.some(
-                    (orig) =>
-                      orig.id === content.id &&
-                      (orig.title !== content.title ||
-                        orig.description !== content.description ||
-                        orig.url !== content.url ||
-                        orig.contentType !== content.contentType ||
-                        orig.duration !== content.duration ||
-                        orig.estimatedMinutes !== content.estimatedMinutes ||
-                        orig.isRequired !== content.isRequired)
-                  ));
+                hasPendingChanges &&
+                (content.id == null ||
+                  (apiContents != null &&
+                    apiContents.some(
+                      (orig) =>
+                        orig.id === content.id &&
+                        (orig.title !== content.title ||
+                          orig.description !== content.description ||
+                          orig.url !== content.url ||
+                          orig.contentType !== content.contentType ||
+                          orig.duration !== content.duration ||
+                          orig.estimatedMinutes !== content.estimatedMinutes ||
+                          orig.isRequired !== content.isRequired)
+                    )));
 
               if (isEditing) {
                 return (
@@ -772,7 +795,11 @@ function NodeDetailSection({
               return (
                 <div
                   key={cId}
-                  className="rounded-xl border border-neutral-200 bg-white p-4 hover:border-neutral-300 transition-colors group"
+                  className={`rounded-xl border p-4 transition-colors group ${
+                    isMarkedDeleted
+                      ? "border-red-200 bg-red-50/40"
+                      : "border-neutral-200 bg-white hover:border-neutral-300"
+                  }`}
                 >
                   {/* Badges row */}
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -789,46 +816,63 @@ function NodeDetailSection({
                         Unsaved
                       </span>
                     )}
+                    {isMarkedDeleted && (
+                      <span className="rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                        Marked for delete
+                      </span>
+                    )}
                     {/* Action buttons — visible on hover */}
-                    <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <button
-                        onClick={() => handleStartEditContent(content)}
-                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteContent(cId)}
-                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
+                    <div className={`ml-auto flex items-center gap-1 transition-all ${isMarkedDeleted ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                      {isMarkedDeleted ? (
+                        <button
+                          onClick={() => onUnmarkContentDeleted(content.id!)}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Revert
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleStartEditContent(content)}
+                            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteContent(cId)}
+                            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   {/* Content title */}
-                  <p className="text-sm font-semibold text-neutral-900">
+                  <p className={`text-sm font-semibold ${isMarkedDeleted ? "text-neutral-500 line-through" : "text-neutral-900"}`}>
                     {content.title}
                   </p>
 
                   {/* Description */}
                   {content.description && (
-                    <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                    <p className={`text-xs mt-1 leading-relaxed ${isMarkedDeleted ? "text-neutral-400 line-through" : "text-neutral-500"}`}>
                       {content.description}
                     </p>
                   )}
 
                   {/* Meta row */}
-                  <div className="flex items-center gap-4 mt-2 flex-wrap">
+                  <div className={`flex items-center gap-4 mt-2 flex-wrap ${isMarkedDeleted ? "text-neutral-400" : ""}`}>
                     {content.duration != null && content.duration > 0 && (
-                      <span className="text-[11px] text-neutral-400">
+                      <span className={`text-[11px] ${isMarkedDeleted ? "line-through" : "text-neutral-400"}`}>
                         Duration: {content.duration} min
                       </span>
                     )}
                     {content.estimatedMinutes != null && content.estimatedMinutes > 0 && (
-                      <span className="text-[11px] text-neutral-400">
+                      <span className={`text-[11px] ${isMarkedDeleted ? "line-through" : "text-neutral-400"}`}>
                         Est: {content.estimatedMinutes} min
                       </span>
                     )}
@@ -838,7 +882,7 @@ function NodeDetailSection({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[11px] text-[#00bae2] hover:underline ml-auto"
+                        className={`flex items-center gap-1 text-[11px] ml-auto ${isMarkedDeleted ? "text-neutral-400 line-through" : "text-[#00bae2] hover:underline"}`}
                       >
                         Open Resource
                         <ExternalLink className="h-3 w-3" />
@@ -1311,6 +1355,75 @@ function normalizeNodeOrder(nodes: RoadmapNode[]): RoadmapNode[] {
   }));
 }
 
+function applySyncMappingsToRoadmap(
+  data: RoadmapDetail,
+  response: {
+    nodeIdMap: Record<string, number>;
+    edgeIdMap: Record<string, number>;
+    contentIdMap: Record<string, number>;
+  },
+  deletedContentIds: number[]
+): RoadmapDetail {
+  const deletedSet = new Set(deletedContentIds);
+
+  const mappedNodes = data.nodes.map((node) => {
+    const mappedNodeId =
+      node.id == null && node.clientId
+        ? response.nodeIdMap[node.clientId] ?? node.id
+        : node.id;
+
+    const mappedContents = (node.contents ?? [])
+      .filter((content) => !(typeof content.id === "number" && deletedSet.has(content.id)))
+      .map((content) => {
+        const mappedContentId =
+          content.id == null && content.clientId
+            ? response.contentIdMap[content.clientId] ?? content.id
+            : content.id;
+
+        return {
+          ...content,
+          id: mappedContentId,
+          nodeId: typeof mappedNodeId === "number" ? mappedNodeId : content.nodeId,
+          nodeClientId: undefined,
+        };
+      });
+
+    return {
+      ...node,
+      id: mappedNodeId,
+      contents: mappedContents,
+    };
+  });
+
+  const mappedEdges = data.edges.map((edge) => {
+    const mappedEdgeId =
+      edge.id == null && edge.clientId
+        ? response.edgeIdMap[edge.clientId] ?? edge.id
+        : edge.id;
+
+    const mappedFromNodeId =
+      edge.fromNodeId ??
+      (edge.fromNodeClientId ? response.nodeIdMap[edge.fromNodeClientId] : undefined);
+
+    const mappedToNodeId =
+      edge.toNodeId ??
+      (edge.toNodeClientId ? response.nodeIdMap[edge.toNodeClientId] : undefined);
+
+    return {
+      ...edge,
+      id: mappedEdgeId,
+      fromNodeId: mappedFromNodeId,
+      toNodeId: mappedToNodeId,
+    };
+  });
+
+  return {
+    ...data,
+    nodes: mappedNodes,
+    edges: mappedEdges,
+  };
+}
+
 export function RoadmapDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -1328,6 +1441,7 @@ export function RoadmapDetailPage() {
   const [editedData, setEditedData] = useState<RoadmapDetail | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletedContentIds, setDeletedContentIds] = useState<number[]>([]);
 
   // ── UI state ──
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
@@ -1354,6 +1468,7 @@ export function RoadmapDetailPage() {
   useEffect(() => {
     if (roadmapData) {
       setEditedData(roadmapData);
+      setDeletedContentIds([]);
     }
   }, [roadmapData]);
 
@@ -1437,6 +1552,9 @@ export function RoadmapDetailPage() {
   const handleDeleteNode = useCallback(
     (nodeId: number | string) => {
       if (!editedData) return;
+      const targetNode = editedData.nodes.find(
+        (n) => getNodeKey(n) === String(nodeId)
+      );
       const newNodes = editedData.nodes.filter(
         (n) => getNodeKey(n) !== String(nodeId)
       );
@@ -1448,11 +1566,34 @@ export function RoadmapDetailPage() {
       // Combine both updates in a single setEditedData call to avoid React
       // batching causing the second call to overwrite the first.
       setEditedData({ ...editedData, nodes: newNodes, edges: newEdges });
+      if (targetNode?.contents?.length) {
+        const removedIds = targetNode.contents
+          .map((content) => content.id)
+          .filter((id): id is number => typeof id === "number");
+        if (removedIds.length > 0) {
+          setDeletedContentIds((prev) =>
+            prev.filter((id) => !removedIds.includes(id))
+          );
+        }
+      }
       setHasUnsavedChanges(true);
       if (selectedNodeId === nodeId) setSelectedNodeId(null);
     },
     [editedData, selectedNodeId]
   );
+
+  const handleMarkContentDeleted = useCallback((contentId: number) => {
+    if (contentId <= 0) return;
+    setDeletedContentIds((prev) =>
+      prev.includes(contentId) ? prev : [...prev, contentId]
+    );
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleUnmarkContentDeleted = useCallback((contentId: number) => {
+    setDeletedContentIds((prev) => prev.filter((id) => id !== contentId));
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleAddEdge = useCallback(
     (fromId: number | string, toId: number | string, edgeType: EdgeType) => {
@@ -1497,13 +1638,14 @@ export function RoadmapDetailPage() {
   };
 
   // ── Save all to server ──
-  // Collect contents that are "changed" for the API payload:
+  // Collect contents for create/update payload only.
   // - Contents from any node whose contents were API-loaded this session
   //   (covers edits, deletions, and new additions on those nodes)
   // - Contents from new (client-only) nodes that have locally-added entries
-  // Nodes whose contents were never loaded are skipped entirely so that the
-  // server does not delete their contents.
+  // Nodes whose contents were never loaded are skipped entirely.
+  // Items marked for delete are excluded and sent via deleteContents.
   const collectContents = (nodes: RoadmapNode[]): NodeContent[] => {
+    const deletedIdSet = new Set(deletedContentIds);
     const result: NodeContent[] = [];
     nodes.forEach((node) => {
       const nId = typeof node.id === "number" ? node.id : undefined;
@@ -1514,9 +1656,11 @@ export function RoadmapDetailPage() {
       // Skip nodes that were never visited AND have no local contents
       if (!hasContents && !wasLoaded) return;
       // If visited but all contents deleted — nothing to add to flat array
-      // (the absence of this nodeId's contents in the payload signals deletion)
       if (!node.contents?.length) return;
       node.contents.forEach((c) => {
+        if (typeof c.id === "number" && deletedIdSet.has(c.id)) {
+          return;
+        }
         result.push({
           ...c,
           nodeId: nId ?? c.nodeId,
@@ -1534,11 +1678,14 @@ export function RoadmapDetailPage() {
       // Strip nested contents from node objects and send them as a separate
       // flat array as required by the SyncRoadmapGraphRequest schema.
       const flatContents = collectContents(editedData.nodes);
+      const deleteContents = Array.from(
+        new Set(deletedContentIds.filter((id) => id > 0))
+      );
       const nodesWithoutContents = editedData.nodes.map(
         ({ contents: _contents, ...rest }) => rest as RoadmapNode
       );
 
-      await syncRoadmapMutation.mutateAsync({
+      const syncResult = await syncRoadmapMutation.mutateAsync({
         roadmapId,
         roadmap: {
           title: editedData.roadmap.title,
@@ -1547,7 +1694,33 @@ export function RoadmapDetailPage() {
         nodes: nodesWithoutContents,
         edges: editedData.edges,
         contents: flatContents,
+        deleteContents,
       });
+
+      const mappedData = applySyncMappingsToRoadmap(
+        editedData,
+        {
+          nodeIdMap: syncResult.nodeIdMap ?? {},
+          edgeIdMap: syncResult.edgeIdMap ?? {},
+          contentIdMap: syncResult.contentIdMap ?? {},
+        },
+        deleteContents
+      );
+
+      setEditedData(mappedData);
+      loadedNodeIdsRef.current = new Set(
+        mappedData.nodes
+          .map((node) => node.id)
+          .filter((id): id is number => typeof id === "number")
+      );
+
+      setSelectedNodeId((prev) => {
+        if (prev == null) return prev;
+        if (typeof prev === "number") return prev;
+        return syncResult.nodeIdMap?.[prev] ?? prev;
+      });
+
+      setDeletedContentIds([]);
       setHasUnsavedChanges(false);
       toast.success("Roadmap saved successfully!", {
         description: "All changes have been synced.",
@@ -1566,6 +1739,7 @@ export function RoadmapDetailPage() {
       setEditedData(roadmapData);
       setHasUnsavedChanges(false);
       setIsEditingMetadata(false);
+      setDeletedContentIds([]);
       toast.info("Changes discarded", {
         description: "Reverted to the last saved version.",
       });
@@ -1887,6 +2061,8 @@ export function RoadmapDetailPage() {
           <NodeDetailSection
             node={selectedNode}
             roadmapId={roadmapId}
+            deletedContentIds={deletedContentIds}
+            hasPendingChanges={hasUnsavedChanges}
             onUpdate={(updates, options) =>
               handleNodeUpdate(
                 selectedNode.id ?? selectedNode.clientId!,
@@ -1894,6 +2070,8 @@ export function RoadmapDetailPage() {
                 options
               )
             }
+            onMarkContentDeleted={handleMarkContentDeleted}
+            onUnmarkContentDeleted={handleUnmarkContentDeleted}
             onDeleteNode={() =>
               handleDeleteNode(selectedNode.id ?? selectedNode.clientId!)
             }
