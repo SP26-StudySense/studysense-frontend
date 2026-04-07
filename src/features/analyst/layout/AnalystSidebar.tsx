@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart3,
   ClipboardList,
@@ -36,8 +36,28 @@ const sidebarItems = [
 
 export function AnalystSidebar() {
   const pathname = usePathname();
-  const { logout, isLoggingOut } = useAuth();
+  const { user, logout, isLoggingOut } = useAuth();
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+
+  const displayName = useMemo(() => {
+    if (!user) return "Analyst";
+
+    const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+    if (fullName) return fullName;
+
+    return user.email?.split("@")[0] || "Analyst";
+  }, [user]);
+
+  const initials = useMemo(() => {
+    if (!user) return "AN";
+
+    const first = user.firstName?.trim()?.charAt(0) ?? "";
+    const last = user.lastName?.trim()?.charAt(0) ?? "";
+    const value = `${first}${last}`.toUpperCase();
+    if (value) return value;
+
+    return user.email?.trim()?.charAt(0)?.toUpperCase() || "AN";
+  }, [user]);
 
   const isActive = (href: string) => {
     return pathname.startsWith(href);
@@ -92,12 +112,28 @@ export function AnalystSidebar() {
         </nav>
       </div>
 
-      {/* Footer / Logout */}
-      <div className="border-t border-neutral-200 p-4">
+      {/* User Info & Logout */}
+      <div className="border-t border-neutral-200/60 p-4">
+        <div className="mb-3 rounded-xl bg-neutral-50 p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#fec5fb] to-[#00bae2] text-sm font-bold text-neutral-900">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-neutral-900">
+                {displayName}
+              </p>
+              <p className="truncate text-xs text-neutral-500">
+                {user?.email || "-"}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           disabled={isLoggingOut}
-          className="flex w-full items-center justify-start gap-3 rounded-xl py-6 text-neutral-600 hover:bg-red-50 hover:text-red-600"
+          className="w-full justify-start gap-2 text-neutral-600 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => setIsLogoutConfirmOpen(true)}
         >
           {isLoggingOut ? (
@@ -105,7 +141,7 @@ export function AnalystSidebar() {
           ) : (
             <>
               <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
-              <span className="text-sm font-medium">Log out</span>
+              <span>Logout</span>
             </>
           )}
         </Button>
