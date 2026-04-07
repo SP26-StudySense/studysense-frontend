@@ -33,7 +33,7 @@ function getPageTitle(pathname: string): string {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
-  const showChatbot = pathname === '/sessions';
+  const showChatbot = pathname.startsWith('/sessions') && !pathname.endsWith('/history');
 
   return (
     <AuthGuard>

@@ -62,9 +62,9 @@ export function Sidebar() {
     const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
 
     const activeStudyPlanId = (() => {
-        // 1. Extract ID from URL if present in dashboard, study-plans, or my-roadmap
-        const match = pathname.match(/^\/(dashboard|study-plans|my-roadmap)\/(\d+)/);
-        if (match) return match[2];
+        // 1. Extract ID from URL if present in plan-scoped sections
+        const planScopedMatch = pathname.match(/^\/(dashboard|study-plans|my-roadmap|sessions)\/(\d+)/);
+        if (planScopedMatch) return planScopedMatch[2];
         
         // 2. Use stored active ID if available
         if (activeStudyPlanIdStore) {
@@ -83,7 +83,7 @@ export function Sidebar() {
 
     // Sync pathname ID to store to maintain consistency
     useEffect(() => {
-        const match = pathname.match(/^\/(dashboard|study-plans|my-roadmap)\/(\d+)/);
+        const match = pathname.match(/^\/(dashboard|study-plans|my-roadmap|sessions)\/(\d+)/);
         if (match) {
             const idFromPath = match[2];
             if (idFromPath !== activeStudyPlanIdStore) {
@@ -106,11 +106,20 @@ export function Sidebar() {
                 icon: Map,
             },
             {
-                title: 'Study Plan',
-                href: `/study-plans/${activeStudyPlanId}`,
-                icon: BookOpen,
+                title: 'Sessions',
+                href: `/sessions/${activeStudyPlanId}`,
+                icon: Calendar,
             },
-            ...baseSidebarItems.slice(2), // Sessions, History, Chat
+            {
+                title: 'Chat',
+                href: '/chat',
+                icon: MessageSquare,
+            },
+            {
+                title: 'History',
+                href: `/sessions/${activeStudyPlanId}/history`,
+                icon: History,
+            },
         ]
         : baseSidebarItems;
 
@@ -121,7 +130,10 @@ export function Sidebar() {
             return pathname.startsWith('/dashboard');
         }
         // Specific exception: Don't highlight 'Sessions' when on 'History' page
-        if (href === '/sessions' && pathname.startsWith('/sessions/history')) {
+        if (href.startsWith('/sessions/') && href.endsWith('/history') && pathname.startsWith('/sessions/')) {
+            return pathname.endsWith('/history');
+        }
+        if ((href === '/sessions' || /^\/sessions\/\d+$/.test(href)) && pathname.startsWith('/sessions/') && pathname.endsWith('/history')) {
             return false;
         }
         // Exception: Highlight 'Study Plans' for any study plan page
@@ -133,6 +145,15 @@ export function Sidebar() {
             return true;
         }
         return pathname.startsWith(href);
+    };
+
+    const handleSidebarNavigation = (href: string) => {
+        // Prevent stale session queries when user switches roadmap then opens Sessions quickly.
+        if (href.startsWith('/sessions') && activeStudyPlanId) {
+            setActiveStudyPlanId(activeStudyPlanId);
+        }
+
+        navigateWithGuard(href);
     };
 
     return (
@@ -158,7 +179,7 @@ export function Sidebar() {
                     {sidebarItems.map((item) => (
                         <button
                             key={item.href}
-                            onClick={() => navigateWithGuard(item.href)}
+                            onClick={() => handleSidebarNavigation(item.href)}
                             className={cn(
                                 "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 w-full text-left cursor-pointer border-0 bg-transparent",
                                 isActive(item.href)

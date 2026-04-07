@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Calendar, Clock, CheckCircle2, TrendingUp, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionHistory, useSessionStatistics } from './api/queries';
 import type { SessionHistoryItem as HistoryItem } from './types';
 import { useSessionStore } from '@/store/session.store';
+
+interface SessionHistoryPageProps {
+    studyPlanId?: string;
+}
 
 function formatDate(dateStr: string): string {
     const date = new Date(dateStr);
@@ -141,16 +145,31 @@ function SessionCard({ session }: { session: HistoryItem }) {
     );
 }
 
-export function SessionHistoryPage() {
+export function SessionHistoryPage({ studyPlanId }: SessionHistoryPageProps = {}) {
     const [page, setPage] = useState(1);
     const pageSize = 10;
     const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
+
+    useEffect(() => {
+        if (studyPlanId) {
+            setActiveStudyPlanId(studyPlanId);
+        }
+    }, [setActiveStudyPlanId, studyPlanId]);
+
+    const routePlanId = studyPlanId ? Number(studyPlanId) : undefined;
+    const resolvedRoutePlanId =
+        typeof routePlanId === 'number' && Number.isFinite(routePlanId) && routePlanId > 0
+            ? routePlanId
+            : undefined;
 
     const parsedPlanId = activeStudyPlanId ? Number(activeStudyPlanId) : undefined;
-    const planId =
+    const resolvedStorePlanId =
         typeof parsedPlanId === 'number' && Number.isFinite(parsedPlanId) && parsedPlanId > 0
             ? parsedPlanId
             : undefined;
+
+    const planId = resolvedRoutePlanId ?? resolvedStorePlanId;
 
     // Fetch real data from API
     const { data: historyData, isLoading: historyLoading } = useSessionHistory({
@@ -161,7 +180,10 @@ export function SessionHistoryPage() {
         sortOrder: 'desc',
     });
 
-    const { data: stats, isLoading: statsLoading } = useSessionStatistics('all');
+    const { data: stats, isLoading: statsLoading } = useSessionStatistics({
+        period: 'all',
+        planId,
+    });
 
     const sessions = historyData?.items ?? [];
     const totalPages = historyData?.totalPages ?? 0;

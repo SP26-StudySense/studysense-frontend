@@ -54,9 +54,11 @@ export const routes = {
     // Study Sessions
     sessions: {
       list: '/sessions',
+      listByPlan: (studyPlanId: string) => `/sessions/${studyPlanId}`,
       detail: (id: string) => `/sessions/${id}`,
       active: '/sessions/active',
       history: '/sessions/history',
+      historyByPlan: (studyPlanId: string) => `/sessions/${studyPlanId}/history`,
     },
 
     // Chat

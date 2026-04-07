@@ -131,6 +131,7 @@ export interface SessionDetailResponse {
 
 export interface SessionHistoryParams {
   planId?: number;
+  studyPlanId?: number;
   pageNumber?: number;
   pageSize?: number;
   sortBy?: string;
@@ -178,6 +179,12 @@ export interface SessionStatistics {
   secondsThisWeek: number;
   totalXpEarned: number;
   averageRating: number;
+}
+
+export interface SessionStatisticsParams {
+  period?: string;
+  planId?: number;
+  studyPlanId?: number;
 }
 
 // ─── Study Events ───────────────────────────────────────────────────────────

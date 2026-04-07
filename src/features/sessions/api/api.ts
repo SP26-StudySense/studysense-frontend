@@ -19,6 +19,7 @@ import type {
   SessionHistoryItem,
   RecentSessionItem,
   SessionStatistics,
+  SessionStatisticsParams,
   LogEventRequest,
   LogEventResponse,
 } from '../types';
@@ -74,7 +75,15 @@ export async function getSessionById(id: string): Promise<SessionDetailResponse>
 export async function getSessionHistory(
   params: SessionHistoryParams
 ): Promise<PaginatedResponse<SessionHistoryItem>> {
-  return get<PaginatedResponse<SessionHistoryItem>>(ep.history, { params });
+  const { studyPlanId, ...restParams } = params;
+  const normalizedParams: SessionHistoryParams = {
+    ...restParams,
+    planId: restParams.planId ?? studyPlanId,
+  };
+
+  return get<PaginatedResponse<SessionHistoryItem>>(ep.history, {
+    params: normalizedParams,
+  });
 }
 
 export async function getRecentSessions(
@@ -84,10 +93,16 @@ export async function getRecentSessions(
 }
 
 export async function getSessionStatistics(
-  period?: string
+  params: SessionStatisticsParams = {}
 ): Promise<SessionStatistics> {
+  const { studyPlanId, ...restParams } = params;
+  const normalizedParams: SessionStatisticsParams = {
+    ...restParams,
+    planId: restParams.planId ?? studyPlanId,
+  };
+
   return get<SessionStatistics>(ep.statistics, {
-    params: period ? { period } : undefined,
+    params: normalizedParams,
   });
 }
 
