@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
+  BarChart3,
   ClipboardList,
   GitBranch,
   LogOut,
@@ -10,8 +12,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { ConfirmationModal } from "@/shared/ui";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 const sidebarItems = [
+  {
+    title: "Dashboard",
+    href: "/analyst-dashboard",
+    icon: BarChart3,
+  },
   {
     title: "Surveys",
     href: "/analyst-survey",
@@ -26,6 +36,8 @@ const sidebarItems = [
 
 export function AnalystSidebar() {
   const pathname = usePathname();
+  const { logout, isLoggingOut } = useAuth();
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const isActive = (href: string) => {
     return pathname.startsWith(href);
@@ -35,7 +47,10 @@ export function AnalystSidebar() {
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-72 flex-col border-r border-neutral-200/60 bg-white/80 backdrop-blur-xl">
       {/* Logo */}
       <div className="flex h-20 shrink-0 items-center px-6">
-        <Link href="/analyst-survey" className="group flex items-center gap-2 cursor-pointer">
+        <Link
+          href="/analyst-dashboard"
+          className="group flex items-center gap-2 cursor-pointer"
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-[#00bae2] transition-transform duration-300 group-hover:scale-105">
             <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
           </div>
@@ -81,11 +96,32 @@ export function AnalystSidebar() {
       <div className="border-t border-neutral-200 p-4">
         <Button
           variant="ghost"
+          disabled={isLoggingOut}
           className="flex w-full items-center justify-start gap-3 rounded-xl py-6 text-neutral-600 hover:bg-red-50 hover:text-red-600"
+          onClick={() => setIsLogoutConfirmOpen(true)}
         >
-          <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
-          <span className="text-sm font-medium">Log out</span>
+          {isLoggingOut ? (
+            <LoadingSpinner size="sm" />
+          ) : (
+            <>
+              <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
+              <span className="text-sm font-medium">Log out</span>
+            </>
+          )}
         </Button>
+
+        <ConfirmationModal
+          isOpen={isLogoutConfirmOpen}
+          onClose={() => setIsLogoutConfirmOpen(false)}
+          onConfirm={() => {
+            void logout();
+          }}
+          title="Log out"
+          description="Are you sure you want to log out of your account?"
+          confirmText="Log out"
+          cancelText="Stay logged in"
+          variant="danger"
+        />
       </div>
     </aside>
   );

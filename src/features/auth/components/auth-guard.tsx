@@ -50,6 +50,11 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const [hasHydrated, setHasHydrated] = useState(false);
   const { data: user, isLoading, error } = useCurrentUser();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setHasHydrated(true);
@@ -81,6 +86,11 @@ export function GuestGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const [hasHydrated, setHasHydrated] = useState(false);
   const { data: user, isLoading } = useCurrentUser({ enabled: true });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setHasHydrated(true);

@@ -7,6 +7,8 @@ import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/
 import * as api from './api';
 import { cmQueryKeys } from './api';
 import type {
+  CreateRoadmapRequest,
+  CreateRoadmapResponse,
   DeleteRoadmapRequest,
   DeleteNodeRequest,
   DeleteEdgeRequest,
@@ -14,6 +16,7 @@ import type {
   CreateRoadmapGraphRequest,
   SyncRoadmapGraphRequest,
   CreateQuizRequest,
+  UpdateQuizRequest,
   CreateQuizQuestionRequest,
   CreateAiQuizQuestionsRequest,
   UpdateQuizQuestionRequest,
@@ -28,6 +31,7 @@ import type {
   CreateRoadmapGraphResponse,
   SyncRoadmapGraphResponse,
   CreateQuizResponse,
+  UpdateQuizResponse,
   CreateQuizQuestionResponse,
   CreateAiQuizQuestionsResponse,
   UpdateQuizQuestionDto,
@@ -38,6 +42,20 @@ import type {
 } from './types';
 
 // ==================== Delete Mutations ====================
+
+export function useCreateRoadmap(
+  options?: UseMutationOptions<CreateRoadmapResponse, Error, CreateRoadmapRequest>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.createRoadmap,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.roadmaps() });
+    },
+    ...options,
+  });
+}
 
 /**
  * Delete a roadmap and all its data
@@ -291,10 +309,7 @@ export function useSyncRoadmapGraph(
 
   return useMutation({
     mutationFn: api.syncRoadmapGraph,
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: cmQueryKeys.roadmapDetail(variables.roadmapId),
-      });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cmQueryKeys.roadmaps() });
     },
     ...options,
@@ -316,6 +331,30 @@ export function useCreateQuiz(
       queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizzes() });
       queryClient.invalidateQueries({
         queryKey: cmQueryKeys.quizzesByNode(variables.createQuizNode.roadmapNodeId),
+      });
+    },
+    ...options,
+  });
+}
+
+export function useUpdateQuiz(
+  options?: UseMutationOptions<
+    UpdateQuizResponse,
+    Error,
+    UpdateQuizRequest
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.updateQuiz,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: cmQueryKeys.quizzes() });
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizzesByNode(variables.updateQuizNodeDto.roadmapNodeId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: cmQueryKeys.quizById(variables.id),
       });
     },
     ...options,

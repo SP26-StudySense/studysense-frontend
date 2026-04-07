@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import {
+    formatLocalDate,
+    getTodayLocalDateInput,
+    isIsoDateBeforeTodayLocal,
+    localDateInputToUtcIso,
+    toLocalDateInputValue,
+} from '@/shared/lib/date-time';
 
 export interface AiPreviewTask {
     title: string;
@@ -46,6 +53,10 @@ export function AiTaskPreviewPanel({
         () => draftTasks.some((task) => !task.title?.trim()),
         [draftTasks]
     );
+    const hasPastDateTask = useMemo(
+        () => draftTasks.some((task) => isIsoDateBeforeTodayLocal(task.scheduledDate)),
+        [draftTasks]
+    );
 
     const handleAccept = async () => {
         setIsAccepting(true);
@@ -64,22 +75,7 @@ export function AiTaskPreviewPanel({
         setDraftTasks((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const formatDeadline = (value?: string): string => {
-        if (!value) {
-            return 'N/A';
-        }
-
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) {
-            return value;
-        }
-
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
-    };
+    const formatDeadline = (value?: string): string => formatLocalDate(value);
 
     if (!isVisible || !mounted) {
         return null;
@@ -152,15 +148,22 @@ export function AiTaskPreviewPanel({
                                         Deadline
                                         <input
                                             type="date"
-                                            value={task.scheduledDate ? new Date(task.scheduledDate).toISOString().slice(0, 10) : ''}
+                                            value={toLocalDateInputValue(task.scheduledDate)}
                                             onChange={(e) => {
-                                                const iso = e.target.value ? new Date(`${e.target.value}T00:00:00`).toISOString() : undefined;
+                                                const iso = e.target.value ? localDateInputToUtcIso(e.target.value) : undefined;
                                                 updateTask(index, { scheduledDate: iso });
                                             }}
+                                            min={getTodayLocalDateInput()}
                                             className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-violet-300"
                                         />
                                     </label>
                                 </div>
+
+                                {isIsoDateBeforeTodayLocal(task.scheduledDate) && (
+                                    <p className="text-[11px] text-rose-600">
+                                        Deadline cannot be in the past.
+                                    </p>
+                                )}
 
                                 <p className="text-[11px] text-neutral-500">
                                     Display deadline: {formatDeadline(task.scheduledDate)}
@@ -180,7 +183,7 @@ export function AiTaskPreviewPanel({
                     </button>
                     <button
                         onClick={handleAccept}
-                        disabled={!hasTasks || hasInvalidTask || isAccepting}
+                        disabled={!hasTasks || hasInvalidTask || hasPastDateTask || isAccepting}
                         className="inline-flex items-center px-4 py-2 rounded-lg border border-violet-200 bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isAccepting ? 'Saving...' : 'Accept'}

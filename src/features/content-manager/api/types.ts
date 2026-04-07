@@ -37,7 +37,10 @@ export enum RoadmapStatus {
 
 export interface LearningSubject {
   id: number;
+  categoryId?: number;
   name: string;
+  description?: string;
+  isActive?: boolean;
 }
 
 /**
@@ -49,7 +52,7 @@ export interface RoadmapMetadata {
   title: string;
   description: string;
   version: number;
-  status: RoadmapStatus;
+  status: RoadmapStatus | number;
   createdAt: Date;
   createdById: string;
   subject?: LearningSubject;
@@ -148,6 +151,102 @@ export interface GetRoadmapsParams {
 }
 
 /**
+ * Get manager roadmaps params
+ * GET /api/roadmaps/manager
+ */
+export interface GetManagerRoadmapsParams {
+  pageIndex: number;
+  pageSize: number;
+  subjectId?: number;
+  status?: RoadmapStatus;
+  version?: number;
+  isLatest?: boolean;
+  keyword?: string;
+}
+
+/**
+ * Get learning subjects assigned to current content manager
+ * GET /api/learning-subjects/manager
+ */
+export interface GetManagerSubjectsResponse {
+  subjects: LearningSubject[];
+}
+
+/**
+ * Get content manager dashboard stats params
+ * GET /api/content-manager/stats
+ */
+export interface GetContentManagerStatsParams {
+  subjectId?: number;
+}
+
+export interface MonthlyCompletedUsersDto {
+  year: number;
+  month: number;
+  completedUsers: number;
+}
+
+export interface TopRoadmapStatsDto {
+  roadmapId: number;
+  title: string;
+  subjectId: number;
+  studyPlanCount: number;
+  nodeCount: number;
+}
+
+export interface QuizLeaderboardItemDto {
+  quizId: number;
+  quizTitle: string | null;
+  roadmapId: number;
+  roadmapTitle: string;
+  count: number;
+}
+
+export interface ContentManagerStatsDto {
+  totalRoadmapsCreated: number;
+  totalNodesAdded: number;
+  totalNodeContentsCreated: number;
+  totalQuizzesCreated: number;
+  totalUsersCompletedRoadmaps: number;
+  totalUsersInProgressRoadmaps: number;
+  topRoadmapMostLearned: TopRoadmapStatsDto | null;
+  completedUsersByMonth: MonthlyCompletedUsersDto[];
+  mostAttemptedQuiz: QuizLeaderboardItemDto | null;
+  mostPassedQuiz: QuizLeaderboardItemDto | null;
+  mostFailedQuiz: QuizLeaderboardItemDto | null;
+}
+
+export interface GetContentManagerStatsResponse {
+  stats: ContentManagerStatsDto;
+}
+
+/**
+ * Create roadmap request
+ * POST /api/roadmaps
+ */
+export interface CreateRoadmapRequest {
+  subjectId: number;
+  title: string;
+  description?: string;
+  status?: RoadmapStatus;
+}
+
+/**
+ * Create roadmap response data
+ * Returned inside `data` from backend ApiResponse wrapper
+ */
+export interface CreateRoadmapResponse {
+  id: number;
+  subjectId: number;
+  title: string;
+  description: string;
+  createdById: string;
+  createdAt: string;
+  version: number;
+  isLatest: boolean;
+}
+
+/**
  * Create roadmap graph request
  * POST /api/roadmaps/graph
  */
@@ -169,7 +268,7 @@ export interface CreateRoadmapGraphRequest {
  * Sync Logic:
  * - id is number: Update existing
  * - id is null: Create new
- * - Not in payload: Delete
+ * - Content delete is explicit via deleteContents
  */
 export interface SyncRoadmapGraphRequest {
   roadmapId: number;
@@ -181,7 +280,8 @@ export interface SyncRoadmapGraphRequest {
   };
   nodes: RoadmapNode[]; // Include all nodes you want to keep
   edges: RoadmapEdge[]; // Include all edges you want to keep
-  contents: NodeContent[]; // Include all contents you want to keep
+  contents: NodeContent[]; // Create + update only
+  deleteContents?: number[]; // Explicit content IDs to delete
 }
 
 /**
@@ -304,6 +404,28 @@ export interface CreateQuizRequest {
     level: string;
     passingScore: number;
   };
+}
+
+/**
+ * Update quiz payload
+ * PUT /api/quiz/{id}
+ */
+export interface UpdateQuizDto {
+  roadmapNodeId: number;
+  title?: string | null;
+  description?: string | null;
+  totalScore?: number | null;
+  level: string;
+  passingScore: number;
+}
+
+/**
+ * Update quiz request
+ * PUT /api/quiz/{id}
+ */
+export interface UpdateQuizRequest {
+  id: number;
+  updateQuizNodeDto: UpdateQuizDto;
 }
 
 export enum QuizQuestionType {
@@ -562,6 +684,22 @@ export type CreateQuizResponse = {
 };
 
 /**
+ * Update quiz response
+ * PUT /api/quiz/{id}
+ */
+export type UpdateQuizResponse = {
+  id?: number;
+  roadmapNodeId?: number;
+  title?: string | null;
+  description?: string | null;
+  totalScore?: number | null;
+  level?: string | null;
+  passingScore?: number | null;
+  success?: boolean;
+  message?: string;
+};
+
+/**
  * Create quiz question response
  * POST /api/quiz-question
  */
@@ -717,6 +855,8 @@ export interface GenerateRoadmapResponse {
  */
 export type ApiRequest =
   | GetRoadmapsParams
+  | GetManagerRoadmapsParams
+  | CreateRoadmapRequest
   | GetNodeContentsRequest
   | CreateRoadmapGraphRequest
   | SyncRoadmapGraphRequest
@@ -735,6 +875,8 @@ export type ApiRequest =
 export type ApiResponse =
   | GenericSuccessResponse
   | GetRoadmapsResponse
+  | GetManagerSubjectsResponse
+  | CreateRoadmapResponse
   | GetRoadmapDetailResponse
   | GetNodeContentsResponse
   | CreateRoadmapGraphResponse

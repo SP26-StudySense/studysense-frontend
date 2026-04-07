@@ -5,23 +5,24 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { useStudyPlanByRoadmap } from '../api/queries';
 import { StudyPlanStatus } from '../api/types';
+import { useNotifications } from '@/features/notification/hooks/use-notifications';
 
 interface PlanGenerationPageProps {
   roadmapId: number;
 }
 
-const POLLING_INTERVAL = 4000; // 4 seconds
-const TIMEOUT_DURATION = 180000; // 3 minutes
+const TIMEOUT_DURATION = 30000; // 30 seconds
 
 export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
   const router = useRouter();
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const [startTime] = useState(() => Date.now());
+  const { items: notifications } = useNotifications();
 
-  // Poll for study plan creation
+  // 1. Initial check on mount, then disable polling
   const { data: studyPlan, error, isError } = useStudyPlanByRoadmap(roadmapId, {
     enabled: !hasTimedOut,
-    refetchInterval: POLLING_INTERVAL,
+    refetchInterval: 5000, // Fallback polling every 5s
   });
 
   useEffect(() => {
@@ -35,25 +36,46 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
     return () => clearTimeout(timeoutId);
   }, [studyPlan]);
 
+  // 2. Redirect proactively if already ready on mount
   useEffect(() => {
-    // Only redirect when study plan AND modules are created
-    // Check that we have a valid study plan with at least one module
-    if (studyPlan && studyPlan.modules && studyPlan.modules.length > 0) {
-      console.log('[PlanGeneration] Study plan and modules created:', studyPlan);
-      
-      // Store the study plan ID and roadmap ID in session storage for dashboard to pick up
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('activeStudyPlanId', String(studyPlan.id));
-        sessionStorage.setItem('activeRoadmapId', String(studyPlan.roadmapId));
-        sessionStorage.setItem('studyPlanStatus', studyPlan.status || '');
-      }
-
-      // Small delay to ensure state is saved, then redirect to specific dashboard
-      setTimeout(() => {
-        router.push(`/dashboard/${studyPlan.id}`);
-      }, 500);
+    if (studyPlan && studyPlan.modules && studyPlan.modules.length > 0 && studyPlan.status === 'Ready') {
+      handleRedirect(studyPlan.id, studyPlan.roadmapId, studyPlan.status);
     }
-  }, [studyPlan, router]);
+  }, [studyPlan?.status, studyPlan?.modules?.length]);
+
+  // 3. Listen for SignalR notifications for redirection
+  useEffect(() => {
+    if (!notifications?.length) return;
+
+    // Look for the most RECENT notification related to a Plan
+    // Since notifications are sorted by date descending, the first one is the newest
+    const latestNotif = notifications[0];
+
+    const isMatch = 
+      latestNotif.relatedType === 'Plan' && 
+      latestNotif.status === 'Ready' &&
+      (latestNotif.relatedId === studyPlan?.id || 
+       latestNotif.actionUrl?.includes(`/dashboard/`) ||
+       latestNotif.content.toLowerCase().includes('ready'));
+
+    if (isMatch && latestNotif.actionUrl) {
+      const idFromUrl = latestNotif.actionUrl.split('/').pop();
+      if (idFromUrl) {
+        console.log('[PlanGeneration] New notification detected, redirecting...');
+        handleRedirect(Number(idFromUrl), roadmapId, 'Ready');
+      }
+    }
+  }, [notifications, studyPlan?.id, roadmapId]);
+
+  const handleRedirect = (id: number, rId: number, status: string) => {
+    console.log('[PlanGeneration] Redirecting to dashboard:', id);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('activeStudyPlanId', String(id));
+      sessionStorage.setItem('activeRoadmapId', String(rId));
+      sessionStorage.setItem('studyPlanStatus', status);
+    }
+    router.push(`/dashboard/${id}`);
+  };
 
   // Calculate elapsed time for display
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -73,10 +95,10 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
             <h2 className="text-2xl font-bold text-neutral-900 mb-3">
-              Request timed out
+              Something went wrong
             </h2>
             <p className="text-neutral-600 mb-6">
-              This is taking longer than expected. Please try again or contact support if the issue continues.
+              The AI provider took too long to respond. Please try again.
             </p>
             <button
               onClick={() => router.push('/roadmaps')}
@@ -122,73 +144,65 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="max-w-lg w-full mx-4">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 p-12 shadow-2xl text-center">
-          {/* Animated Icon */}
-          <div className="relative mx-auto w-24 h-24 mb-8">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] animate-pulse opacity-20" />
-            <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center">
-              <Sparkles className="h-12 w-12 text-[#00bae2] animate-pulse" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+      <div className="max-w-md w-full">
+        <div className="bg-white/90 backdrop-blur-2xl rounded-[2.5rem] border border-white/50 p-8 shadow-2xl shadow-indigo-100/50 text-center">
+          {/* Compact Icon */}
+          <div className="relative mx-auto w-16 h-16 mb-6">
+            <div className="absolute inset-0 rounded-full bg-[#00bae2] animate-ping opacity-10" />
+            <div className="absolute inset-0 rounded-full bg-[#00bae2]/5 flex items-center justify-center">
+              <Sparkles className="h-8 w-8 text-[#00bae2]" />
             </div>
           </div>
 
           {/* Main Message */}
-          <h1 className="text-3xl font-bold text-neutral-900 mb-4">
-            Building your study plan
+          <h1 className="text-2xl font-bold text-neutral-900 mb-6">
+            Generating Roadmap
           </h1>
-          
-          <p className="text-lg text-neutral-600 mb-2">
-            We are analyzing your survey results...
-          </p>
-          
-          <p className="text-sm text-neutral-500 mb-8">
-            This can take 30-120 seconds
-          </p>
-
-          {/* Progress Indicator */}
-          <div className="space-y-4">
-            {/* Spinner */}
-            <div className="flex items-center justify-center gap-3">
-              <Loader2 className="h-6 w-6 text-[#00bae2] animate-spin" />
-              <span className="text-sm font-medium text-neutral-700">
-                Processing... ({elapsedSeconds}s)
-              </span>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-[#fec5fb] to-[#00bae2] transition-all duration-1000 ease-out"
-                style={{
-                  width: `${Math.min((elapsedSeconds / 120) * 100, 95)}%`,
-                }}
-              />
-            </div>
-
-            {/* Status Messages */}
-            <div className="mt-8 space-y-2">
+ 
+          {/* Status List */}
+          <div className="space-y-4 mb-8">
+            <div className="space-y-3 bg-neutral-50/80 rounded-2xl p-5 border border-neutral-100">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600">✓ Learning goals analyzed</span>
-                <span className="text-green-600 font-medium">Done</span>
+                <span className="text-neutral-500">Analyzing Goals</span>
+                <span className="text-green-600 font-bold flex items-center gap-1">
+                  ✓ Done
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-600">⟳ Creating your personalized roadmap</span>
-                <span className="text-[#00bae2] font-medium animate-pulse">In progress...</span>
+                <span className="text-neutral-600 font-medium">AI Roadmap Design</span>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 text-[#00bae2] animate-spin" />
+                  <span className="text-[#00bae2] font-bold">({elapsedSeconds}s)</span>
+                </div>
               </div>
               <div className="flex items-center justify-between text-sm text-neutral-400">
-                <span>◦ Generating study tasks</span>
+                <span>Generating Detailed Lessons</span>
                 <span>Pending</span>
               </div>
             </div>
+ 
+            {/* Navigation Options */}
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                onClick={() => router.push('/roadmaps')}
+                className="w-full px-6 py-3.5 rounded-2xl bg-[#00bae2] text-white font-semibold hover:bg-[#00a8d0] shadow-lg shadow-cyan-100 transition-all active:scale-95 text-sm"
+              >
+                Back to Roadmaps
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="w-full px-6 py-3 rounded-2xl bg-transparent text-neutral-400 font-medium hover:text-neutral-600 transition-all text-xs"
+              >
+                Back to Home
+              </button>
+            </div>
           </div>
-
-          {/* Tips */}
-          <div className="mt-10 pt-8 border-t border-neutral-200">
-            <p className="text-xs text-neutral-500">
-              <strong>Tip:</strong> You can leave this page. We will notify you when your plan is ready.
-            </p>
-          </div>
+ 
+          {/* Minimal Note */}
+          <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-medium">
+            We will notify you once completed
+          </p>
         </div>
       </div>
     </div>

@@ -233,46 +233,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     );
 
     useEffect(() => {
-        setState((prev) => {
-            const sameRoadmapId = prev.roadmapId === resolvedRoadmapId;
-            const sameModules = areModulesEqual(prev.availableModules, availableModules);
-            const sameTasks = areTasksEqual(prev.availableTasks, availableTasks);
-            const sameConversationLoading = prev.isConversationLoading === conversationsQuery.isLoading;
-            const sameHistoryLoading = prev.isHistoryLoading === historyQuery.isLoading;
-            const sameCreatingConversation =
-                prev.isCreatingConversation === createConversationMutation.isPending;
-
-            if (
-                sameRoadmapId &&
-                sameModules &&
-                sameTasks &&
-                sameConversationLoading &&
-                sameHistoryLoading &&
-                sameCreatingConversation
-            ) {
-                return prev;
-            }
-
-            return {
-                ...prev,
-                roadmapId: resolvedRoadmapId,
-                availableModules,
-                availableTasks,
-                isConversationLoading: conversationsQuery.isLoading,
-                isHistoryLoading: historyQuery.isLoading,
-                isCreatingConversation: createConversationMutation.isPending,
-            };
-        });
-    }, [
-        availableModules,
-        availableTasks,
-        conversationsQuery.isLoading,
-        createConversationMutation.isPending,
-        historyQuery.isLoading,
-        resolvedRoadmapId,
-    ]);
-
-    useEffect(() => {
         if (!conversationsQuery.data) {
             return;
         }
@@ -331,8 +291,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const createConversation = useCallback(async () => {
-        const activeRoadmapId =
-            state.roadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
+        const activeRoadmapId = resolvedRoadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
         if (!activeRoadmapId) {
             toast.error('Không xác định được roadmap để tạo conversation.');
             return;
@@ -365,7 +324,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         fallbackRoadmapId,
         fallbackRoadmapTitle,
         selectedConversation?.roadmapId,
-        state.roadmapId,
+        resolvedRoadmapId,
         studyPlan?.roadmapName,
     ]);
 
@@ -376,8 +335,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            const activeRoadmapId =
-                state.roadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
+            const activeRoadmapId = resolvedRoadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
             if (!activeRoadmapId) {
                 toast.error('Không xác định được roadmap từ URL hiện tại.');
                 return;
@@ -475,8 +433,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             sendMessageMutation,
             state.isLoading,
             state.pendingAttachments,
-            state.roadmapId,
             state.selectedConversationId,
+            resolvedRoadmapId,
             studyPlan?.roadmapName,
         ]
     );
@@ -535,6 +493,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const contextValue: ChatContextType = {
         ...state,
+        roadmapId: resolvedRoadmapId,
+        availableModules,
+        availableTasks,
+        isConversationLoading: conversationsQuery.isLoading,
+        isHistoryLoading: historyQuery.isLoading,
+        isCreatingConversation: createConversationMutation.isPending,
         openChat,
         closeChat,
         toggleChat,

@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "@/shared/lib";
+import { ContentManagerLoading } from "../components";
 import {
   ArrowLeft,
   BookOpen,
@@ -940,7 +942,9 @@ function GeneratePopup({ onSubmit, onCancel }: GeneratePopupProps) {
     }
   };
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900/70 backdrop-blur-sm p-4 sm:p-6 md:p-8 animate-in fade-in duration-200">
       <div className="w-full max-w-2xl rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-neutral-200 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
         {/* Header with gradient icon */}
@@ -998,7 +1002,8 @@ function GeneratePopup({ onSubmit, onCancel }: GeneratePopupProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1257,29 +1262,11 @@ export function RoadmapGeneratePage() {
 
   if (isGenerating) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center">
-        <div className="text-center max-w-md">
-          {/* Animated gradient circle */}
-          <div className="relative mx-auto mb-8">
-            <div className="h-24 w-24 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 animate-pulse" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Sparkles className="h-10 w-10 text-white animate-spin" style={{ animationDuration: '3s' }} />
-            </div>
-          </div>
-          
-          {/* Loading text */}
-          <h3 className="text-xl font-bold text-neutral-900 mb-2">Generating Your Roadmap</h3>
-          <p className="text-neutral-600 mb-1">AI is creating your personalized learning path...</p>
-          <p className="text-sm text-neutral-500">This may take 10-30 seconds</p>
-          
-          {/* Progress dots */}
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <div className="h-2 w-2 rounded-full bg-[#00bae2] animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="h-2 w-2 rounded-full bg-[#00bae2] animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="h-2 w-2 rounded-full bg-[#00bae2] animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-        </div>
-      </div>
+      <ContentManagerLoading
+        variant="page"
+        title="Generating your roadmap..."
+        description="AI is creating your personalized learning path. This may take 10-30 seconds."
+      />
     );
   }
 

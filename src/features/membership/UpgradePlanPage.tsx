@@ -5,24 +5,24 @@ import { Check, Zap, Crown, ArrowRight, Star, Sparkles, Loader2 } from 'lucide-r
 import Link from 'next/link';
 import { post } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 const freePlanFeatures = [
-    'Access to all public roadmaps',
+    'Up to 2 active study plans',
     'Basic progress tracking',
-    'Up to 3 active study plans',
-    'Community forum access',
     'Basic AI suggestions',
+    'Basic AI chat assistant',
+    'Personalized learning paths',
+    'Analytics & insights',
     'Email support',
 ];
 
 const premiumPlanFeatures = [
     'Everything in Free',
-    'Unlimited study plans',
-    'Advanced AI-powered roadmaps',
-    'Personalized learning paths',
-    'Priority AI chat assistant',
-    'Detailed analytics & insights',
-    'Offline access',
+    'Unlimited active study plans',
+    'Advanced AI suggestions',
+    'Advanced AI chat assistant',
+    'Advanced analytics & insights',
     'Priority support',
     'Early access to new features',
     'Custom study schedule builder',
@@ -66,11 +66,18 @@ const pricingConfig: Record<BillingCycle, { label: string; price: string; perMon
 };
 
 export function UpgradePlanPage() {
+    const { isAuthenticated } = useAuth();
     const [billing, setBilling] = useState<BillingCycle>('monthly');
     const [isLoading, setIsLoading] = useState(false);
     const currentPricing = pricingConfig[billing];
 
     const handleUpgrade = async () => {
+        if (!isAuthenticated) {
+            const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/login?callbackUrl=${callbackUrl}`;
+            return;
+        }
+
         setIsLoading(true);
         try {
             const data = await post<{ checkoutUrl: string }>(endpoints.payments.createPayment, {
@@ -262,13 +269,11 @@ export function UpgradePlanPage() {
                             {[
                                 { feature: 'Public roadmap access', free: true, premium: true },
                                 { feature: 'Progress tracking', free: true, premium: true },
-                                { feature: 'Community forum', free: true, premium: true },
-                                { feature: 'Active study plans', free: 'Up to 3', premium: 'Unlimited' },
+                                { feature: 'Active study plans', free: 'Up to 2', premium: 'Unlimited' },
                                 { feature: 'AI suggestions', free: 'Basic', premium: 'Advanced' },
-                                { feature: 'Personalized learning path', free: false, premium: true },
-                                { feature: 'AI chat assistant', free: false, premium: true },
-                                { feature: 'Analytics & insights', free: false, premium: true },
-                                { feature: 'Offline access', free: false, premium: true },
+                                { feature: 'Personalized learning path', free: true, premium: true },
+                                { feature: 'AI chat assistant', free: 'Basic', premium: 'Advanced' },
+                                { feature: 'Analytics & insights', free: true, premium: true },
                                 { feature: 'Support', free: 'Email', premium: 'Priority' },
                             ].map((row) => (
                                 <tr key={row.feature} className="hover:bg-neutral-50/50 transition-colors">

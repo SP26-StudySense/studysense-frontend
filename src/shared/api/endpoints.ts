@@ -26,6 +26,7 @@ export const endpoints = {
     preferences: '/users/preferences',
     progress: '/users/progress',
     avatar: '/users/avatar',
+    cancelSubscription: '/users/cancel-subscription',
   },
 
   // Payments
@@ -33,6 +34,7 @@ export const endpoints = {
     userPayments: '/payments/user-payments',
     createPayment: '/payments/create-payment',
     paymentStatus: (id: string) => `/payments/${id}/status`,
+    cancelPayment: (id: string) => `/payments/${id}/cancel`,
   },
 
   // Study Plans
@@ -41,6 +43,8 @@ export const endpoints = {
     byId: (id: string) => `/study-plans/${id}`,
     create: '/study-plans',
     byRoadmap: (roadmapId: string) => `/study-plans/by-roadmap/${roadmapId}`,
+    checkJoined: (studyPlanId: string) => `/study-plans/check-joined/${studyPlanId}`,
+    checkRoadmapLimit: '/study-plans/check-roadmap-limit',
     user: '/study-plans/user',
     current: '/study-plans/current',
     archive: (id: string) => `/study-plans/${id}/archive`,

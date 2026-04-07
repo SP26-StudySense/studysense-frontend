@@ -8,6 +8,7 @@ import { SearchFilterBar } from './components/SearchFilterBar';
 import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useStudyPlans, StudyPlanItem } from '@/features/study-plan/api';
 import { StudyPlanDto, ModuleStatus } from '@/features/study-plan/api/types';
 import type { RoadmapFilters, RoadmapTemplate, UserLearningRoadmap } from './types';
@@ -58,7 +59,11 @@ function useRoadmapNodeCounts(roadmapIds: number[]) {
         queries: roadmapIds.map((id) => ({
             queryKey: ['roadmaps', 'nodeCount', id],
             queryFn: async () => {
-                const data = await get<RoadmapGraphDTO>(endpoints.roadmaps.byId(String(id)));
+                const data = await get<RoadmapGraphDTO>(endpoints.roadmaps.byId(String(id)), {
+                    headers: {
+                        'x-skip-auth-redirect': '1',
+                    },
+                });
                 return { id, count: data?.nodes?.length ?? 0 };
             },
             staleTime: 5 * 60 * 1000, // 5 minutes
@@ -111,6 +116,8 @@ function useStudyPlanModuleStats(studyPlanIds: number[]) {
 }
 
 export function RoadmapsList() {
+    const { isAuthenticated } = useAuth();
+    const [hasMounted, setHasMounted] = useState(false);
     const [activeTab, setActiveTab] = useState<'explore' | 'my-roadmap'>('explore');
     const [exploreFilters, setExploreFilters] = useState<RoadmapFilters>({
         search: '',
@@ -128,7 +135,17 @@ export function RoadmapsList() {
         data: studyPlans = [], 
         isLoading: isLoadingStudyPlans, 
         error: studyPlansError 
-    } = useStudyPlans();
+    } = useStudyPlans(isAuthenticated);
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isAuthenticated && activeTab === 'my-roadmap') {
+            setActiveTab('explore');
+        }
+    }, [isAuthenticated, activeTab]);
 
     // Fetch roadmaps from API
     const { data: roadmapsData, isLoading, error } = useRoadmaps({
@@ -251,19 +268,21 @@ export function RoadmapsList() {
                         </span>
                     </button>
 
-                    <button
-                        onClick={() => setActiveTab('my-roadmap')}
-                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-semibold transition-colors ${
-                            activeTab === 'my-roadmap'
-                                ? 'bg-[#f2f0ff] text-[#5c4fba] border border-b-0 border-[#ddd7ff]'
-                                : 'text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50'
-                        }`}
-                    >
-                        <span>My Roadmaps</span>
-                        <span className="inline-flex min-w-6 justify-center rounded-full bg-white/80 px-1.5 py-0.5 text-xs text-neutral-700">
-                            {isLoadingStudyPlans ? '...' : filteredLearningRoadmaps.length}
-                        </span>
-                    </button>
+                    {hasMounted && isAuthenticated && (
+                        <button
+                            onClick={() => setActiveTab('my-roadmap')}
+                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-semibold transition-colors ${
+                                activeTab === 'my-roadmap'
+                                    ? 'bg-[#f2f0ff] text-[#5c4fba] border border-b-0 border-[#ddd7ff]'
+                                    : 'text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50'
+                            }`}
+                        >
+                            <span>My Roadmaps</span>
+                            <span className="inline-flex min-w-6 justify-center rounded-full bg-white/80 px-1.5 py-0.5 text-xs text-neutral-700">
+                                {isLoadingStudyPlans ? '...' : filteredLearningRoadmaps.length}
+                            </span>
+                        </button>
+                    )}
                 </div>
             </div>
 
