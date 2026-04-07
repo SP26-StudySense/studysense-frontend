@@ -11,7 +11,7 @@ interface PlanGenerationPageProps {
   roadmapId: number;
 }
 
-const TIMEOUT_DURATION = 180000; // 3 minutes
+const TIMEOUT_DURATION = 30000; // 30 seconds
 
 export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
   const router = useRouter();
@@ -95,10 +95,10 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
             <h2 className="text-2xl font-bold text-neutral-900 mb-3">
-              Request timed out
+              Something went wrong
             </h2>
             <p className="text-neutral-600 mb-6">
-              This is taking longer than expected. Please try again or contact support if the issue continues.
+              The AI provider took too long to respond. Please try again.
             </p>
             <button
               onClick={() => router.push('/roadmaps')}
