@@ -6,7 +6,7 @@ import { ArrowLeft, ExternalLink } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
-import { RoadmapGraphDTO } from './api';
+import { RoadmapGraphDTO, RoadmapNodeDTO } from './api';
 import { RoadmapTemplate } from './types';
 import { RoadmapPreviewGraph } from './components/RoadmapPreviewGraph';
 import { useStartLearning } from './hooks/useStartLearning';
@@ -15,6 +15,11 @@ import { SurveyTriggerType } from '@/features/survey/api/types';
 import { SurveyTriggerReason } from '@/features/survey/types';
 import { showInfo, showWarning } from '@/shared/lib/toast';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useStudyPlans } from '@/features/study-plan/api';
+import { useSessionStore } from '@/store/session.store';
+import { get as apiGet } from '@/shared/api/client';
+import { STUDY_PLAN } from '@/shared/lib/constants';
+import { useUserMembership } from '@/features/membership/api/queries';
 
 interface RoadmapPreviewPageProps {
     roadmapId: string;
@@ -28,21 +33,53 @@ const difficultyColors = {
 
 type TabType = 'overview' | 'roadmap';
 
+function isFreePlan(subscriptionType: unknown): boolean {
+    if (typeof subscriptionType === 'number') {
+        return subscriptionType <= 1;
+    }
+
+    const raw = String(subscriptionType ?? '').trim().toLowerCase();
+    if (!raw) return true;
+
+    const asNumber = Number(raw);
+    if (!Number.isNaN(asNumber)) {
+        return asNumber <= 1;
+    }
+
+    if (raw.includes('premium') || raw.includes('pro') || raw.includes('paid')) {
+        return false;
+    }
+
+    return raw.includes('free');
+}
+
 export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
+    const { data: studyPlans = [] } = useStudyPlans(isAuthenticated);
+    const { data: membership } = useUserMembership(isAuthenticated);
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
     const [roadmap, setRoadmap] = useState<RoadmapTemplate | null>(null);
+    const [roadmapNodes, setRoadmapNodes] = useState<RoadmapNodeDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>('overview');
+    const [isCheckingLimit, setIsCheckingLimit] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
+    const [isExpandedNodes, setIsExpandedNodes] = useState(false);
     const { startLearning, isLoading } = useStartLearning();
+    const isFreeUser = isFreePlan(membership?.subscriptionType ?? user?.subscriptionType);
+    const existingStudyPlanId = roadmap
+        ? studyPlans.find((plan) => plan.roadmapId === Number(roadmap.id))?.id
+        : undefined;
 
     useEffect(() => {
         const fetchRoadmap = async () => {
             try {
                 setLoading(true);
                 const data = await get<RoadmapGraphDTO>(endpoints.roadmaps.byId(roadmapId));
+                
+                console.log('🔍 [RoadmapPreviewPage] API Response:', data);
                 
                 if (!data) {
                     setError('Roadmap not found');
@@ -60,6 +97,8 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                     icon: 'Map',
                 };
                 setRoadmap(template);
+                setRoadmapNodes(data?.nodes ?? []);
+                console.log('✅ [RoadmapPreviewPage] Nodes set:', data?.nodes);
             } catch (err) {
                 setError('Failed to load roadmap');
                 console.error(err);
@@ -100,7 +139,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     }, []);
 
     const handleStartLearning = async () => {
-        if (!roadmap || isCheckingSurvey || isLoading) return;
+        if (!roadmap || isCheckingLimit || isCheckingSurvey || isLoading) return;
 
         if (!isAuthenticated) {
             const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
@@ -108,26 +147,73 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
             return;
         }
 
+        if (existingStudyPlanId) {
+            setActiveStudyPlanId(String(existingStudyPlanId));
+            router.push(`/dashboard/${existingStudyPlanId}`);
+            return;
+        }
+
+        if (isFreeUser) {
+            setIsCheckingLimit(true);
+            try {
+                const limitCheck = await apiGet<{
+                    maxRoadmaps: number;
+                    joinedRoadmaps: number;
+                    hasReachedLimit: boolean;
+                }>(endpoints.studyPlans.checkRoadmapLimit);
+
+                const reachedLimit = limitCheck.hasReachedLimit;
+                const maxRoadmaps = limitCheck.maxRoadmaps || STUDY_PLAN.MAX_JOINED_ROADMAPS;
+
+                if (reachedLimit) {
+                    showWarning(
+                        `Free plan allows up to ${maxRoadmaps} joined roadmaps. Please upgrade to continue.`,
+                        { duration: 5000 }
+                    );
+                    router.push('/membership');
+                    return;
+                }
+            } catch {
+                showWarning('Cannot verify your free-plan roadmap limit right now. Please try again.', {
+                    duration: 4000,
+                });
+                return;
+            } finally {
+                setIsCheckingLimit(false);
+            }
+        }
+
         setIsCheckingSurvey(true);
         try {
-            const pending = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
-            if (pending.hasPendingSurvey && pending.surveyCode) {
+            const registerSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_REGISTER);
+
+            if (registerSurvey.hasPendingSurvey && registerSurvey.surveyCode) {
+                const params = new URLSearchParams({
+                    triggerReason: SurveyTriggerReason.INITIAL,
+                    returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                });
+                router.push(`/surveys/${registerSurvey.surveyCode}?${params.toString()}`);
+                return;
+            }
+
+            const roadmapSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
+            if (roadmapSurvey.hasPendingSurvey && roadmapSurvey.surveyCode) {
                 const params = new URLSearchParams({
                     triggerReason: SurveyTriggerReason.RESURVEY,
                     returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
                     roadmapId: roadmap.id.toString(),
                 });
-                router.push(`/surveys/${pending.surveyCode}?${params.toString()}`);
+                router.push(`/surveys/${roadmapSurvey.surveyCode}?${params.toString()}`);
                 return;
             }
 
-            if (pending.blockedReason === 'MaxAttemptsExceeded') {
+            if (roadmapSurvey.blockedReason === 'MaxAttemptsExceeded') {
                 showInfo(
-                    `You have already completed this survey ${pending.completedAttempts} time${pending.completedAttempts !== 1 ? 's' : ''} (max ${pending.maxAttempts}). Proceeding to start learning.`,
+                    `You have already completed this survey ${roadmapSurvey.completedAttempts} time${roadmapSurvey.completedAttempts !== 1 ? 's' : ''} (max ${roadmapSurvey.maxAttempts}). Proceeding to start learning.`,
                     { duration: 5000 }
                 );
-            } else if (pending.blockedReason === 'CooldownActive' && pending.cooldownEndsAt) {
-                const endsAt = new Date(pending.cooldownEndsAt);
+            } else if (roadmapSurvey.blockedReason === 'CooldownActive' && roadmapSurvey.cooldownEndsAt) {
+                const endsAt = new Date(roadmapSurvey.cooldownEndsAt);
                 const diffMs = endsAt.getTime() - Date.now();
                 const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
                 showWarning(
@@ -262,11 +348,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                     {activeTab === 'overview' ? (
                         <div className="space-y-8 sm:space-y-10">
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pb-8 border-b border-neutral-200">
-                            <div className="p-1">
-                                <div className="text-sm text-neutral-600 mb-2">Duration</div>
-                                <div className="text-3xl sm:text-4xl font-bold text-neutral-900">{roadmap.estimatedHours}h</div>
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-8 border-b border-neutral-200">
                             <div className="p-1">
                                 <div className="text-sm text-neutral-600 mb-2">Total Nodes</div>
                                 <div className="text-3xl sm:text-4xl font-bold text-neutral-900">{roadmap.totalNodes}</div>
@@ -277,32 +359,35 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                             </div>
                         </div>
 
-                        {/* What You'll Learn */}
-                        <div className="pt-0">
-                            <h3 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-5 sm:mb-6">What You'll Learn</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                                {getWhatYouLearn(roadmap.category).map((item, index) => (
-                                    <div key={index} className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#00bae2]/10 flex items-center justify-center mt-1">
-                                            <div className="w-2 h-2 rounded-full bg-[#00bae2]" />
-                                        </div>
-                                        <p className="text-neutral-700">{item}</p>
-                                    </div>
-                                ))}
+                        {/* What You'll Learn - Display Nodes */}
+                        {roadmapNodes.length > 0 && (
+                            <div className="pt-0">
+                                <h3 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-5 sm:mb-6">Learning Path</h3>
+                                <div className="space-y-3">
+                                    {roadmapNodes
+                                        .sort((a, b) => (a.orderNo ?? 0) - (b.orderNo ?? 0))
+                                        .slice(0, isExpandedNodes ? undefined : 5)
+                                        .map((node, index) => (
+                                            <div key={node.id} className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50 hover:bg-neutral-100 transition-colors">
+                                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#00bae2]/20 flex items-center justify-center mt-0.5">
+                                                    <span className="text-xs font-semibold text-[#00bae2]">{index + 1}</span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-neutral-900">{node.title}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                                {roadmapNodes.length > 5 && (
+                                    <button
+                                        onClick={() => setIsExpandedNodes(!isExpandedNodes)}
+                                        className="mt-4 px-4 py-2 rounded-lg border border-[#00bae2] text-[#00bae2] font-medium hover:bg-[#00bae2]/5 transition-colors"
+                                    >
+                                        {isExpandedNodes ? '▲ Show Less' : '▼ Show More'} ({roadmapNodes.length} total)
+                                    </button>
+                                )}
                             </div>
-                        </div>
-
-                        {/* Prerequisites */}
-                        <div className="pt-5 border-t border-neutral-200">
-                            <h3 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-5 sm:mb-6">Prerequisites</h3>
-                            <div className="flex flex-wrap gap-3">
-                                {getPrerequisites(roadmap.difficulty).map((prereq, index) => (
-                                    <span key={index} className="px-4 py-2 rounded-full bg-neutral-100 text-sm text-neutral-700 border border-neutral-200">
-                                        {prereq}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
+                        )}
                         </div>
                     ) : (
                         <div className="overflow-hidden border-y border-neutral-200">
@@ -323,68 +408,22 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                         </button>
                         <button
                             onClick={handleStartLearning}
-                            disabled={isCheckingSurvey || isLoading}
+                            disabled={isCheckingLimit || isCheckingSurvey || isLoading}
                             className="flex-1 rounded-2xl bg-[#00bae2] px-6 py-3 font-semibold text-white shadow-lg shadow-[#00bae2]/20 transition-colors hover:bg-[#00a8d0] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {isCheckingSurvey || isLoading ? (isCheckingSurvey ? 'Checking...' : 'Starting...') : 'Start Learning'}
+                            {isCheckingLimit || isCheckingSurvey || isLoading
+                                ? isCheckingLimit
+                                    ? 'Checking limit...'
+                                    : isCheckingSurvey
+                                        ? 'Checking...'
+                                        : 'Creating Plan...'
+                                : existingStudyPlanId
+                                    ? 'Continue'
+                                    : 'Start Learning'}
                         </button>
                     </div>
                 </div>
             </div>
         </div>
     );
-}
-
-// Helper functions to generate preview content
-function getWhatYouLearn(category: string): string[] {
-    const learning: Record<string, string[]> = {
-        frontend: [
-            'Build responsive and accessible user interfaces',
-            'Master modern JavaScript frameworks and libraries',
-            'Understand state management and component architecture',
-            'Implement best practices for performance optimization',
-        ],
-        backend: [
-            'Design and implement RESTful APIs',
-            'Work with databases and data modeling',
-            'Implement authentication and authorization',
-            'Build scalable server-side applications',
-        ],
-        devops: [
-            'Set up CI/CD pipelines for automated deployments',
-            'Containerize applications with Docker',
-            'Orchestrate containers with Kubernetes',
-            'Monitor and optimize infrastructure',
-        ],
-        'ai-data': [
-            'Understand machine learning fundamentals',
-            'Build and train neural network models',
-            'Work with data preprocessing and analysis',
-            'Deploy AI models in production',
-        ],
-        mobile: [
-            'Build native mobile applications',
-            'Implement mobile-specific UI/UX patterns',
-            'Work with device features and APIs',
-            'Optimize app performance and battery usage',
-        ],
-        other: [
-            'Master advanced programming concepts',
-            'Design scalable system architectures',
-            'Apply software engineering best practices',
-            'Solve complex technical challenges',
-        ],
-    };
-
-    return learning[category] || learning.other;
-}
-
-function getPrerequisites(difficulty: string): string[] {
-    const prerequisites: Record<string, string[]> = {
-        beginner: ['Basic computer skills', 'Willingness to learn'],
-        intermediate: ['Programming fundamentals', 'Basic web/software concepts', '1-2 years experience'],
-        advanced: ['Strong programming background', '3+ years experience', 'Computer science fundamentals'],
-    };
-
-    return prerequisites[difficulty] || prerequisites.beginner;
 }
