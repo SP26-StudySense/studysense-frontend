@@ -30,7 +30,7 @@ const baseSidebarItems = [
         icon: LayoutDashboard,
     },
     {
-        title: 'Study Schedule',
+        title: 'Study Plan',
         href: '/study-plans/1',
         icon: BookOpen,
     },
@@ -40,14 +40,14 @@ const baseSidebarItems = [
         icon: Calendar,
     },
     {
-        title: 'Chat',
-        href: '/chat',
-        icon: MessageSquare,
-    },
-    {
         title: 'History',
         href: '/sessions/history',
         icon: History,
+    },
+    {
+        title: 'Chat',
+        href: '/chat',
+        icon: MessageSquare,
     },
 ];
 
@@ -101,16 +101,16 @@ export function Sidebar() {
                 icon: LayoutDashboard,
             },
             {
-                title: 'Study Schedule',
-                href: `/study-plans/${activeStudyPlanId}`,
-                icon: BookOpen,
-            },
-            {
-                title: 'My Roadmap',
+                title: 'Roadmap',
                 href: `/my-roadmap/${activeStudyPlanId}`,
                 icon: Map,
             },
-            ...baseSidebarItems.slice(2), // Sessions, Chat, History
+            {
+                title: 'Study Plan',
+                href: `/study-plans/${activeStudyPlanId}`,
+                icon: BookOpen,
+            },
+            ...baseSidebarItems.slice(2), // Sessions, History, Chat
         ]
         : baseSidebarItems;
 
@@ -128,7 +128,7 @@ export function Sidebar() {
         if (href.startsWith('/study-plans') && pathname.startsWith('/study-plans')) {
             return true;
         }
-        // Exception: Highlight 'My Roadmap' for any my-roadmap page
+        // Exception: Highlight 'Roadmap' for any my-roadmap page
         if (href.startsWith('/my-roadmap') && pathname.startsWith('/my-roadmap')) {
             return true;
         }

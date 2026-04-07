@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
@@ -49,6 +49,11 @@ function DefaultLoading() {
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const { data: user, isLoading, error } = useCurrentUser();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   console.log('[AuthGuard] State:', { user: !!user, isLoading, error: error?.message });
 
@@ -59,7 +64,8 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
     }
   }, [user, isLoading, error, router]);
 
-  if (isLoading) {
+  // Keep first client render identical to server render to avoid hydration mismatch.
+  if (!mounted || isLoading) {
     console.log('[AuthGuard] Loading...');
     return fallback || <DefaultLoading />;
   }
@@ -80,6 +86,11 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
 export function GuestGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser({ enabled: true });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   console.log('[GuestGuard] State:', { user: !!user, isLoading });
 
@@ -91,7 +102,7 @@ export function GuestGuard({ children, fallback }: AuthGuardProps) {
   //   }
   // }, [user, isLoading, router]);
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     console.log('[GuestGuard] Loading...');
     return fallback || <DefaultLoading />;
   }

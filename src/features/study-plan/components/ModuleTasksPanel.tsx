@@ -81,7 +81,8 @@ function SkipModuleConfirmDialog({
         return () => setMounted(false);
     }, []);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen) return null;
+    if (!mounted) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -140,7 +141,8 @@ function TakeQuizLevelDialog({
         }
     }, [isOpen]);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen) return null;
+    if (!mounted) return null;
 
     const levels: Array<{ value: QuizLevel; label: string; description: string }> = [
         { value: 'Beginner', label: 'Beginner', description: 'Basic concepts and easy questions.' },

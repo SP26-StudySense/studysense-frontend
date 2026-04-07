@@ -270,7 +270,8 @@ export function MembershipPage() {
                                     </span>
                                 </div>
                                 <p className="mt-0.5 text-sm text-neutral-500">
-                                    Billed at {displayPrice} · Expires on{' '}
+                                    {/* Billed at {displayPrice} ·  */}
+                                    Expires on{' '}
                                     <span className="font-medium text-neutral-700">{endDate ? formatDate(endDate.toISOString()) : 'N/A'}</span>
                                 </p>
                             </div>
