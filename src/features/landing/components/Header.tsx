@@ -20,14 +20,14 @@ function hasPaidSubscription(subscriptionType: unknown): boolean {
     return normalized.includes('premium') || normalized.includes('pro');
 }
 
-function MembershipNavLink({ isPremium }: { isPremium: boolean }) {
+function MembershipNavLink({ isPremium, mounted }: { isPremium: boolean; mounted: boolean }) {
 
     return (
         <Link
             href="/membership"
             className="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
         >
-            {isPremium && <Crown className="h-3.5 w-3.5 text-amber-500" />}
+            {mounted && isPremium && <Crown className="h-3.5 w-3.5 text-amber-500" />}
             Membership
         </Link>
     );
@@ -94,7 +94,7 @@ export const Header = () => {
                         About Us
                     </Link>
                     <UpgradePlanNavLink />
-                    <MembershipNavLink isPremium={isSubscribed} />
+                    <MembershipNavLink isPremium={isSubscribed} mounted={mounted} />
                 </nav>
 
                 <div className="flex items-center gap-x-4">

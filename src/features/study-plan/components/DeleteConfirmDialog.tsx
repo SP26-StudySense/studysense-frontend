@@ -25,7 +25,8 @@ export function DeleteConfirmDialog({
         setMounted(true);
     }, []);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen) return null;
+    if (!mounted) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center">

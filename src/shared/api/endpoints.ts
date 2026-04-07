@@ -43,6 +43,8 @@ export const endpoints = {
     byId: (id: string) => `/study-plans/${id}`,
     create: '/study-plans',
     byRoadmap: (roadmapId: string) => `/study-plans/by-roadmap/${roadmapId}`,
+    checkJoined: (studyPlanId: string) => `/study-plans/check-joined/${studyPlanId}`,
+    checkRoadmapLimit: '/study-plans/check-roadmap-limit',
     user: '/study-plans/user',
     current: '/study-plans/current',
     archive: (id: string) => `/study-plans/${id}/archive`,
