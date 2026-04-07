@@ -220,7 +220,29 @@ async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: str
 /**
  * Main middleware function
  */
-export function middleware(request: NextRequest) {
+function applyRefreshedAuthCookies(
+    response: NextResponse,
+    refreshed: { accessToken: string; refreshSetCookie: string | null } | null
+): NextResponse {
+    if (!refreshed) {
+        return response;
+    }
+
+    response.cookies.set(env.NEXT_PUBLIC_AUTH_TOKEN_KEY, refreshed.accessToken, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24,
+    });
+
+    if (refreshed.refreshSetCookie) {
+        response.headers.append('set-cookie', refreshed.refreshSetCookie);
+    }
+
+    return response;
+}
+
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Handle API proxy requests
@@ -229,67 +251,92 @@ export function middleware(request: NextRequest) {
     }
 
     // Get token from cookies for route protection
-    const accessToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
+    let accessToken = request.cookies.get(env.NEXT_PUBLIC_AUTH_TOKEN_KEY)?.value;
+    const refreshToken =
+        request.cookies.get(env.NEXT_PUBLIC_AUTH_REFRESH_KEY)?.value ||
+        request.cookies.get('refreshToken')?.value;
+
+    let refreshedAuth: { accessToken: string; refreshSetCookie: string | null } | null = null;
+
+    if (!accessToken && refreshToken) {
+        refreshedAuth = await tryRefreshToken(refreshToken);
+        if (refreshedAuth?.accessToken) {
+            accessToken = refreshedAuth.accessToken;
+        }
+    }
+
     const isAuthenticated = !!accessToken;
 
     // Redirect authenticated users away from auth pages
     if (isAuthRoute(pathname) && isAuthenticated) {
         const roles = getRolesFromToken(accessToken!);
         if (hasRole(roles, 'ContentManager')) {
-            return NextResponse.redirect(new URL(routes.contentManager.dashboard, request.url));
+            const response = NextResponse.redirect(new URL(routes.contentManager.dashboard, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
-        return NextResponse.redirect(new URL(routes.dashboard.home, request.url));
+        const response = NextResponse.redirect(new URL(routes.dashboard.home, request.url));
+        return applyRefreshedAuthCookies(response, refreshedAuth);
     }
 
     // Redirect unauthenticated users to login for protected routes
     if (isProtectedRoute(pathname) && !isAuthenticated) {
         const loginUrl = new URL(routes.auth.login, request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
-        return NextResponse.redirect(loginUrl);
+        const response = NextResponse.redirect(loginUrl);
+        return applyRefreshedAuthCookies(response, refreshedAuth);
     }
 
     if (isAdminRoute(pathname)) {
         if (!isAuthenticated) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
         const roles = getRolesFromToken(accessToken!);
         if (!hasRole(roles, 'Admin')) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
     }
 
     // Protect analyst routes: must be authenticated and have Analyst role
     if (isAnalystRoute(pathname)) {
         if (!isAuthenticated) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
         const roles = getRolesFromToken(accessToken!);
         if (!hasRole(roles, 'Analyst')) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
     }
 
     if (isContentManagerRoute(pathname)) {
         if (!isAuthenticated) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
         const roles = getRolesFromToken(accessToken!);
         if (!hasRole(roles, 'ContentManager')) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
     }
 
     if (isStudyPlanRoute(pathname)) {
         if (!isAuthenticated) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
         const roles = getRolesFromToken(accessToken!);
         if (!hasRole(roles, 'User')) {
-            return NextResponse.redirect(new URL(routes.public.home, request.url));
+            const response = NextResponse.redirect(new URL(routes.public.home, request.url));
+            return applyRefreshedAuthCookies(response, refreshedAuth);
         }
     }
 
-    return NextResponse.next();
+    const response = NextResponse.next();
+    return applyRefreshedAuthCookies(response, refreshedAuth);
 }
 
 export const config = {

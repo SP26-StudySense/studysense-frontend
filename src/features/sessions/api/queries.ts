@@ -13,6 +13,7 @@ import type {
   SessionHistoryItem,
   RecentSessionItem,
   SessionStatistics,
+  SessionStatisticsParams,
 } from '../types';
 import type { PaginatedResponse } from '@/shared/types';
 
@@ -95,15 +96,15 @@ export function useRecentSessions(
  * Get session statistics for a given period.
  */
 export function useSessionStatistics(
-  period?: string,
+  params: SessionStatisticsParams = {},
   options?: Omit<
     UseQueryOptions<SessionStatistics>,
     'queryKey' | 'queryFn'
   >
 ) {
   return useQuery({
-    queryKey: queryKeys.studySessions.statistics(period),
-    queryFn: () => api.getSessionStatistics(period),
+    queryKey: queryKeys.studySessions.statistics(params),
+    queryFn: () => api.getSessionStatistics(params),
     staleTime: 5 * 60 * 1000,
     ...options,
   });

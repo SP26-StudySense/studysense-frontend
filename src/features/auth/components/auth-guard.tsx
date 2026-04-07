@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
@@ -48,28 +48,28 @@ function DefaultLoading() {
  */
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const { data: user, isLoading, error } = useCurrentUser();
 
-  console.log('[AuthGuard] State:', { user: !!user, isLoading, error: error?.message });
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   useEffect(() => {
-    if (!isLoading && (!user || error)) {
-      console.log('[AuthGuard] Redirecting to login - no user');
+    if (hasHydrated && !isLoading && (!user || error)) {
       router.push(routes.auth.login);
     }
-  }, [user, isLoading, error, router]);
+  }, [error, hasHydrated, isLoading, router, user]);
 
-  if (isLoading) {
-    console.log('[AuthGuard] Loading...');
+  // Keep server and first client render consistent to avoid hydration mismatch.
+  if (!hasHydrated || isLoading) {
     return fallback || <DefaultLoading />;
   }
 
   if (!user) {
-    console.log('[AuthGuard] No user, showing loading');
     return fallback || <DefaultLoading />;
   }
 
-  console.log('[AuthGuard] User authenticated, rendering children');
   return <>{children}</>;
 }
 
@@ -79,9 +79,12 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
  */
 export function GuestGuard({ children, fallback }: AuthGuardProps) {
   const router = useRouter();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const { data: user, isLoading } = useCurrentUser({ enabled: true });
 
-  console.log('[GuestGuard] State:', { user: !!user, isLoading });
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   // TEMPORARY: Disable redirect to allow login
   // useEffect(() => {
@@ -91,13 +94,12 @@ export function GuestGuard({ children, fallback }: AuthGuardProps) {
   //   }
   // }, [user, isLoading, router]);
 
-  if (isLoading) {
-    console.log('[GuestGuard] Loading...');
+  // Keep server and first client render identical.
+  if (!hasHydrated || isLoading) {
     return fallback || <DefaultLoading />;
   }
 
   // TEMPORARY: Always show login page
-  console.log('[GuestGuard] Rendering children (temp bypass)');
   return <>{children}</>;
 
   // if (user) {

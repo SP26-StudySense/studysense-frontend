@@ -89,6 +89,50 @@ function areTasksEqual(prev: AvailableTask[], next: AvailableTask[]): boolean {
     return true;
 }
 
+function areConversationItemsEqual(
+    prev: ChatState['conversations'],
+    next: ChatState['conversations']
+): boolean {
+    if (prev === next) return true;
+    if (prev.length !== next.length) return false;
+
+    for (let i = 0; i < prev.length; i += 1) {
+        const a = prev[i];
+        const b = next[i];
+        if (
+            a.id !== b.id ||
+            a.title !== b.title ||
+            a.roadmapId !== b.roadmapId ||
+            a.lastMessageAt !== b.lastMessageAt
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function areMessagesEqual(prev: ChatMessage[], next: ChatMessage[]): boolean {
+    if (prev === next) return true;
+    if (prev.length !== next.length) return false;
+
+    for (let i = 0; i < prev.length; i += 1) {
+        const a = prev[i];
+        const b = next[i];
+        if (
+            a.id !== b.id ||
+            a.conversationId !== b.conversationId ||
+            a.role !== b.role ||
+            a.content !== b.content ||
+            a.createdAt !== b.createdAt
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const queryClient = useQueryClient();
@@ -238,6 +282,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             const selectedExists = conversations.some((item) => item.id === prev.selectedConversationId);
             const nextSelectedId = selectedExists ? prev.selectedConversationId : conversations[0]?.id ?? null;
 
+            if (
+                areConversationItemsEqual(prev.conversations, conversations) &&
+                prev.selectedConversationId === nextSelectedId
+            ) {
+                return prev;
+            }
+
             return {
                 ...prev,
                 conversations,
@@ -255,10 +306,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             mapHistoryMessageDto(item, modulesMap, tasksMap)
         );
 
-        setState((prev) => ({
-            ...prev,
-            messages: mappedMessages,
-        }));
+        setState((prev) => {
+            if (areMessagesEqual(prev.messages, mappedMessages)) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                messages: mappedMessages,
+            };
+        });
     }, [historyQuery.data, modulesMap, tasksMap]);
 
     const openChat = useCallback(() => {

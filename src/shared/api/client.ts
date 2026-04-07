@@ -15,6 +15,7 @@ import axios, {
 import Cookies from 'js-cookie';
 
 import { env } from '@/shared/config';
+import { endpoints } from '@/shared/api/endpoints';
 import type { ApiResponse } from '@/shared/types';
 import { parseApiError } from './errors';
 
@@ -51,6 +52,7 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const requestUrl = String(error.config?.url || '');
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     const isAuthEndpoint =
       requestUrl.includes('/auth/login') ||
       requestUrl.includes('/auth/register') ||
@@ -59,7 +61,19 @@ apiClient.interceptors.response.use(
       requestUrl.includes('/auth/reset-password') ||
       requestUrl.includes('/auth/confirm-email');
 
-    // Handle 401 - Proxy couldn't refresh token, redirect to login
+    // Handle 401 by attempting one client-side refresh + retry before redirecting.
+    if (error.response?.status === 401 && !isAuthEndpoint && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        await apiClient.post(endpoints.auth.refresh, {});
+        return apiClient(originalRequest);
+      } catch {
+        // Fall through to forced logout below.
+      }
+    }
+
+    // Proxy/client refresh failed, redirect to login.
     // Skip redirect for auth form endpoints so invalid credentials do not reload the page.
     if (error.response?.status === 401 && !isAuthEndpoint) {
       // Clear tokens and redirect to login
