@@ -27,7 +27,8 @@ export function QuizNavigationConfirmDialog({
         setMounted(true);
     }, []);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen) return null;
+    if (!mounted) return null;
 
     const getContent = () => {
         switch (type) {

@@ -6,19 +6,20 @@ import {
   Save,
   X,
   ArrowLeft,
-  Loader2,
   AlertCircle,
   Edit2,
   Check,
   Plus,
+  RotateCcw,
   Trash2,
   ExternalLink,
   Link2,
   CircleDot,
 } from "lucide-react";
 import { CMSRoadmapGraph } from "../components/CMSRoadmapGraph";
+import { ContentManagerLoading } from "../components";
 import { useRoadmapDetail, useNodeContents, useQuizzesByNode } from "../api/queries";
-import { useCreateQuiz, useDeleteQuiz, useSyncRoadmapGraph } from "../api/mutations";
+import { useCreateQuiz, useDeleteQuiz, useSyncRoadmapGraph, useUpdateQuiz } from "../api/mutations";
 import { toast } from "@/shared/lib";
 import type {
   RoadmapDetail,
@@ -26,6 +27,7 @@ import type {
   RoadmapEdge,
   RoadmapMetadata,
   NodeContent,
+  QuizItem,
   NodeDifficulty,
   EdgeType,
   ContentType,
@@ -69,7 +71,14 @@ const DIFFICULTY_STYLES: Record<string, string> = {
 interface NodeDetailSectionProps {
   node: RoadmapNode;
   roadmapId: number;
-  onUpdate: (updates: Partial<RoadmapNode>) => void;
+  deletedContentIds: number[];
+  hasPendingChanges: boolean;
+  onUpdate: (
+    updates: Partial<RoadmapNode>,
+    options?: { markUnsaved?: boolean }
+  ) => void;
+  onMarkContentDeleted: (contentId: number) => void;
+  onUnmarkContentDeleted: (contentId: number) => void;
   onDeleteNode: () => void;
   onContentsLoaded?: (nodeId: number) => void;
 }
@@ -77,13 +86,18 @@ interface NodeDetailSectionProps {
 function NodeDetailSection({
   node,
   roadmapId,
+  deletedContentIds,
+  hasPendingChanges,
   onUpdate,
+  onMarkContentDeleted,
+  onUnmarkContentDeleted,
   onDeleteNode,
   onContentsLoaded,
 }: NodeDetailSectionProps) {
   const router = useRouter();
   const nodeId = typeof node.id === "number" ? node.id : null;
   const createQuizMutation = useCreateQuiz();
+  const updateQuizMutation = useUpdateQuiz();
   const deleteQuizMutation = useDeleteQuiz();
 
   // Fetch quizzes for this node (only persisted nodes)
@@ -108,7 +122,10 @@ function NodeDetailSection({
       onContentsLoaded?.(nodeId);
       // Preserve any unsaved (id=null) local contents, merge with API data
       const localOnly = (node.contents ?? []).filter((c) => c.id === null);
-      onUpdate({ contents: [...apiContents, ...localOnly] });
+      onUpdate(
+        { contents: [...apiContents, ...localOnly] },
+        { markUnsaved: false }
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiContents, nodeId]);
@@ -129,6 +146,15 @@ function NodeDetailSection({
     level: "Beginner",
     passingScore: 5,
   });
+  const [isEditQuizOpen, setIsEditQuizOpen] = useState(false);
+  const [editingQuizId, setEditingQuizId] = useState<number | null>(null);
+  const [editQuizForm, setEditQuizForm] = useState({
+    title: "",
+    description: "",
+    totalScore: 10,
+    level: "Beginner",
+    passingScore: 5,
+  });
   const [deletingQuizId, setDeletingQuizId] = useState<number | null>(null);
 
   // When the node changes (different node selected), reset form
@@ -144,11 +170,20 @@ function NodeDetailSection({
       estimatedHours: node.estimatedHours,
     });
     setIsCreateQuizOpen(false);
+    setIsEditQuizOpen(false);
+    setEditingQuizId(null);
     setQuizForm({
       title: `${node.title} Quiz`,
       description: "",
       totalScore: 10,
-      level: "Beginner",
+      level: node.difficulty || "Beginner",
+      passingScore: 5,
+    });
+    setEditQuizForm({
+      title: "",
+      description: "",
+      totalScore: 10,
+      level: node.difficulty || "Beginner",
       passingScore: 5,
     });
   }
@@ -160,11 +195,12 @@ function NodeDetailSection({
       });
       return;
     }
+
     setQuizForm({
       title: `${node.title} Quiz`,
       description: "",
       totalScore: 10,
-      level: "Beginner",
+      level: node.difficulty || "Beginner",
       passingScore: 5,
     });
     setIsCreateQuizOpen(true);
@@ -172,8 +208,9 @@ function NodeDetailSection({
 
   const handleSubmitCreateQuiz = async () => {
     if (!nodeId) return;
+
     try {
-      await createQuizMutation.mutateAsync({
+      const createdQuiz = await createQuizMutation.mutateAsync({
         createQuizNode: {
           roadmapNodeId: nodeId,
           title: quizForm.title.trim() || null,
@@ -189,10 +226,79 @@ function NodeDetailSection({
               : 1,
         },
       });
-      toast.success("Quiz created successfully");
-      setIsCreateQuizOpen(false);
+
+      const createdQuizId = createdQuiz?.id;
+      if (createdQuizId) {
+        toast.success("Quiz created successfully");
+        setIsCreateQuizOpen(false);
+        return;
+      }
+
+      toast.success("Quiz created successfully", {
+        description: "Please open the quiz in Quizzes list to edit full details.",
+      });
     } catch {
       toast.error("Failed to create quiz", {
+        description: "Please check input and try again.",
+      });
+    }
+  };
+
+  const handleCancelCreateQuiz = () => {
+    setIsCreateQuizOpen(false);
+  };
+
+  const handleOpenEditQuiz = (quiz: QuizItem) => {
+    setEditingQuizId(quiz.id);
+    setEditQuizForm({
+      title: quiz.title ?? "",
+      description: quiz.description ?? "",
+      totalScore:
+        typeof quiz.totalScore === "number" && Number.isFinite(quiz.totalScore)
+          ? quiz.totalScore
+          : 10,
+      level: quiz.level || node.difficulty || "Beginner",
+      passingScore:
+        typeof quiz.passingScore === "number" && Number.isFinite(quiz.passingScore)
+          ? quiz.passingScore
+          : 5,
+    });
+    setIsEditQuizOpen(true);
+  };
+
+  const handleCancelEditQuiz = () => {
+    if (updateQuizMutation.isPending) return;
+    setIsEditQuizOpen(false);
+    setEditingQuizId(null);
+  };
+
+  const handleSubmitEditQuiz = async () => {
+    if (!nodeId || !editingQuizId) return;
+
+    try {
+      await updateQuizMutation.mutateAsync({
+        id: editingQuizId,
+        updateQuizNodeDto: {
+          roadmapNodeId: nodeId,
+          title: editQuizForm.title.trim() || null,
+          description: editQuizForm.description.trim() || null,
+          totalScore:
+            Number.isFinite(editQuizForm.totalScore) && editQuizForm.totalScore > 0
+              ? editQuizForm.totalScore
+              : null,
+          level: editQuizForm.level || "Beginner",
+          passingScore:
+            Number.isFinite(editQuizForm.passingScore) && editQuizForm.passingScore > 0
+              ? editQuizForm.passingScore
+              : 1,
+        },
+      });
+
+      toast.success("Quiz updated successfully");
+      setIsEditQuizOpen(false);
+      setEditingQuizId(null);
+    } catch {
+      toast.error("Failed to update quiz", {
         description: "Please check input and try again.",
       });
     }
@@ -278,6 +384,17 @@ function NodeDetailSection({
   };
 
   const handleDeleteContent = (contentId: number | string) => {
+    const target = contents.find((c) => (c.id ?? c.clientId) === contentId);
+    if (!target) return;
+
+    if (typeof target.id === "number" && target.id > 0) {
+      onMarkContentDeleted(target.id);
+      if (editingContentId === contentId) {
+        handleCancelEditContent();
+      }
+      return;
+    }
+
     const updated = contents.filter((c) => {
       const cId = c.id ?? c.clientId;
       return cId !== contentId;
@@ -321,17 +438,6 @@ function NodeDetailSection({
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleOpenCreateQuiz}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
-          >
-            {createQuizMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Plus className="h-3.5 w-3.5" />
-            )}
-            Create Quiz
-          </button>
-          <button
             onClick={onDeleteNode}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors border border-red-200"
           >
@@ -340,116 +446,6 @@ function NodeDetailSection({
           </button>
         </div>
       </div>
-
-      {isCreateQuizOpen && (
-        <div className="rounded-xl border border-[#00bae2]/20 bg-[#00bae2]/5 p-4 space-y-3">
-          <div>
-            <h4 className="text-sm font-semibold text-neutral-900">Create Quiz</h4>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Create a quiz for this roadmap node.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Title
-              </label>
-              <input
-                type="text"
-                value={quizForm.title}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({ ...prev, title: e.target.value }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-                placeholder="Quiz title"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Description
-              </label>
-              <textarea
-                value={quizForm.description}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({ ...prev, description: e.target.value }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10 min-h-[80px]"
-                placeholder="Quiz description"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Total Score
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="0.5"
-                value={quizForm.totalScore}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({
-                    ...prev,
-                    totalScore: Number(e.target.value),
-                  }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Level
-              </label>
-              <select
-                value={quizForm.level}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({
-                    ...prev,
-                    level: e.target.value,
-                  }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                Passing Score
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="0.5"
-                value={quizForm.passingScore}
-                onChange={(e) =>
-                  setQuizForm((prev) => ({
-                    ...prev,
-                    passingScore: Number(e.target.value),
-                  }))
-                }
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsCreateQuizOpen(false)}
-              className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmitCreateQuiz}
-              disabled={createQuizMutation.isPending}
-              className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
-            >
-              {createQuizMutation.isPending ? "Creating..." : "Create Quiz"}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Basic Information */}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
@@ -612,9 +608,12 @@ function NodeDetailSection({
         </div>
 
         {isLoadingContents && nodeId && (
-          <div className="flex items-center gap-2 py-4 text-sm text-neutral-500">
-            <Loader2 className="h-4 w-4 animate-spin text-[#00bae2]" />
-            Loading contents from server...
+          <div className="py-4">
+            <ContentManagerLoading
+              variant="inline"
+              size="sm"
+              title="Loading contents..."
+            />
           </div>
         )}
 
@@ -750,22 +749,26 @@ function NodeDetailSection({
             {contents.map((content) => {
               const cId = content.id ?? content.clientId!;
               const isEditing = editingContentId === cId;
+              const isMarkedDeleted =
+                typeof content.id === "number" &&
+                deletedContentIds.includes(content.id);
               // A content is "unsaved" if it is new (id=null) OR if it was
               // loaded from the server but its fields differ from the server copy.
               const isUnsaved =
-                content.id == null ||
-                (apiContents != null &&
-                  apiContents.some(
-                    (orig) =>
-                      orig.id === content.id &&
-                      (orig.title !== content.title ||
-                        orig.description !== content.description ||
-                        orig.url !== content.url ||
-                        orig.contentType !== content.contentType ||
-                        orig.duration !== content.duration ||
-                        orig.estimatedMinutes !== content.estimatedMinutes ||
-                        orig.isRequired !== content.isRequired)
-                  ));
+                hasPendingChanges &&
+                (content.id == null ||
+                  (apiContents != null &&
+                    apiContents.some(
+                      (orig) =>
+                        orig.id === content.id &&
+                        (orig.title !== content.title ||
+                          orig.description !== content.description ||
+                          orig.url !== content.url ||
+                          orig.contentType !== content.contentType ||
+                          orig.duration !== content.duration ||
+                          orig.estimatedMinutes !== content.estimatedMinutes ||
+                          orig.isRequired !== content.isRequired)
+                    )));
 
               if (isEditing) {
                 return (
@@ -868,7 +871,11 @@ function NodeDetailSection({
               return (
                 <div
                   key={cId}
-                  className="rounded-xl border border-neutral-200 bg-white p-4 hover:border-neutral-300 transition-colors group"
+                  className={`rounded-xl border p-4 transition-colors group ${
+                    isMarkedDeleted
+                      ? "border-red-200 bg-red-50/40"
+                      : "border-neutral-200 bg-white hover:border-neutral-300"
+                  }`}
                 >
                   {/* Badges row */}
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -885,46 +892,63 @@ function NodeDetailSection({
                         Unsaved
                       </span>
                     )}
+                    {isMarkedDeleted && (
+                      <span className="rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                        Marked for delete
+                      </span>
+                    )}
                     {/* Action buttons — visible on hover */}
-                    <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <button
-                        onClick={() => handleStartEditContent(content)}
-                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteContent(cId)}
-                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
+                    <div className={`ml-auto flex items-center gap-1 transition-all ${isMarkedDeleted ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                      {isMarkedDeleted ? (
+                        <button
+                          onClick={() => onUnmarkContentDeleted(content.id!)}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Revert
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleStartEditContent(content)}
+                            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteContent(cId)}
+                            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   {/* Content title */}
-                  <p className="text-sm font-semibold text-neutral-900">
+                  <p className={`text-sm font-semibold ${isMarkedDeleted ? "text-neutral-500 line-through" : "text-neutral-900"}`}>
                     {content.title}
                   </p>
 
                   {/* Description */}
                   {content.description && (
-                    <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                    <p className={`text-xs mt-1 leading-relaxed ${isMarkedDeleted ? "text-neutral-400 line-through" : "text-neutral-500"}`}>
                       {content.description}
                     </p>
                   )}
 
                   {/* Meta row */}
-                  <div className="flex items-center gap-4 mt-2 flex-wrap">
+                  <div className={`flex items-center gap-4 mt-2 flex-wrap ${isMarkedDeleted ? "text-neutral-400" : ""}`}>
                     {content.duration != null && content.duration > 0 && (
-                      <span className="text-[11px] text-neutral-400">
+                      <span className={`text-[11px] ${isMarkedDeleted ? "line-through" : "text-neutral-400"}`}>
                         Duration: {content.duration} min
                       </span>
                     )}
                     {content.estimatedMinutes != null && content.estimatedMinutes > 0 && (
-                      <span className="text-[11px] text-neutral-400">
+                      <span className={`text-[11px] ${isMarkedDeleted ? "line-through" : "text-neutral-400"}`}>
                         Est: {content.estimatedMinutes} min
                       </span>
                     )}
@@ -934,7 +958,7 @@ function NodeDetailSection({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 text-[11px] text-[#00bae2] hover:underline ml-auto"
+                        className={`flex items-center gap-1 text-[11px] ml-auto ${isMarkedDeleted ? "text-neutral-400 line-through" : "text-[#00bae2] hover:underline"}`}
                       >
                         Open Resource
                         <ExternalLink className="h-3 w-3" />
@@ -961,17 +985,255 @@ function NodeDetailSection({
           </h4>
           <button
             onClick={handleOpenCreateQuiz}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+            disabled={createQuizMutation.isPending}
           >
             <Plus className="h-3.5 w-3.5" />
             Add Quiz
           </button>
         </div>
 
+        {isCreateQuizOpen && (
+          <div className="mb-4 rounded-xl border border-[#00bae2]/20 bg-[#00bae2]/5 p-4 space-y-3">
+            <div>
+              <h4 className="text-sm font-semibold text-neutral-900">Create Quiz</h4>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Fill quiz information here, then create.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={quizForm.title}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  placeholder="Quiz title"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Description
+                </label>
+                <textarea
+                  value={quizForm.description}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({ ...prev, description: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10 min-h-[80px]"
+                  placeholder="Quiz description"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Total Score
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.5"
+                  value={quizForm.totalScore}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({
+                      ...prev,
+                      totalScore: Number(e.target.value),
+                    }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Level
+                </label>
+                <select
+                  value={quizForm.level}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({
+                      ...prev,
+                      level: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Passing Score
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.5"
+                  value={quizForm.passingScore}
+                  onChange={(e) =>
+                    setQuizForm((prev) => ({
+                      ...prev,
+                      passingScore: Number(e.target.value),
+                    }))
+                  }
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCancelCreateQuiz}
+                className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitCreateQuiz}
+                disabled={createQuizMutation.isPending}
+                className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+              >
+                {createQuizMutation.isPending ? "Creating..." : "Create Quiz"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isEditQuizOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h4 className="text-base font-semibold text-neutral-900">Update Quiz</h4>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Update quiz information for this roadmap node.
+                  </p>
+                </div>
+                <button
+                  onClick={handleCancelEditQuiz}
+                  disabled={updateQuizMutation.isPending}
+                  className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editQuizForm.title}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({ ...prev, title: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                    placeholder="Quiz title"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Description
+                  </label>
+                  <textarea
+                    value={editQuizForm.description}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10 min-h-[90px]"
+                    placeholder="Quiz description"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Total Score
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    value={editQuizForm.totalScore}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({
+                        ...prev,
+                        totalScore: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Level
+                  </label>
+                  <select
+                    value={editQuizForm.level}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({
+                        ...prev,
+                        level: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Passing Score
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    value={editQuizForm.passingScore}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({
+                        ...prev,
+                        passingScore: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  onClick={handleCancelEditQuiz}
+                  disabled={updateQuizMutation.isPending}
+                  className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitEditQuiz}
+                  disabled={updateQuizMutation.isPending}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+                >
+                  {updateQuizMutation.isPending ? "Updating..." : "Update Quiz"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoadingQuizzes && nodeId && (
-          <div className="flex items-center gap-2 py-4 text-sm text-neutral-500">
-            <Loader2 className="h-4 w-4 animate-spin text-[#00bae2]" />
-            Loading quizzes...
+          <div className="py-4">
+            <ContentManagerLoading
+              variant="inline"
+              size="sm"
+              title="Loading quizzes..."
+            />
           </div>
         )}
 
@@ -1022,12 +1284,20 @@ function NodeDetailSection({
                     View Detail
                   </button>
                   <button
+                    onClick={() => handleOpenEditQuiz(quiz)}
+                    disabled={updateQuizMutation.isPending}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                  <button
                     onClick={() => handleDeleteQuiz(quiz.id)}
                     disabled={deletingQuizId === quiz.id || deleteQuizMutation.isPending}
                     className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {deletingQuizId === quiz.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <ContentManagerLoading variant="icon" size="sm" />
                     ) : (
                       <Trash2 className="h-3.5 w-3.5" />
                     )}
@@ -1286,6 +1556,82 @@ function generateClientId() {
   return `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function normalizeNodeOrder(nodes: RoadmapNode[]): RoadmapNode[] {
+  return nodes.map((node, index) => ({
+    ...node,
+    orderNo: index,
+  }));
+}
+
+function applySyncMappingsToRoadmap(
+  data: RoadmapDetail,
+  response: {
+    nodeIdMap: Record<string, number>;
+    edgeIdMap: Record<string, number>;
+    contentIdMap: Record<string, number>;
+  },
+  deletedContentIds: number[]
+): RoadmapDetail {
+  const deletedSet = new Set(deletedContentIds);
+
+  const mappedNodes = data.nodes.map((node) => {
+    const mappedNodeId =
+      node.id == null && node.clientId
+        ? response.nodeIdMap[node.clientId] ?? node.id
+        : node.id;
+
+    const mappedContents = (node.contents ?? [])
+      .filter((content) => !(typeof content.id === "number" && deletedSet.has(content.id)))
+      .map((content) => {
+        const mappedContentId =
+          content.id == null && content.clientId
+            ? response.contentIdMap[content.clientId] ?? content.id
+            : content.id;
+
+        return {
+          ...content,
+          id: mappedContentId,
+          nodeId: typeof mappedNodeId === "number" ? mappedNodeId : content.nodeId,
+          nodeClientId: undefined,
+        };
+      });
+
+    return {
+      ...node,
+      id: mappedNodeId,
+      contents: mappedContents,
+    };
+  });
+
+  const mappedEdges = data.edges.map((edge) => {
+    const mappedEdgeId =
+      edge.id == null && edge.clientId
+        ? response.edgeIdMap[edge.clientId] ?? edge.id
+        : edge.id;
+
+    const mappedFromNodeId =
+      edge.fromNodeId ??
+      (edge.fromNodeClientId ? response.nodeIdMap[edge.fromNodeClientId] : undefined);
+
+    const mappedToNodeId =
+      edge.toNodeId ??
+      (edge.toNodeClientId ? response.nodeIdMap[edge.toNodeClientId] : undefined);
+
+    return {
+      ...edge,
+      id: mappedEdgeId,
+      fromNodeId: mappedFromNodeId,
+      toNodeId: mappedToNodeId,
+    };
+  });
+
+  return {
+    ...data,
+    nodes: mappedNodes,
+    edges: mappedEdges,
+  };
+}
+
 export function RoadmapDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -1303,11 +1649,13 @@ export function RoadmapDetailPage() {
   const [editedData, setEditedData] = useState<RoadmapDetail | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletedContentIds, setDeletedContentIds] = useState<number[]>([]);
 
   // ── UI state ──
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
   const [metadataForm, setMetadataForm] = useState({ title: "", description: "" });
   const [selectedNodeId, setSelectedNodeId] = useState<number | string | null>(null);
+  const [reformatSignal, setReformatSignal] = useState(0);
 
   // Track which nodes had their contents loaded from the API
   const loadedNodeIdsRef = useRef<Set<number>>(new Set());
@@ -1328,6 +1676,7 @@ export function RoadmapDetailPage() {
   useEffect(() => {
     if (roadmapData) {
       setEditedData(roadmapData);
+      setDeletedContentIds([]);
     }
   }, [roadmapData]);
 
@@ -1343,10 +1692,12 @@ export function RoadmapDetailPage() {
 
   // ── Node helpers ──
   const updateNodes = useCallback(
-    (nodes: RoadmapNode[]) => {
+    (nodes: RoadmapNode[], markUnsaved = true) => {
       if (!editedData) return;
       setEditedData({ ...editedData, nodes });
-      setHasUnsavedChanges(true);
+      if (markUnsaved) {
+        setHasUnsavedChanges(true);
+      }
     },
     [editedData]
   );
@@ -1361,19 +1712,30 @@ export function RoadmapDetailPage() {
   );
 
   const handleNodeUpdate = useCallback(
-    (nodeId: number | string, updates: Partial<RoadmapNode>) => {
+    (
+      nodeId: number | string,
+      updates: Partial<RoadmapNode>,
+      options?: { markUnsaved?: boolean }
+    ) => {
       if (!editedData) return;
       const newNodes = editedData.nodes.map((n) => {
         const key = getNodeKey(n);
         return key === String(nodeId) ? { ...n, ...updates } : n;
       });
-      updateNodes(newNodes);
+      updateNodes(newNodes, options?.markUnsaved ?? true);
     },
     [editedData, updateNodes]
   );
 
   const handleAddNode = useCallback(() => {
     if (!editedData) return;
+
+    const selectedKey = selectedNodeId != null ? String(selectedNodeId) : null;
+    const selectedIndex = selectedKey
+      ? editedData.nodes.findIndex((n) => getNodeKey(n) === selectedKey)
+      : -1;
+    const insertIndex = selectedIndex >= 0 ? selectedIndex + 1 : editedData.nodes.length;
+
     const newNode: RoadmapNode = {
       id: null,
       clientId: generateClientId(),
@@ -1382,17 +1744,25 @@ export function RoadmapDetailPage() {
       description: "",
       difficulty: "Beginner" as NodeDifficulty,
       estimatedHours: 1,
-      orderNo: editedData.nodes.length,
+      orderNo: insertIndex,
       contents: [],
     };
-    const newNodes = [...editedData.nodes, newNode];
-    updateNodes(newNodes);
+    const newNodes = [...editedData.nodes];
+    newNodes.splice(insertIndex, 0, newNode);
+    updateNodes(normalizeNodeOrder(newNodes));
     setSelectedNodeId(newNode.clientId!);
-  }, [editedData, roadmapId, updateNodes]);
+  }, [editedData, roadmapId, selectedNodeId, updateNodes]);
+
+  const handleReformatGraph = useCallback(() => {
+    setReformatSignal((prev) => prev + 1);
+  }, []);
 
   const handleDeleteNode = useCallback(
     (nodeId: number | string) => {
       if (!editedData) return;
+      const targetNode = editedData.nodes.find(
+        (n) => getNodeKey(n) === String(nodeId)
+      );
       const newNodes = editedData.nodes.filter(
         (n) => getNodeKey(n) !== String(nodeId)
       );
@@ -1404,11 +1774,34 @@ export function RoadmapDetailPage() {
       // Combine both updates in a single setEditedData call to avoid React
       // batching causing the second call to overwrite the first.
       setEditedData({ ...editedData, nodes: newNodes, edges: newEdges });
+      if (targetNode?.contents?.length) {
+        const removedIds = targetNode.contents
+          .map((content) => content.id)
+          .filter((id): id is number => typeof id === "number");
+        if (removedIds.length > 0) {
+          setDeletedContentIds((prev) =>
+            prev.filter((id) => !removedIds.includes(id))
+          );
+        }
+      }
       setHasUnsavedChanges(true);
       if (selectedNodeId === nodeId) setSelectedNodeId(null);
     },
     [editedData, selectedNodeId]
   );
+
+  const handleMarkContentDeleted = useCallback((contentId: number) => {
+    if (contentId <= 0) return;
+    setDeletedContentIds((prev) =>
+      prev.includes(contentId) ? prev : [...prev, contentId]
+    );
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleUnmarkContentDeleted = useCallback((contentId: number) => {
+    setDeletedContentIds((prev) => prev.filter((id) => id !== contentId));
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleAddEdge = useCallback(
     (fromId: number | string, toId: number | string, edgeType: EdgeType) => {
@@ -1453,13 +1846,14 @@ export function RoadmapDetailPage() {
   };
 
   // ── Save all to server ──
-  // Collect contents that are "changed" for the API payload:
+  // Collect contents for create/update payload only.
   // - Contents from any node whose contents were API-loaded this session
   //   (covers edits, deletions, and new additions on those nodes)
   // - Contents from new (client-only) nodes that have locally-added entries
-  // Nodes whose contents were never loaded are skipped entirely so that the
-  // server does not delete their contents.
+  // Nodes whose contents were never loaded are skipped entirely.
+  // Items marked for delete are excluded and sent via deleteContents.
   const collectContents = (nodes: RoadmapNode[]): NodeContent[] => {
+    const deletedIdSet = new Set(deletedContentIds);
     const result: NodeContent[] = [];
     nodes.forEach((node) => {
       const nId = typeof node.id === "number" ? node.id : undefined;
@@ -1470,9 +1864,11 @@ export function RoadmapDetailPage() {
       // Skip nodes that were never visited AND have no local contents
       if (!hasContents && !wasLoaded) return;
       // If visited but all contents deleted — nothing to add to flat array
-      // (the absence of this nodeId's contents in the payload signals deletion)
       if (!node.contents?.length) return;
       node.contents.forEach((c) => {
+        if (typeof c.id === "number" && deletedIdSet.has(c.id)) {
+          return;
+        }
         result.push({
           ...c,
           nodeId: nId ?? c.nodeId,
@@ -1490,11 +1886,14 @@ export function RoadmapDetailPage() {
       // Strip nested contents from node objects and send them as a separate
       // flat array as required by the SyncRoadmapGraphRequest schema.
       const flatContents = collectContents(editedData.nodes);
+      const deleteContents = Array.from(
+        new Set(deletedContentIds.filter((id) => id > 0))
+      );
       const nodesWithoutContents = editedData.nodes.map(
         ({ contents: _contents, ...rest }) => rest as RoadmapNode
       );
 
-      await syncRoadmapMutation.mutateAsync({
+      const syncResult = await syncRoadmapMutation.mutateAsync({
         roadmapId,
         roadmap: {
           title: editedData.roadmap.title,
@@ -1503,7 +1902,33 @@ export function RoadmapDetailPage() {
         nodes: nodesWithoutContents,
         edges: editedData.edges,
         contents: flatContents,
+        deleteContents,
       });
+
+      const mappedData = applySyncMappingsToRoadmap(
+        editedData,
+        {
+          nodeIdMap: syncResult.nodeIdMap ?? {},
+          edgeIdMap: syncResult.edgeIdMap ?? {},
+          contentIdMap: syncResult.contentIdMap ?? {},
+        },
+        deleteContents
+      );
+
+      setEditedData(mappedData);
+      loadedNodeIdsRef.current = new Set(
+        mappedData.nodes
+          .map((node) => node.id)
+          .filter((id): id is number => typeof id === "number")
+      );
+
+      setSelectedNodeId((prev) => {
+        if (prev == null) return prev;
+        if (typeof prev === "number") return prev;
+        return syncResult.nodeIdMap?.[prev] ?? prev;
+      });
+
+      setDeletedContentIds([]);
       setHasUnsavedChanges(false);
       toast.success("Roadmap saved successfully!", {
         description: "All changes have been synced.",
@@ -1522,6 +1947,7 @@ export function RoadmapDetailPage() {
       setEditedData(roadmapData);
       setHasUnsavedChanges(false);
       setIsEditingMetadata(false);
+      setDeletedContentIds([]);
       toast.info("Changes discarded", {
         description: "Reverted to the last saved version.",
       });
@@ -1548,12 +1974,7 @@ export function RoadmapDetailPage() {
   // ── Loading / Error states ──
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-          <p className="text-sm text-neutral-500">Loading roadmap...</p>
-        </div>
-      </div>
+      <ContentManagerLoading variant="page" title="Loading roadmap..." />
     );
   }
 
@@ -1620,7 +2041,7 @@ export function RoadmapDetailPage() {
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <ContentManagerLoading variant="icon" size="sm" />
                     Saving...
                   </>
                 ) : (
@@ -1794,13 +2215,22 @@ export function RoadmapDetailPage() {
               Visualize and manage nodes and connections
             </p>
           </div>
-          <button
-            onClick={handleAddNode}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            Add Node
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReformatGraph}
+              className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reformat
+            </button>
+            <button
+              onClick={handleAddNode}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              Add Node
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-5 h-[520px]">
@@ -1810,6 +2240,7 @@ export function RoadmapDetailPage() {
               nodes={editedData.nodes}
               edges={editedData.edges}
               selectedNodeId={selectedNodeId}
+              reformatSignal={reformatSignal}
               onNodeSelect={setSelectedNodeId}
               className="h-full"
             />
@@ -1838,12 +2269,17 @@ export function RoadmapDetailPage() {
           <NodeDetailSection
             node={selectedNode}
             roadmapId={roadmapId}
-            onUpdate={(updates) =>
+            deletedContentIds={deletedContentIds}
+            hasPendingChanges={hasUnsavedChanges}
+            onUpdate={(updates, options) =>
               handleNodeUpdate(
                 selectedNode.id ?? selectedNode.clientId!,
-                updates
+                updates,
+                options
               )
             }
+            onMarkContentDeleted={handleMarkContentDeleted}
+            onUnmarkContentDeleted={handleUnmarkContentDeleted}
             onDeleteNode={() =>
               handleDeleteNode(selectedNode.id ?? selectedNode.clientId!)
             }

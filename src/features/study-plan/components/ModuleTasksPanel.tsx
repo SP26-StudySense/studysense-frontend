@@ -5,12 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, Sparkles, FastForward, AlertTriangle, ArrowRight, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/shared/lib/utils';
+import {
+    formatLocalDate,
+    getTodayLocalDateInput,
+    isIsoDateBeforeTodayLocal,
+    localDateInputToUtcIso,
+} from '@/shared/lib/date-time';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
 import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems, useCreateTasksBatch } from '../api/mutations';
 import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
 import type { QuizLevel } from '@/features/quiz/api/types';
 import { useCurrentQuizAttemptByModule } from '@/features/quiz';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { TaskFormModal } from './TaskFormModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { AiTaskPreviewPanel, AiPreviewTask } from './AiTaskPreviewPanel';
@@ -74,7 +81,8 @@ function SkipModuleConfirmDialog({
         return () => setMounted(false);
     }, []);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen) return null;
+    if (!mounted) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -133,7 +141,8 @@ function TakeQuizLevelDialog({
         }
     }, [isOpen]);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen) return null;
+    if (!mounted) return null;
 
     const levels: Array<{ value: QuizLevel; label: string; description: string }> = [
         { value: 'Beginner', label: 'Beginner', description: 'Basic concepts and easy questions.' },
@@ -229,8 +238,15 @@ export function ModuleTasksPanel({
     // Quiz dialog states
     const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
     const [isTakeQuizOpen, setIsTakeQuizOpen] = useState(false);
-    const { data: currentQuizAttemptData } = useCurrentQuizAttemptByModule(
-        module?.id ? parseInt(module.id, 10) : 0
+    const moduleIdForQuizAttempt = module?.id ? parseInt(module.id, 10) : 0;
+    const {
+        data: currentQuizAttemptData,
+        isLoading: isLoadingCurrentQuizAttempt,
+        isFetching: isFetchingCurrentQuizAttempt,
+        isFetched: isFetchedCurrentQuizAttempt,
+    } = useCurrentQuizAttemptByModule(
+        moduleIdForQuizAttempt,
+        { enabled: !!module?.id }
     );
     const currentQuizAttemptId = currentQuizAttemptData?.quizAttempt?.id;
 
@@ -460,8 +476,11 @@ export function ModuleTasksPanel({
 
     if (!module) return null;
 
+    const isModuleSelectionLocked = viewFilter === 'module' && module.status === 'completed';
+    const isSelectionDisabled = hasUnfinishedSession || isModuleSelectionLocked;
+
     const handleTaskToggle = (taskId: string) => {
-        if (hasUnfinishedSession) return;
+        if (isSelectionDisabled) return;
         setSelectedTaskIds(prev => {
             const newSet = new Set(prev);
             if (newSet.has(taskId)) {
@@ -474,7 +493,7 @@ export function ModuleTasksPanel({
     };
 
     const handleSelectAll = () => {
-        if (hasUnfinishedSession) return;
+        if (isSelectionDisabled) return;
         // Filter out completed tasks and locked module tasks
         const selectableTasks = filteredTasks.filter(t => !t.isCompleted && !t.isFromLockedModule);
         if (selectedTaskIds.size === selectableTasks.length) {
@@ -485,6 +504,8 @@ export function ModuleTasksPanel({
     };
 
     const handleStartLearning = () => {
+        if (isModuleSelectionLocked) return;
+
         if (hasUnfinishedSession) {
             router.push('/sessions');
             return;
@@ -654,6 +675,21 @@ export function ModuleTasksPanel({
         
         try {
             setAiPreviewMessage('Saving tasks...');
+
+            const hasPastDate = tasksToSave.some((task) => {
+                if (!task.scheduledDate) {
+                    return false;
+                }
+
+                return isIsoDateBeforeTodayLocal(task.scheduledDate);
+            });
+
+            if (hasPastDate) {
+                setAiPreviewMessage('Deadline cannot be in the past. Please adjust task dates.');
+                return;
+            }
+
+            const todayLocalDate = getTodayLocalDateInput();
             const payload = {
                 tasks: tasksToSave
                     .filter((t) => t.title?.trim())
@@ -663,7 +699,7 @@ export function ModuleTasksPanel({
                     description: t.description,
                     status: TaskStatus.Pending,
                     estimatedDurationSeconds: (t.estimatedMinutes || 30) * 60,
-                    scheduledDate: t.scheduledDate || new Date().toISOString()
+                    scheduledDate: t.scheduledDate || localDateInputToUtcIso(todayLocalDate)
                 }))
             };
 
@@ -684,20 +720,7 @@ export function ModuleTasksPanel({
     };
 
     const formatTaskDeadline = (value?: string): string => {
-        if (!value) {
-            return 'N/A';
-        }
-
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) {
-            return value;
-        }
-
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
+        return formatLocalDate(value);
     };
 
     const handleToggleTaskExpand = (taskId: string) => {
@@ -763,6 +786,9 @@ export function ModuleTasksPanel({
     const isModuleCompleted = module.status === 'completed';
     const canSkipModule = !isModuleCompleted;
     const canTakeQuiz = allModuleTasksCompleted;
+    const isQuizActionLoading =
+        !isModuleCompleted &&
+        (isLoadingCurrentQuizAttempt || isFetchingCurrentQuizAttempt || !isFetchedCurrentQuizAttempt);
     const totalEstimatedTime = filteredTasks
         .filter(t => {
             if (t.isFromLockedModule) return false;
@@ -915,7 +941,15 @@ export function ModuleTasksPanel({
                     {viewFilter === 'module' && !isLocked && (
                         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-50">
                             {/* Quiz Actions - Show based on current attempt state */}
-                            {!isModuleCompleted && currentQuizAttemptId && canTakeQuiz ? (
+                            {isQuizActionLoading ? (
+                                <button
+                                    disabled
+                                    className="flex-1 sm:flex-none inline-flex justify-center items-center gap-2 px-4 py-2 rounded-xl bg-neutral-50 text-neutral-500 border border-neutral-200 text-sm font-medium"
+                                >
+                                    <LoadingSpinner size="sm" />
+                                    <span>Checking quiz status...</span>
+                                </button>
+                            ) : !isModuleCompleted && currentQuizAttemptId && canTakeQuiz ? (
                                 // Continue Take Quiz (when all tasks completed)
                                 <button
                                     onClick={handleContinueQuiz}
@@ -1003,11 +1037,22 @@ export function ModuleTasksPanel({
                                 <div className="flex items-center justify-end mb-2">
                                     <button
                                         onClick={handleSelectAll}
-                                        disabled={hasUnfinishedSession}
+                                        disabled={isSelectionDisabled}
                                         className="text-xs font-semibold text-violet-600 hover:text-violet-700 transition-colors disabled:text-neutral-400 disabled:cursor-not-allowed"
                                     >
                                         {selectedTaskIds.size === incompleteTasks.length ? 'Deselect All' : 'Select All'}
                                     </button>
+                                </div>
+                            )}
+
+                            {isModuleSelectionLocked && (
+                                <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                                    <p className="text-sm font-medium text-sky-800">
+                                        This module is completed.
+                                    </p>
+                                    <p className="text-xs text-sky-700 mt-1">
+                                        Task selection is disabled for completed modules.
+                                    </p>
                                 </div>
                             )}
 
@@ -1086,7 +1131,7 @@ export function ModuleTasksPanel({
                                 <div className="space-y-0 relative border border-neutral-200 rounded-2xl bg-white shadow-sm flex flex-col">
                                     {filteredTasks.map((task, index) => {
                                         const isSelected = selectedTaskIds.has(task.id);
-                                        const isDisabled = task.isCompleted || !!task.isFromLockedModule;
+                                        const isDisabled = task.isCompleted || !!task.isFromLockedModule || isModuleSelectionLocked;
                                         const isExpanded = expandedTaskIds.has(task.id);
                                         const isFirst = index === 0;
                                         const isLast = index === filteredTasks.length - 1;
@@ -1243,7 +1288,8 @@ export function ModuleTasksPanel({
                             </div>
                             <button
                                 onClick={handleStartLearning}
-                                className="flex-shrink-0 inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-neutral-900 shadow-lg transition-all duration-300 bg-gradient-to-r from-[#fec5fb] to-[#00bae2] shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5"
+                                disabled={isModuleSelectionLocked}
+                                className="flex-shrink-0 inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-neutral-900 shadow-lg transition-all duration-300 bg-gradient-to-r from-[#fec5fb] to-[#00bae2] shadow-[#00bae2]/20 hover:shadow-xl hover:shadow-[#00bae2]/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                             >
                                 {hasUnfinishedSession ? 'Continue Learning' : 'Start Learning'}
                                 <Play className="h-4 w-4" fill="currentColor" strokeWidth={1} />

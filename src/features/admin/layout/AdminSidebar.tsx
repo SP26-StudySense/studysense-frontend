@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -12,6 +13,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { ConfirmationModal } from "@/shared/ui";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 const sidebarItems = [
   {
@@ -38,6 +42,8 @@ const sidebarItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { logout, isLoggingOut } = useAuth();
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const isActive = (href: string) => {
     if (href === "/admin-dashboard") {
@@ -96,11 +102,32 @@ export function AdminSidebar() {
       <div className="border-t border-neutral-200 p-4">
         <Button
           variant="ghost"
+          disabled={isLoggingOut}
           className="flex w-full items-center justify-start gap-3 rounded-xl py-6 text-neutral-600 hover:bg-red-50 hover:text-red-600"
+          onClick={() => setIsLogoutConfirmOpen(true)}
         >
-          <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
-          <span className="text-sm font-medium">Log out</span>
+          {isLoggingOut ? (
+            <LoadingSpinner size="sm" />
+          ) : (
+            <>
+              <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
+              <span className="text-sm font-medium">Log out</span>
+            </>
+          )}
         </Button>
+
+        <ConfirmationModal
+          isOpen={isLogoutConfirmOpen}
+          onClose={() => setIsLogoutConfirmOpen(false)}
+          onConfirm={() => {
+            void logout();
+          }}
+          title="Log out"
+          description="Are you sure you want to log out of your account?"
+          confirmText="Log out"
+          cancelText="Stay logged in"
+          variant="danger"
+        />
       </div>
     </aside>
   );

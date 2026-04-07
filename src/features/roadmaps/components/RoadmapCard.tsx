@@ -1,16 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as LucideIcons from 'lucide-react';
 import { RoadmapTemplate, UserLearningRoadmap } from '../types';
 import { cn } from '@/shared/lib/utils';
 import { useStartLearning } from '../hooks/useStartLearning';
 import { useSessionStore } from '@/store/session.store';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
 import { SurveyTriggerType } from '@/features/survey/api/types';
 import { SurveyTriggerReason } from '@/features/survey/types';
+import { get } from '@/shared/api/client';
+import { endpoints } from '@/shared/api/endpoints';
+import { STUDY_PLAN } from '@/shared/lib/constants';
 import { showWarning, showInfo } from '@/shared/lib/toast';
+import { useUserMembership } from '@/features/membership/api/queries';
 
 interface RoadmapCardProps {
     roadmap: RoadmapTemplate | UserLearningRoadmap;
@@ -25,9 +30,36 @@ const difficultyColors = {
     advanced: 'bg-red-100 text-red-700 border-red-200',
 };
 
+function isFreePlan(subscriptionType: unknown): boolean {
+    if (typeof subscriptionType === 'number') {
+        return subscriptionType <= 1;
+    }
+
+    const raw = String(subscriptionType ?? '').trim().toLowerCase();
+    if (!raw) return true;
+
+    const asNumber = Number(raw);
+    if (!Number.isNaN(asNumber)) {
+        return asNumber <= 1;
+    }
+
+    if (raw.includes('premium') || raw.includes('pro') || raw.includes('paid')) {
+        return false;
+    }
+
+    return raw.includes('free');
+}
+
 export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStudyPlanMap }: RoadmapCardProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const { isAuthenticated, user } = useAuth();
+    const { data: membership } = useUserMembership(isAuthenticated);
+    const [isCheckingLimit, setIsCheckingLimit] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
+    const [autoTriggered, setAutoTriggered] = useState(false);
+
+    const isFreeUser = isFreePlan(membership?.subscriptionType ?? user?.subscriptionType);
 
     // Check if this roadmap already has a study plan
     const hasExistingPlan = existingRoadmapIds?.has(Number(roadmap.id)) ?? false;
@@ -42,14 +74,35 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
         return 'progress' in r;
     };
 
+    // Auto-trigger if startRoadmapId query param matches this card's roadmap
+    useEffect(() => {
+        const startRoadmapId = searchParams.get('startRoadmapId');
+        if (startRoadmapId && !autoTriggered && variant === 'template' && Number(roadmap.id) === parseInt(startRoadmapId, 10)) {
+            console.log(`🎯 Auto-triggering startLearning for roadmap #${roadmap.id}`);
+            setAutoTriggered(true);
+            // Delay slightly to ensure component is ready
+            setTimeout(() => handleClickInternal(), 100);
+        }
+    }, [searchParams, autoTriggered, variant, roadmap.id]);
+
     const handleClick = async () => {
-        if (isCheckingSurvey || isLoading) return;
+        await handleClickInternal();
+    };
+
+    const handleClickInternal = async () => {
+        if (isCheckingLimit || isCheckingSurvey || isLoading) return;
 
         if (variant === 'learning' && isLearningRoadmap(roadmap)) {
             // Continue learning -> go to dashboard
             setActiveStudyPlanId(roadmap.studyPlanId);
             router.push(`/dashboard/${roadmap.studyPlanId}`);
         } else {
+            if (!isAuthenticated) {
+                const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                router.push(`/login?callbackUrl=${callbackUrl}`);
+                return;
+            }
+
             // Check if roadmap already has a study plan, redirect to dashboard instead of survey
             if (hasExistingPlan && roadmapToStudyPlanMap) {
                 const existingStudyPlanId = roadmapToStudyPlanMap.get(Number(roadmap.id));
@@ -61,29 +114,73 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
                 }
             }
 
+            // Check free-plan limit first before any survey/create flow.
+            if (isFreeUser) {
+                setIsCheckingLimit(true);
+                try {
+                    const limitCheck = await get<{
+                        maxRoadmaps: number;
+                        joinedRoadmaps: number;
+                        hasReachedLimit: boolean;
+                    }>(endpoints.studyPlans.checkRoadmapLimit);
+
+                    const reachedLimit = limitCheck.hasReachedLimit;
+                    const maxRoadmaps = limitCheck.maxRoadmaps || STUDY_PLAN.MAX_JOINED_ROADMAPS;
+
+                    if (reachedLimit) {
+                        showWarning(
+                            `Free plan allows up to ${maxRoadmaps} joined roadmaps. Please upgrade to continue.`,
+                            { duration: 5000 }
+                        );
+                        router.push('/membership');
+                        return;
+                    }
+                } catch {
+                    showWarning('Cannot verify your free-plan roadmap limit right now. Please try again.', {
+                        duration: 4000,
+                    });
+                    return;
+                } finally {
+                    setIsCheckingLimit(false);
+                }
+            }
+
             // Check for pending ON_START_ROADMAP survey before creating study plan
             setIsCheckingSurvey(true);
             try {
-                const pending = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
-                if (pending.hasPendingSurvey && pending.surveyCode) {
-                    // Redirect user to survey first; after submission, come back with startRoadmapId
+                 // 1. Check ON_REGISTER (global)
+                const registerSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_REGISTER);
+
+                if (registerSurvey.hasPendingSurvey && registerSurvey.surveyCode) {
                     const params = new URLSearchParams({
-                        triggerReason: SurveyTriggerReason.RESURVEY,
+                        triggerReason: SurveyTriggerReason.INITIAL,
                         returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
-                        roadmapId: roadmap.id.toString(),
                     });
-                    router.push(`/surveys/${pending.surveyCode}?${params.toString()}`);
+                    router.push(`/surveys/${registerSurvey.surveyCode}?${params.toString()}`);
                     return;
                 }
 
-                // Survey exists but user is blocked — show informative message
-                if (pending.blockedReason === 'MaxAttemptsExceeded') {
+                // 2. Check ON_START_ROADMAP (contextual)
+                const roadmapSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
+
+                if (roadmapSurvey.hasPendingSurvey && roadmapSurvey.surveyCode) {
+                    const params = new URLSearchParams({
+                    triggerReason: SurveyTriggerReason.RESURVEY,
+                    returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                    roadmapId: roadmap.id.toString(),
+                    });
+
+                    router.push(`/surveys/${roadmapSurvey.surveyCode}?${params.toString()}`);
+                    return;
+                }
+                                // Survey exists but user is blocked — show informative message
+                if (roadmapSurvey.blockedReason === 'MaxAttemptsExceeded') {
                     showInfo(
-                        `You have already completed this survey ${pending.completedAttempts} time${pending.completedAttempts !== 1 ? 's' : ''} (max ${pending.maxAttempts}). Proceeding to start learning.`,
+                        `You have already completed this survey ${roadmapSurvey.completedAttempts} time${roadmapSurvey.completedAttempts !== 1 ? 's' : ''} (max ${roadmapSurvey.maxAttempts}). Proceeding to start learning.`,
                         { duration: 5000 }
                     );
-                } else if (pending.blockedReason === 'CooldownActive' && pending.cooldownEndsAt) {
-                    const endsAt = new Date(pending.cooldownEndsAt);
+                } else if (roadmapSurvey.blockedReason === 'CooldownActive' && roadmapSurvey.cooldownEndsAt) {
+                    const endsAt = new Date(roadmapSurvey.cooldownEndsAt);
                     const diffMs = endsAt.getTime() - Date.now();
                     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
                     showWarning(
@@ -211,16 +308,16 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
             {/* Footer Action */}
             <div className="mt-auto border-t border-neutral-100 p-4 bg-neutral-50/50 group-hover:bg-neutral-50 transition-colors">
                 <button 
-                  disabled={isCheckingSurvey || isLoading} 
+                                    disabled={isCheckingLimit || isCheckingSurvey || isLoading} 
                   className="w-full flex items-center justify-center gap-2 text-sm font-medium text-neutral-700 group-hover:text-[#00bae2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isCheckingSurvey || isLoading ? (
+                                        {isCheckingLimit || isCheckingSurvey || isLoading ? (
                         <>
                             <LucideIcons.Loader2 className="h-4 w-4 animate-spin" />
-                            {isCheckingSurvey ? 'Checking...' : 'Creating Plan...'}
+                                                        {isCheckingLimit ? 'Checking limit...' : isCheckingSurvey ? 'Checking...' : 'Creating Plan...'}
                         </>
                     ) : (
                         <>
-                            {variant === 'template' ? 'Start Learning' : 'Continue'}
+                            {variant === 'learning' ? 'Continue' : (!hasExistingPlan ? 'Start Learning' : 'Continue')}
                             <LucideIcons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                         </>
                     )}

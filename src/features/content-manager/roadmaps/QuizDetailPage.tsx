@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ContentManagerLoading } from "../components";
 import {
   useCreateAiQuizQuestions,
   useCreateQuizQuestion,
@@ -712,6 +714,10 @@ export function QuizDetailPage() {
     );
   }
 
+  if (quizDetailQuery.isLoading && !quizDetailQuery.data) {
+    return <ContentManagerLoading variant="page" title="Loading quiz..." />;
+  }
+
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -728,9 +734,7 @@ export function QuizDetailPage() {
           </button>
           <div>
             <h1 className="text-xl font-bold text-neutral-900">
-              {quizDetailQuery.isLoading
-                ? "Loading..."
-                : (quizDetailQuery.data?.quizDto?.title ?? "Quiz Detail")}
+              {quizDetailQuery.data?.quizDto?.title ?? "Quiz Detail"}
             </h1>
             {quizDetailQuery.data?.quizDto?.description && (
               <p className="text-sm text-neutral-500 mt-0.5">
@@ -791,10 +795,12 @@ export function QuizDetailPage() {
         </div>
 
         {quizQuestionsQuery.isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-neutral-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading questions...
-          </div>
+          <ContentManagerLoading
+            variant="inline"
+            size="sm"
+            title="Loading questions..."
+            className="justify-start py-2"
+          />
         ) : quizQuestionsQuery.isError ? (
           <p className="text-sm text-red-600">Cannot load quiz questions.</p>
         ) : existingQuestions.length === 0 ? (
@@ -1336,7 +1342,7 @@ export function QuizDetailPage() {
             >
               {createQuestionMutation.isPending ? (
                 <span className="inline-flex items-center justify-center gap-1.5">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <ContentManagerLoading variant="icon" size="sm" />
                   Saving...
                 </span>
               ) : (
@@ -1347,7 +1353,7 @@ export function QuizDetailPage() {
         </div>
       )}
 
-      {isAiModalOpen && (
+      {isAiModalOpen && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-neutral-950/55 backdrop-blur-sm"
@@ -1390,7 +1396,7 @@ export function QuizDetailPage() {
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-neutral-700">
-                    Question Count
+                    Number Of Questions
                   </label>
                   <input
                     type="number"
@@ -1427,11 +1433,13 @@ export function QuizDetailPage() {
               )}
 
               {createAiQuizQuestionsMutation.isPending ? (
-                <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#00bae2]/30 bg-[#00bae2]/5 px-6 text-center">
-                  <Loader2 className="mb-3 h-8 w-8 animate-spin text-[#00bae2]" />
-                  <p className="text-sm font-medium text-neutral-800">AI is generating quiz questions...</p>
-                  <p className="mt-1 text-xs text-neutral-500">This may take a few seconds depending on the prompt context.</p>
-                </div>
+                <ContentManagerLoading
+                  variant="section"
+                  size="md"
+                  title="AI is generating quiz questions..."
+                  description="This may take a few seconds depending on the prompt context."
+                  className="border-dashed border-[#00bae2]/30 bg-[#00bae2]/5"
+                />
               ) : aiResponse ? (
                 aiDraftQuestions.length > 0 ? (
                   <div className="space-y-4">
@@ -1644,7 +1652,7 @@ export function QuizDetailPage() {
                   >
                     {createQuestionMutation.isPending ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <ContentManagerLoading variant="icon" size="sm" />
                         Saving...
                       </>
                     ) : (
@@ -1667,7 +1675,7 @@ export function QuizDetailPage() {
                 >
                   {createAiQuizQuestionsMutation.isPending ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <ContentManagerLoading variant="icon" size="sm" />
                       Generating...
                     </>
                   ) : (
@@ -1680,7 +1688,8 @@ export function QuizDetailPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -25,6 +25,9 @@ export interface NotificationItem {
   isRead: boolean;
   readAt?: string | null;
   createdAt: string;
+  status?: string | null;
+  actionUrl?: string | null;
+  dedupeKey?: string | null;
 }
 
 export interface GetMyNotificationsResponse {
@@ -56,6 +59,9 @@ export interface RealtimeNotification {
   relatedSessionId?: string | null;
   isRead: boolean;
   createdAt: string;
+  status?: string | null;
+  actionUrl?: string | null;
+  dedupeKey?: string | null;
 }
 
 export interface RegisterPushTokenRequest {

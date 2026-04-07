@@ -98,7 +98,7 @@ export const routes = {
 
   // Analyst routes
   analyst: {
-    home: '/analyst-survey',
+    home: '/analyst-dashboard',
     survey: '/analyst-survey',
     triggerMapping: '/analyst-triggermapping',
   },
@@ -144,7 +144,7 @@ export const authRoutes = [
   routes.auth.verifyEmail,
 ];
 
-export const protectedRoutes = ['/dashboard', '/study-plans', '/roadmaps', '/sessions', '/profile', '/settings', '/membership'];
+export const protectedRoutes = ['/dashboard', '/study-plans', '/sessions', '/profile', '/settings', '/membership'];
 
 export const adminRoutes = ['/admin-dashboard', '/admin-users', '/admin-categories', '/admin-transactions'];
 

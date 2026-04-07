@@ -1,4 +1,5 @@
 import { RoadmapDetailPage } from '@/features/roadmaps/RoadmapDetailPage';
+import { EnrollmentGuard } from '@/features/study-plan/components/enrollment-guard';
 
 interface PageProps {
     params: Promise<{
@@ -8,5 +9,9 @@ interface PageProps {
 
 export default async function MyRoadmapRoute({ params }: PageProps) {
     const { id } = await params;
-    return <RoadmapDetailPage studyPlanId={parseInt(id)} />;
+    return (
+        <EnrollmentGuard studyPlanId={id}>
+            <RoadmapDetailPage studyPlanId={parseInt(id)} />
+        </EnrollmentGuard>
+    );
 }

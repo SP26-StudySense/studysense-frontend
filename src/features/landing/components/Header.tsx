@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import { GitFork, ChevronRight, Crown } from 'lucide-react';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -19,14 +20,14 @@ function hasPaidSubscription(subscriptionType: unknown): boolean {
     return normalized.includes('premium') || normalized.includes('pro');
 }
 
-function MembershipNavLink({ isPremium }: { isPremium: boolean }) {
+function MembershipNavLink({ isPremium, mounted }: { isPremium: boolean; mounted: boolean }) {
 
     return (
         <Link
             href="/membership"
             className="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
         >
-            {isPremium && <Crown className="h-3.5 w-3.5 text-amber-500" />}
+            {mounted && isPremium && <Crown className="h-3.5 w-3.5 text-amber-500" />}
             Membership
         </Link>
     );
@@ -44,9 +45,15 @@ function UpgradePlanNavLink() {
 }
 
 export const Header = () => {
+    const [mounted, setMounted] = useState(false);
     const { navigateWithTransition } = useTransitionRouter();
     const { isAuthenticated, isLoading, user } = useAuth();
     const { data: membership } = useUserMembership(isAuthenticated);
+    
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const isSubscribed = hasPaidSubscription(membership?.subscriptionType ?? user?.subscriptionType);
 
     return (
@@ -86,12 +93,12 @@ export const Header = () => {
                     >
                         About Us
                     </Link>
-                    <MembershipNavLink isPremium={isSubscribed} />
-                    {(!isAuthenticated || !isSubscribed) && <UpgradePlanNavLink />}
+                    <UpgradePlanNavLink />
+                    <MembershipNavLink isPremium={isSubscribed} mounted={mounted} />
                 </nav>
 
                 <div className="flex items-center gap-x-4">
-                    {isLoading ? (
+                    {!mounted || isLoading ? (
                         <div className="h-8 w-8 rounded-full bg-neutral-200 animate-pulse" />
                     ) : isAuthenticated ? (
                         <>

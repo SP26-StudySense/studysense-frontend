@@ -4,9 +4,13 @@
  */
 
 import { get, post, put, del } from '@/shared/api/client';
+import { RoadmapStatus } from './types';
 import type {
   // Request types
   GetRoadmapsParams,
+  GetManagerRoadmapsParams,
+  GetContentManagerStatsParams,
+  CreateRoadmapRequest,
   GetNodeContentsRequest,
   CreateRoadmapGraphRequest,
   SyncRoadmapGraphRequest,
@@ -15,6 +19,7 @@ import type {
   DeleteEdgeRequest,
   DeleteContentRequest,
   CreateQuizRequest,
+  UpdateQuizRequest,
   CreateQuizQuestionRequest,
   CreateAiQuizQuestionsRequest,
   UpdateQuizQuestionRequest,
@@ -27,6 +32,9 @@ import type {
   GetQuizByIdRequest,
   // Response types
   GetRoadmapsResponse,
+  GetManagerSubjectsResponse,
+  GetContentManagerStatsResponse,
+  CreateRoadmapResponse,
   RoadmapDetail,
   NodeContent,
   CreateRoadmapGraphResponse,
@@ -36,6 +44,7 @@ import type {
   DeleteEdgeResponse,
   DeleteContentResponse,
   CreateQuizResponse,
+  UpdateQuizResponse,
   CreateQuizQuestionResponse,
   CreateAiQuizQuestionsResponse,
   UpdateQuizQuestionDto,
@@ -78,8 +87,11 @@ export const cmQueryKeys = {
     [...cmQueryKeys.roadmaps(), 'list', params] as const,
   roadmapDetail: (id: number) =>
     [...cmQueryKeys.roadmaps(), 'detail', id] as const,
-  managerRoadmaps: (params: Omit<GetRoadmapsParams, 'subjectId'>) =>
+  managerRoadmaps: (params: GetManagerRoadmapsParams) =>
     [...cmQueryKeys.roadmaps(), 'manager', params] as const,
+  managerSubjects: () => [...cmQueryKeys.all, 'manager-subjects'] as const,
+  managerStats: (params?: GetContentManagerStatsParams) =>
+    [...cmQueryKeys.all, 'manager-stats', params ?? {}] as const,
   nodeContents: (roadmapId: number, nodeId: number) =>
     [...cmQueryKeys.all, 'contents', roadmapId, nodeId] as const,
   quizzes: () => [...cmQueryKeys.all, 'quizzes'] as const,
@@ -102,6 +114,15 @@ export async function getRoadmaps(
   return get<GetRoadmapsResponse>(`/roadmaps${queryString}`);
 }
 
+export async function createRoadmap(
+  request: CreateRoadmapRequest
+): Promise<CreateRoadmapResponse> {
+  return post<CreateRoadmapResponse>('/roadmaps', {
+    ...request,
+    status: request.status ?? RoadmapStatus.Draft,
+  });
+}
+
 export async function getRoadmapDetail(
   roadmapId: number
 ): Promise<RoadmapDetail> {
@@ -109,10 +130,21 @@ export async function getRoadmapDetail(
 }
 
 export async function getManagerRoadmaps(
-  params: Omit<GetRoadmapsParams, 'subjectId'>
+  params: GetManagerRoadmapsParams
 ): Promise<GetRoadmapsResponse> {
   const queryString = buildQueryString(params);
   return get<GetRoadmapsResponse>(`/roadmaps/manager${queryString}`);
+}
+
+export async function getSubjectsByContentManager(): Promise<GetManagerSubjectsResponse> {
+  return get<GetManagerSubjectsResponse>('/learning-subjects/manager');
+}
+
+export async function getContentManagerStats(
+  params?: GetContentManagerStatsParams
+): Promise<GetContentManagerStatsResponse> {
+  const queryString = buildQueryString(params ?? {});
+  return get<GetContentManagerStatsResponse>(`/content-manager/stats${queryString}`);
 }
 
 export async function deleteRoadmap(
@@ -166,10 +198,10 @@ export async function createRoadmapGraph(
 export async function syncRoadmapGraph(
   request: SyncRoadmapGraphRequest
 ): Promise<SyncRoadmapGraphResponse> {
-  const { roadmapId, ...graphData } = request;
+  const { roadmapId } = request;
   return put<SyncRoadmapGraphResponse>(
     `/roadmaps/${roadmapId}/graph`,
-    graphData
+    request
   );
 }
 
@@ -189,6 +221,14 @@ export async function createQuiz(
   request: CreateQuizRequest
 ): Promise<CreateQuizResponse> {
   return post<CreateQuizResponse>('/quiz', request);
+}
+
+export async function updateQuiz(
+  request: UpdateQuizRequest
+): Promise<UpdateQuizResponse> {
+  return put<UpdateQuizResponse>(`/quiz/${request.id}`, {
+    updateQuizNodeDto: request.updateQuizNodeDto,
+  });
 }
 
 export async function createQuizQuestion(

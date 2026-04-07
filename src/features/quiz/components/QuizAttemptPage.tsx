@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Loader2, RotateCcw, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, RotateCcw, XCircle } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 import {
   QuizAttemptStatus,
@@ -78,6 +79,7 @@ export function QuizAttemptPage({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<QuizConfirmDialogType>('simple');
   const [isDialogLoading, setIsDialogLoading] = useState(false);
+  const [isSubmitFlowPending, setIsSubmitFlowPending] = useState(false);
   const dialogPromiseResolveRef = useRef<((value: boolean) => void) | null>(null);
 
   useEffect(() => {
@@ -265,6 +267,7 @@ export function QuizAttemptPage({
     result?.quizAttempt.status === QuizAttemptStatus.Passed || result?.quizAttempt.status === "Passed";
   const correctCount = result?.questions.filter((question) => question.isCorrect).length ?? 0;
   const currentQuestion = orderedQuestions[currentQuestionIndex];
+  const isSubmitPending = isSubmitFlowPending || isSaving || isSubmitting;
   const isFirstQuestion = currentQuestionIndex === 0;
   const isLastQuestion = questionCount > 0 && currentQuestionIndex === questionCount - 1;
 
@@ -273,12 +276,30 @@ export function QuizAttemptPage({
   const headerDescription = quizMeta?.description || quizDescription;
   const headerLevel = quizMeta?.level || level;
   const headerPassingScore = quizMeta?.passingScore;
+  const isInitialLoading = !result && !error && (!questionsData || !attemptId || isCreating);
+  const handleQuestionJump = (index: number) => {
+    if (index < 0 || index >= questionCount) return;
+    setCurrentQuestionIndex(index);
+  };
 
-  if (isCreating && !questionsData) {
+  const handleSubmitClick = useCallback(async () => {
+    if (isSubmitPending) return;
+
+    setIsSubmitFlowPending(true);
+    try {
+      await submitAttempt();
+    } finally {
+      setIsSubmitFlowPending(false);
+    }
+  }, [isSubmitPending, submitAttempt]);
+
+  if (isInitialLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] flex items-center justify-center px-4">
         <div className="rounded-3xl bg-white/90 border border-neutral-200/60 p-8 w-full max-w-xl text-center shadow-xl shadow-neutral-900/10">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00bae2] mx-auto mb-4" />
+          <div className="mb-4 flex justify-center">
+            <LoadingSpinner size="lg" />
+          </div>
           <h1 className="text-xl font-bold text-neutral-900 mb-2">{loadingTitle || `Preparing your ${level} quiz`}</h1>
           <p className="text-sm text-neutral-500">{loadingDescription || 'Generating questions for this module...'}</p>
         </div>
@@ -441,114 +462,157 @@ export function QuizAttemptPage({
             )}
           </div>
 
-          <div className="mt-5">
-            <div className="flex justify-between text-sm text-neutral-500 mb-2">
-              <span>Progress</span>
-              <span>
-                {answeredCount}/{questionCount} answered
+          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="lg:sticky lg:top-6 h-fit rounded-3xl bg-white/95 border border-neutral-200/70 p-4 shadow-xl shadow-neutral-900/10">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-neutral-900">Question Tracker</h2>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Click a number to jump to that question.
+                </p>
+              </div>
+              <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold text-neutral-700">
+                {answeredCount}/{questionCount}
               </span>
             </div>
-            <div className="h-2 w-full rounded-full bg-neutral-200 overflow-hidden">
+
+            <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-5">
+              {orderedQuestions.map((question, index) => {
+                const isCurrent = index === currentQuestionIndex;
+                const isAnswered = answers[question.questionId] != null;
+
+                return (
+                  <button
+                    key={question.questionId}
+                    onClick={() => handleQuestionJump(index)}
+                    className={`h-10 rounded-xl border text-sm font-semibold transition-all ${
+                      isCurrent
+                        ? 'border-[#00bae2] bg-[#00bae2] text-white shadow-md shadow-cyan-500/20'
+                        : isAnswered
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50'
+                    }`}
+                    aria-label={`Go to question ${index + 1}`}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] text-neutral-600">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#00bae2]" />
+                Current
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                Answered
+              </div>
+              <div className="col-span-2 flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-neutral-300" />
+                Not answered
+              </div>
+            </div>
+
+            <div className="mt-4 h-2 w-full rounded-full bg-neutral-200 overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#00bae2] to-emerald-500 transition-all"
                 style={{ width: questionCount > 0 ? `${(answeredCount / questionCount) * 100}%` : '0%' }}
               />
             </div>
-          </div>
 
-          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-        </div>
-
-        <div className="space-y-4">
-          {currentQuestion && (
-            <div
-              key={currentQuestion.questionId}
-              className="rounded-3xl bg-white/90 border border-neutral-200/60 p-5 sm:p-6 shadow-xl shadow-neutral-900/10"
-            >
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <p className="text-xs uppercase tracking-wide text-neutral-500">
-                  Question {currentQuestionIndex + 1} of {questionCount}
-                </p>
-                <span className="text-xs font-medium text-neutral-500">
-                  {answers[currentQuestion.questionId] != null ? 'Answered' : 'Not answered'}
-                </span>
-              </div>
-              <p className="text-lg font-semibold text-neutral-900">{currentQuestion.prompt}</p>
-
-              <div className="mt-4 grid grid-cols-1 gap-2.5">
-                {(shuffledOptionsByQuestionId[currentQuestion.questionId] ?? currentQuestion.options).map((option) => {
-                  const isSelected = answers[currentQuestion.questionId] === option.optionId;
-
-                  return (
-                    <button
-                      key={option.optionId}
-                      onClick={() => setAnswer(currentQuestion.questionId, option.optionId)}
-                      className={`w-full text-left rounded-2xl border px-4 py-3 transition-all ${
-                        isSelected
-                          ? 'border-[#00bae2] bg-[#00bae2]/10 text-neutral-900'
-                          : 'border-neutral-200 hover:border-neutral-300 bg-white'
-                      }`}
-                    >
-                      <span className="text-xs font-bold text-neutral-500 mr-2">{option.valueKey}.</span>
-                      <span className="text-sm font-medium">{option.displayText}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl bg-white/95 border border-neutral-200 px-5 py-4 shadow-lg sticky bottom-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-sm text-neutral-500">
+            <p className="mt-3 text-xs text-neutral-500">
               {allAnswered
                 ? 'All questions answered. You can submit now.'
-                : 'Please answer all questions before submitting.'}
+                : 'Answer all questions before submitting.'}
             </p>
-            <div className="flex items-center gap-2 justify-end">
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setCurrentQuestionIndex((prev) => Math.max(prev - 1, 0))}
+                disabled={isFirstQuestion}
+                className="inline-flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Back
+              </button>
+
+              <button
+                onClick={() => setCurrentQuestionIndex((prev) => Math.min(prev + 1, questionCount - 1))}
+                disabled={isLastQuestion || questionCount === 0}
+                className="inline-flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Forward
+              </button>
+
               <button
                 onClick={saveAnswers}
                 disabled={!hasUnsavedChanges || isSaving || isSubmitting}
-                className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="col-span-2 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : 'Save Progress'}
               </button>
 
               <button
-                onClick={() => setCurrentQuestionIndex((prev) => Math.max(prev - 1, 0))}
-                disabled={isFirstQuestion}
-                className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSubmitClick}
+                disabled={!allAnswered || isSubmitPending}
+                className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#00bae2] to-emerald-500 hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                {isSubmitPending ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    {isSaving ? 'Saving answers...' : 'Submitting...'}
+                  </>
+                ) : (
+                  'Submit Quiz'
+                )}
               </button>
-
-              {!isLastQuestion ? (
-                <button
-                  onClick={() => setCurrentQuestionIndex((prev) => Math.min(prev + 1, questionCount - 1))}
-                  disabled={questionCount === 0}
-                  className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#00bae2] to-emerald-500 hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  onClick={submitAttempt}
-                  disabled={!allAnswered || isSubmitting}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#00bae2] to-emerald-500 hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Quiz'
-                  )}
-                </button>
-              )}
             </div>
-          </div>
+          </aside>
+
+          <section className="space-y-4">
+            {currentQuestion && (
+              <div
+                key={currentQuestion.questionId}
+                className="rounded-3xl bg-white/90 border border-neutral-200/60 p-5 sm:p-6 shadow-xl shadow-neutral-900/10"
+              >
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-xs uppercase tracking-wide text-neutral-500">
+                    Question {currentQuestionIndex + 1} of {questionCount}
+                  </p>
+                  <span className="text-xs font-medium text-neutral-500">
+                    {answers[currentQuestion.questionId] != null ? 'Answered' : 'Not answered'}
+                  </span>
+                </div>
+                <p className="text-lg font-semibold text-neutral-900">{currentQuestion.prompt}</p>
+
+                <div className="mt-4 grid grid-cols-1 gap-2.5">
+                  {(shuffledOptionsByQuestionId[currentQuestion.questionId] ?? currentQuestion.options).map((option, optionIndex) => {
+                    const isSelected = answers[currentQuestion.questionId] === option.optionId;
+                    const displayLabel = optionIndex < 26 ? String.fromCharCode(65 + optionIndex) : `${optionIndex + 1}`;
+
+                    return (
+                      <button
+                        key={option.optionId}
+                        onClick={() => setAnswer(currentQuestion.questionId, option.optionId)}
+                        className={`w-full text-left rounded-2xl border px-4 py-3 transition-all ${
+                          isSelected
+                            ? 'border-[#00bae2] bg-[#00bae2]/10 text-neutral-900'
+                            : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                        }`}
+                      >
+                        <span className="text-xs font-bold text-neutral-500 mr-2">{displayLabel}.</span>
+                        <span className="text-sm font-medium">{option.displayText}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
         </div>
 
         {/* Navigation Confirmation Dialog */}

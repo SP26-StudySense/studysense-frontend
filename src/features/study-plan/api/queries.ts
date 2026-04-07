@@ -10,7 +10,7 @@ import { StudyPlanDto, TaskItemDto } from './types';
  * Hook to fetch user's study plans from /study-plans/user
  * Note: API client auto-adds /api/ prefix and auto-unwraps { data: ... } wrapper
  */
-export function useStudyPlans() {
+export function useStudyPlans(enabled = true) {
   return useQuery({
     queryKey: ['studyPlans', 'user'] as const,
     queryFn: async () => {
@@ -18,6 +18,7 @@ export function useStudyPlans() {
       const data = await get<StudyPlanItem[]>('/study-plans/user');
       return data || [];
     },
+    enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
