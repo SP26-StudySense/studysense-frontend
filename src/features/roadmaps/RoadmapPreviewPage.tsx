@@ -6,7 +6,7 @@ import { ArrowLeft, ExternalLink } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
-import { RoadmapGraphDTO } from './api';
+import { RoadmapGraphDTO, RoadmapNodeDTO } from './api';
 import { RoadmapTemplate } from './types';
 import { RoadmapPreviewGraph } from './components/RoadmapPreviewGraph';
 import { useStartLearning } from './hooks/useStartLearning';
@@ -60,11 +60,13 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const { data: membership } = useUserMembership(isAuthenticated);
     const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
     const [roadmap, setRoadmap] = useState<RoadmapTemplate | null>(null);
+    const [roadmapNodes, setRoadmapNodes] = useState<RoadmapNodeDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>('overview');
     const [isCheckingLimit, setIsCheckingLimit] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
+    const [isExpandedNodes, setIsExpandedNodes] = useState(false);
     const { startLearning, isLoading } = useStartLearning();
     const isFreeUser = isFreePlan(membership?.subscriptionType ?? user?.subscriptionType);
     const existingStudyPlanId = roadmap
@@ -76,6 +78,8 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
             try {
                 setLoading(true);
                 const data = await get<RoadmapGraphDTO>(endpoints.roadmaps.byId(roadmapId));
+                
+                console.log('🔍 [RoadmapPreviewPage] API Response:', data);
                 
                 if (!data) {
                     setError('Roadmap not found');
@@ -93,6 +97,8 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                     icon: 'Map',
                 };
                 setRoadmap(template);
+                setRoadmapNodes(data?.nodes ?? []);
+                console.log('✅ [RoadmapPreviewPage] Nodes set:', data?.nodes);
             } catch (err) {
                 setError('Failed to load roadmap');
                 console.error(err);
@@ -342,11 +348,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                     {activeTab === 'overview' ? (
                         <div className="space-y-8 sm:space-y-10">
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pb-8 border-b border-neutral-200">
-                            <div className="p-1">
-                                <div className="text-sm text-neutral-600 mb-2">Duration</div>
-                                <div className="text-3xl sm:text-4xl font-bold text-neutral-900">{roadmap.estimatedHours}h</div>
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-8 border-b border-neutral-200">
                             <div className="p-1">
                                 <div className="text-sm text-neutral-600 mb-2">Total Nodes</div>
                                 <div className="text-3xl sm:text-4xl font-bold text-neutral-900">{roadmap.totalNodes}</div>
@@ -357,32 +359,35 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                             </div>
                         </div>
 
-                        {/* What You'll Learn */}
-                        <div className="pt-0">
-                            <h3 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-5 sm:mb-6">What You'll Learn</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                                {getWhatYouLearn(roadmap.category).map((item, index) => (
-                                    <div key={index} className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#00bae2]/10 flex items-center justify-center mt-1">
-                                            <div className="w-2 h-2 rounded-full bg-[#00bae2]" />
-                                        </div>
-                                        <p className="text-neutral-700">{item}</p>
-                                    </div>
-                                ))}
+                        {/* What You'll Learn - Display Nodes */}
+                        {roadmapNodes.length > 0 && (
+                            <div className="pt-0">
+                                <h3 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-5 sm:mb-6">Learning Path</h3>
+                                <div className="space-y-3">
+                                    {roadmapNodes
+                                        .sort((a, b) => (a.orderNo ?? 0) - (b.orderNo ?? 0))
+                                        .slice(0, isExpandedNodes ? undefined : 5)
+                                        .map((node, index) => (
+                                            <div key={node.id} className="flex items-start gap-3 p-3 rounded-lg bg-neutral-50 hover:bg-neutral-100 transition-colors">
+                                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#00bae2]/20 flex items-center justify-center mt-0.5">
+                                                    <span className="text-xs font-semibold text-[#00bae2]">{index + 1}</span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-neutral-900">{node.title}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                                {roadmapNodes.length > 5 && (
+                                    <button
+                                        onClick={() => setIsExpandedNodes(!isExpandedNodes)}
+                                        className="mt-4 px-4 py-2 rounded-lg border border-[#00bae2] text-[#00bae2] font-medium hover:bg-[#00bae2]/5 transition-colors"
+                                    >
+                                        {isExpandedNodes ? '▲ Show Less' : '▼ Show More'} ({roadmapNodes.length} total)
+                                    </button>
+                                )}
                             </div>
-                        </div>
-
-                        {/* Prerequisites */}
-                        <div className="pt-5 border-t border-neutral-200">
-                            <h3 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-5 sm:mb-6">Prerequisites</h3>
-                            <div className="flex flex-wrap gap-3">
-                                {getPrerequisites(roadmap.difficulty).map((prereq, index) => (
-                                    <span key={index} className="px-4 py-2 rounded-full bg-neutral-100 text-sm text-neutral-700 border border-neutral-200">
-                                        {prereq}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
+                        )}
                         </div>
                     ) : (
                         <div className="overflow-hidden border-y border-neutral-200">
@@ -421,58 +426,4 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
             </div>
         </div>
     );
-}
-
-// Helper functions to generate preview content
-function getWhatYouLearn(category: string): string[] {
-    const learning: Record<string, string[]> = {
-        frontend: [
-            'Build responsive and accessible user interfaces',
-            'Master modern JavaScript frameworks and libraries',
-            'Understand state management and component architecture',
-            'Implement best practices for performance optimization',
-        ],
-        backend: [
-            'Design and implement RESTful APIs',
-            'Work with databases and data modeling',
-            'Implement authentication and authorization',
-            'Build scalable server-side applications',
-        ],
-        devops: [
-            'Set up CI/CD pipelines for automated deployments',
-            'Containerize applications with Docker',
-            'Orchestrate containers with Kubernetes',
-            'Monitor and optimize infrastructure',
-        ],
-        'ai-data': [
-            'Understand machine learning fundamentals',
-            'Build and train neural network models',
-            'Work with data preprocessing and analysis',
-            'Deploy AI models in production',
-        ],
-        mobile: [
-            'Build native mobile applications',
-            'Implement mobile-specific UI/UX patterns',
-            'Work with device features and APIs',
-            'Optimize app performance and battery usage',
-        ],
-        other: [
-            'Master advanced programming concepts',
-            'Design scalable system architectures',
-            'Apply software engineering best practices',
-            'Solve complex technical challenges',
-        ],
-    };
-
-    return learning[category] || learning.other;
-}
-
-function getPrerequisites(difficulty: string): string[] {
-    const prerequisites: Record<string, string[]> = {
-        beginner: ['Basic computer skills', 'Willingness to learn'],
-        intermediate: ['Programming fundamentals', 'Basic web/software concepts', '1-2 years experience'],
-        advanced: ['Strong programming background', '3+ years experience', 'Computer science fundamentals'],
-    };
-
-    return prerequisites[difficulty] || prerequisites.beginner;
 }
