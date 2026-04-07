@@ -130,7 +130,12 @@ export function RoleGuard({
 }: RoleGuardProps) {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
+  const [mounted, setMounted] = useState(false);
   const destination = redirectTo ?? routes.dashboard.home;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const userHasAllowedRole = hasAllowedRole(user?.roles, allowedRoles);
@@ -140,6 +145,11 @@ export function RoleGuard({
   }, [user, isLoading, allowedRoles, router, destination]);
 
   const userHasAllowedRole = hasAllowedRole(user?.roles, allowedRoles);
+
+  // Keep SSR and first client render consistent to avoid hydration mismatch.
+  if (!mounted || isLoading) {
+    return fallback || <DefaultLoading />;
+  }
 
   if (!user || !userHasAllowedRole) {
     return fallback || <DefaultLoading />;
