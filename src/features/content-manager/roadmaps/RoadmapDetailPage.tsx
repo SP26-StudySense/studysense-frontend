@@ -19,7 +19,7 @@ import {
 import { CMSRoadmapGraph } from "../components/CMSRoadmapGraph";
 import { ContentManagerLoading } from "../components";
 import { useRoadmapDetail, useNodeContents, useQuizzesByNode } from "../api/queries";
-import { useCreateQuiz, useDeleteQuiz, useSyncRoadmapGraph } from "../api/mutations";
+import { useCreateQuiz, useDeleteQuiz, useSyncRoadmapGraph, useUpdateQuiz } from "../api/mutations";
 import { toast } from "@/shared/lib";
 import type {
   RoadmapDetail,
@@ -27,6 +27,7 @@ import type {
   RoadmapEdge,
   RoadmapMetadata,
   NodeContent,
+  QuizItem,
   NodeDifficulty,
   EdgeType,
   ContentType,
@@ -96,6 +97,7 @@ function NodeDetailSection({
   const router = useRouter();
   const nodeId = typeof node.id === "number" ? node.id : null;
   const createQuizMutation = useCreateQuiz();
+  const updateQuizMutation = useUpdateQuiz();
   const deleteQuizMutation = useDeleteQuiz();
 
   // Fetch quizzes for this node (only persisted nodes)
@@ -144,6 +146,15 @@ function NodeDetailSection({
     level: "Beginner",
     passingScore: 5,
   });
+  const [isEditQuizOpen, setIsEditQuizOpen] = useState(false);
+  const [editingQuizId, setEditingQuizId] = useState<number | null>(null);
+  const [editQuizForm, setEditQuizForm] = useState({
+    title: "",
+    description: "",
+    totalScore: 10,
+    level: "Beginner",
+    passingScore: 5,
+  });
   const [deletingQuizId, setDeletingQuizId] = useState<number | null>(null);
 
   // When the node changes (different node selected), reset form
@@ -159,8 +170,17 @@ function NodeDetailSection({
       estimatedHours: node.estimatedHours,
     });
     setIsCreateQuizOpen(false);
+    setIsEditQuizOpen(false);
+    setEditingQuizId(null);
     setQuizForm({
       title: `${node.title} Quiz`,
+      description: "",
+      totalScore: 10,
+      level: node.difficulty || "Beginner",
+      passingScore: 5,
+    });
+    setEditQuizForm({
+      title: "",
       description: "",
       totalScore: 10,
       level: node.difficulty || "Beginner",
@@ -226,6 +246,62 @@ function NodeDetailSection({
 
   const handleCancelCreateQuiz = () => {
     setIsCreateQuizOpen(false);
+  };
+
+  const handleOpenEditQuiz = (quiz: QuizItem) => {
+    setEditingQuizId(quiz.id);
+    setEditQuizForm({
+      title: quiz.title ?? "",
+      description: quiz.description ?? "",
+      totalScore:
+        typeof quiz.totalScore === "number" && Number.isFinite(quiz.totalScore)
+          ? quiz.totalScore
+          : 10,
+      level: quiz.level || node.difficulty || "Beginner",
+      passingScore:
+        typeof quiz.passingScore === "number" && Number.isFinite(quiz.passingScore)
+          ? quiz.passingScore
+          : 5,
+    });
+    setIsEditQuizOpen(true);
+  };
+
+  const handleCancelEditQuiz = () => {
+    if (updateQuizMutation.isPending) return;
+    setIsEditQuizOpen(false);
+    setEditingQuizId(null);
+  };
+
+  const handleSubmitEditQuiz = async () => {
+    if (!nodeId || !editingQuizId) return;
+
+    try {
+      await updateQuizMutation.mutateAsync({
+        id: editingQuizId,
+        updateQuizNodeDto: {
+          roadmapNodeId: nodeId,
+          title: editQuizForm.title.trim() || null,
+          description: editQuizForm.description.trim() || null,
+          totalScore:
+            Number.isFinite(editQuizForm.totalScore) && editQuizForm.totalScore > 0
+              ? editQuizForm.totalScore
+              : null,
+          level: editQuizForm.level || "Beginner",
+          passingScore:
+            Number.isFinite(editQuizForm.passingScore) && editQuizForm.passingScore > 0
+              ? editQuizForm.passingScore
+              : 1,
+        },
+      });
+
+      toast.success("Quiz updated successfully");
+      setIsEditQuizOpen(false);
+      setEditingQuizId(null);
+    } catch {
+      toast.error("Failed to update quiz", {
+        description: "Please check input and try again.",
+      });
+    }
   };
 
   const handleDeleteQuiz = async (quizId: number) => {
@@ -1027,6 +1103,130 @@ function NodeDetailSection({
           </div>
         )}
 
+        {isEditQuizOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h4 className="text-base font-semibold text-neutral-900">Update Quiz</h4>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Update quiz information for this roadmap node.
+                  </p>
+                </div>
+                <button
+                  onClick={handleCancelEditQuiz}
+                  disabled={updateQuizMutation.isPending}
+                  className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editQuizForm.title}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({ ...prev, title: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                    placeholder="Quiz title"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Description
+                  </label>
+                  <textarea
+                    value={editQuizForm.description}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10 min-h-[90px]"
+                    placeholder="Quiz description"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Total Score
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    value={editQuizForm.totalScore}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({
+                        ...prev,
+                        totalScore: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Level
+                  </label>
+                  <select
+                    value={editQuizForm.level}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({
+                        ...prev,
+                        level: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Passing Score
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    value={editQuizForm.passingScore}
+                    onChange={(e) =>
+                      setEditQuizForm((prev) => ({
+                        ...prev,
+                        passingScore: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  onClick={handleCancelEditQuiz}
+                  disabled={updateQuizMutation.isPending}
+                  className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitEditQuiz}
+                  disabled={updateQuizMutation.isPending}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+                >
+                  {updateQuizMutation.isPending ? "Updating..." : "Update Quiz"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoadingQuizzes && nodeId && (
           <div className="py-4">
             <ContentManagerLoading
@@ -1082,6 +1282,14 @@ function NodeDetailSection({
                     className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
                   >
                     View Detail
+                  </button>
+                  <button
+                    onClick={() => handleOpenEditQuiz(quiz)}
+                    disabled={updateQuizMutation.isPending}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit
                   </button>
                   <button
                     onClick={() => handleDeleteQuiz(quiz.id)}

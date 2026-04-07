@@ -406,6 +406,28 @@ export interface CreateQuizRequest {
   };
 }
 
+/**
+ * Update quiz payload
+ * PUT /api/quiz/{id}
+ */
+export interface UpdateQuizDto {
+  roadmapNodeId: number;
+  title?: string | null;
+  description?: string | null;
+  totalScore?: number | null;
+  level: string;
+  passingScore: number;
+}
+
+/**
+ * Update quiz request
+ * PUT /api/quiz/{id}
+ */
+export interface UpdateQuizRequest {
+  id: number;
+  updateQuizNodeDto: UpdateQuizDto;
+}
+
 export enum QuizQuestionType {
   SingleChoice = 0,
   MultipleChoice = 1,
@@ -657,6 +679,22 @@ export type CreateQuizResponse = {
   totalScore?: number;
   level?: string;
   passingScore?: number;
+  success?: boolean;
+  message?: string;
+};
+
+/**
+ * Update quiz response
+ * PUT /api/quiz/{id}
+ */
+export type UpdateQuizResponse = {
+  id?: number;
+  roadmapNodeId?: number;
+  title?: string | null;
+  description?: string | null;
+  totalScore?: number | null;
+  level?: string | null;
+  passingScore?: number | null;
   success?: boolean;
   message?: string;
 };

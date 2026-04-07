@@ -1396,7 +1396,7 @@ export function QuizDetailPage() {
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-neutral-700">
-                    Question Count
+                    Number Of Questions
                   </label>
                   <input
                     type="number"
