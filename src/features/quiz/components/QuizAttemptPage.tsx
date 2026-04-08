@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, CheckCircle2, RotateCcw, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, RotateCcw, XCircle } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { formatDateTimeHmDdMmYyyyInUserTimeZone } from '@/shared/lib/date-time';
 
 import {
   QuizAttemptStatus,
@@ -16,7 +17,7 @@ interface QuizAttemptPageProps {
   moduleId: number;
   quizAttemptId?: number;
   moduleTitle?: string;
-  level?: QuizLevel;
+  createAttemptLevel?: QuizLevel;
   contextLabel: string;
   quizTitle: string;
   quizDescription: string;
@@ -31,7 +32,7 @@ export function QuizAttemptPage({
   moduleId,
   quizAttemptId,
   moduleTitle,
-  level = 'Advanced',
+  createAttemptLevel,
   contextLabel,
   quizTitle,
   quizDescription,
@@ -49,7 +50,9 @@ export function QuizAttemptPage({
     error,
     isQuizUnavailable,
     hasUnsavedChanges,
-    setAnswer,
+    setSingleChoiceAnswer,
+    toggleMultipleChoiceAnswer,
+    setShortAnswer,
     saveAnswers,
     startAttempt,
     resetAttempt,
@@ -62,14 +65,14 @@ export function QuizAttemptPage({
     isSubmitting,
   } = useQuizAttemptFlow({
     moduleId,
-    level,
+    createAttemptLevel,
     initialQuizAttemptId: quizAttemptId,
     onSubmitted,
   });
 
   const attemptKey = useMemo(
-    () => `${moduleId}:${level}:${quizAttemptId ?? 'new'}`,
-    [moduleId, level, quizAttemptId]
+    () => `${moduleId}:${quizAttemptId ?? 'new'}`,
+    [moduleId, quizAttemptId]
   );
   const initializedAttemptKeyRef = useRef<string>('');
   const allowNavigationRef = useRef(false);
@@ -270,13 +273,57 @@ export function QuizAttemptPage({
   const isSubmitPending = isSubmitFlowPending || isSaving || isSubmitting;
   const isFirstQuestion = currentQuestionIndex === 0;
   const isLastQuestion = questionCount > 0 && currentQuestionIndex === questionCount - 1;
+  const currentAnswer = currentQuestion ? answers[currentQuestion.questionId] : undefined;
 
   const quizMeta = questionsData?.quiz;
   const headerTitle = quizMeta?.title || quizTitle;
   const headerDescription = quizMeta?.description || quizDescription;
-  const headerLevel = quizMeta?.level || level;
+  const headerLevel = quizMeta?.level;
   const headerPassingScore = quizMeta?.passingScore;
   const isInitialLoading = !result && !error && (!questionsData || !attemptId || isCreating);
+
+  const formatDateTime = (value: string | null | undefined) => {
+    return formatDateTimeHmDdMmYyyyInUserTimeZone(value, { fallback: '-' });
+  };
+
+  const getReviewAnswerDisplay = (question: SubmitQuizAttemptResponse['questions'][number], type: 'selected' | 'correct') => {
+    if (question.type === 'ShortAnswer') {
+      const textValue = type === 'selected' ? question.selectedTextValue : question.correctTextValue;
+      return textValue || 'No answer';
+    }
+
+    if (question.type === 'MultipleChoice') {
+      const optionText = type === 'selected' ? question.selectedOptionText : question.correctOptionText;
+      if (optionText) {
+        return optionText;
+      }
+
+      const ids = type === 'selected' ? question.selectedOptionIds : question.correctOptionIds;
+      if (ids.length > 0) {
+        return ids.join(', ');
+      }
+    }
+
+    const fallback = type === 'selected' ? question.selectedOptionText : question.correctOptionText;
+    return fallback || 'No answer';
+  };
+
+  const getCurrentQuestionAnsweredState = () => {
+    if (!currentQuestion || !currentAnswer) {
+      return false;
+    }
+
+    if (currentQuestion.type === 'MultipleChoice') {
+      return currentAnswer.optionIds.length > 0;
+    }
+
+    if (currentQuestion.type === 'ShortAnswer') {
+      return currentAnswer.textValue.trim().length > 0;
+    }
+
+    return currentAnswer.optionId != null;
+  };
+
   const handleQuestionJump = (index: number) => {
     if (index < 0 || index >= questionCount) return;
     setCurrentQuestionIndex(index);
@@ -300,7 +347,7 @@ export function QuizAttemptPage({
           <div className="mb-4 flex justify-center">
             <LoadingSpinner size="lg" />
           </div>
-          <h1 className="text-xl font-bold text-neutral-900 mb-2">{loadingTitle || `Preparing your ${level} quiz`}</h1>
+          <h1 className="text-xl font-bold text-neutral-900 mb-2">{loadingTitle || 'Preparing your quiz'}</h1>
           <p className="text-sm text-neutral-500">{loadingDescription || 'Generating questions for this module...'}</p>
         </div>
       </div>
@@ -357,7 +404,7 @@ export function QuizAttemptPage({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
               <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-neutral-500">Score</p>
                 <p className="text-2xl font-bold text-neutral-900 mt-1">{result.quizAttempt.score ?? 0}</p>
@@ -369,11 +416,15 @@ export function QuizAttemptPage({
                 </p>
               </div>
               <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                <p className="text-xs uppercase tracking-wide text-neutral-500">Submission</p>
+                <p className="text-xs uppercase tracking-wide text-neutral-500">Started At</p>
                 <p className="text-sm font-semibold text-neutral-800 mt-2">
-                  {result.quizAttempt.submittedAt
-                    ? new Date(result.quizAttempt.submittedAt).toLocaleString()
-                    : 'Completed'}
+                  {formatDateTime(result.quizAttempt.startedAt)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-neutral-500">Submitted At</p>
+                <p className="text-sm font-semibold text-neutral-800 mt-2">
+                  {formatDateTime(result.quizAttempt.submittedAt)}
                 </p>
               </div>
             </div>
@@ -396,12 +447,13 @@ export function QuizAttemptPage({
                   <div className="flex-1">
                     <p className="text-xs text-neutral-500 mb-1">Question {index + 1}</p>
                     <p className="font-medium text-neutral-900">{question.prompt}</p>
+                    <p className="text-xs text-neutral-500 mt-1">Type: {question.type}</p>
                     <p className="text-sm text-neutral-600 mt-2">
-                      Your answer: <span className="font-medium">{question.selectedOptionText || 'No answer'}</span>
+                      Your answer: <span className="font-medium">{getReviewAnswerDisplay(question, 'selected')}</span>
                     </p>
                     {!question.isCorrect && (
                       <p className="text-sm text-neutral-700 mt-1">
-                        Correct answer: <span className="font-semibold">{question.correctOptionText || '-'}</span>
+                        Correct answer: <span className="font-semibold">{getReviewAnswerDisplay(question, 'correct')}</span>
                       </p>
                     )}
                   </div>
@@ -482,7 +534,12 @@ export function QuizAttemptPage({
             <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-5">
               {orderedQuestions.map((question, index) => {
                 const isCurrent = index === currentQuestionIndex;
-                const isAnswered = answers[question.questionId] != null;
+                const currentQuestionAnswer = answers[question.questionId];
+                const isAnswered = question.type === 'MultipleChoice'
+                  ? (currentQuestionAnswer?.optionIds.length ?? 0) > 0
+                  : question.type === 'ShortAnswer'
+                    ? (currentQuestionAnswer?.textValue.trim().length ?? 0) > 0
+                    : currentQuestionAnswer?.optionId != null;
 
                 return (
                   <button
@@ -535,17 +592,19 @@ export function QuizAttemptPage({
               <button
                 onClick={() => setCurrentQuestionIndex((prev) => Math.max(prev - 1, 0))}
                 disabled={isFirstQuestion}
-                className="inline-flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center rounded-xl h-10 border border-neutral-200 text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Previous question"
               >
-                Back
+                <ChevronLeft className="h-4 w-4" />
               </button>
 
               <button
                 onClick={() => setCurrentQuestionIndex((prev) => Math.min(prev + 1, questionCount - 1))}
                 disabled={isLastQuestion || questionCount === 0}
-                className="inline-flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center rounded-xl h-10 border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Next question"
               >
-                Forward
+                <ChevronRight className="h-4 w-4" />
               </button>
 
               <button
@@ -583,33 +642,61 @@ export function QuizAttemptPage({
                   <p className="text-xs uppercase tracking-wide text-neutral-500">
                     Question {currentQuestionIndex + 1} of {questionCount}
                   </p>
+                  <span className="inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
+                    {currentQuestion.type}
+                  </span>
                   <span className="text-xs font-medium text-neutral-500">
-                    {answers[currentQuestion.questionId] != null ? 'Answered' : 'Not answered'}
+                    {getCurrentQuestionAnsweredState() ? 'Answered' : 'Not answered'}
                   </span>
                 </div>
                 <p className="text-lg font-semibold text-neutral-900">{currentQuestion.prompt}</p>
 
-                <div className="mt-4 grid grid-cols-1 gap-2.5">
-                  {(shuffledOptionsByQuestionId[currentQuestion.questionId] ?? currentQuestion.options).map((option, optionIndex) => {
-                    const isSelected = answers[currentQuestion.questionId] === option.optionId;
-                    const displayLabel = optionIndex < 26 ? String.fromCharCode(65 + optionIndex) : `${optionIndex + 1}`;
+                {currentQuestion.type === 'ShortAnswer' ? (
+                  <div className="mt-4">
+                    <label htmlFor={`short-answer-${currentQuestion.questionId}`} className="sr-only">
+                      Short answer input
+                    </label>
+                    <textarea
+                      id={`short-answer-${currentQuestion.questionId}`}
+                      value={currentAnswer?.textValue ?? ''}
+                      onChange={(event) => setShortAnswer(currentQuestion.questionId, event.target.value)}
+                      rows={5}
+                      placeholder="Type your answer here..."
+                      className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-800 outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/20"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-1 gap-2.5">
+                    {(shuffledOptionsByQuestionId[currentQuestion.questionId] ?? currentQuestion.options).map((option, optionIndex) => {
+                      const isSelected = currentQuestion.type === 'MultipleChoice'
+                        ? (currentAnswer?.optionIds ?? []).includes(option.optionId)
+                        : currentAnswer?.optionId === option.optionId;
+                      const displayLabel = optionIndex < 26 ? String.fromCharCode(65 + optionIndex) : `${optionIndex + 1}`;
 
-                    return (
-                      <button
-                        key={option.optionId}
-                        onClick={() => setAnswer(currentQuestion.questionId, option.optionId)}
-                        className={`w-full text-left rounded-2xl border px-4 py-3 transition-all ${
-                          isSelected
-                            ? 'border-[#00bae2] bg-[#00bae2]/10 text-neutral-900'
-                            : 'border-neutral-200 hover:border-neutral-300 bg-white'
-                        }`}
-                      >
-                        <span className="text-xs font-bold text-neutral-500 mr-2">{displayLabel}.</span>
-                        <span className="text-sm font-medium">{option.displayText}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                      return (
+                        <button
+                          key={option.optionId}
+                          onClick={() => {
+                            if (currentQuestion.type === 'MultipleChoice') {
+                              toggleMultipleChoiceAnswer(currentQuestion.questionId, option.optionId);
+                              return;
+                            }
+
+                            setSingleChoiceAnswer(currentQuestion.questionId, option.optionId);
+                          }}
+                          className={`w-full text-left rounded-2xl border px-4 py-3 transition-all ${
+                            isSelected
+                              ? 'border-[#00bae2] bg-[#00bae2]/10 text-neutral-900'
+                              : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                          }`}
+                        >
+                          <span className="text-xs font-bold text-neutral-500 mr-2">{displayLabel}.</span>
+                          <span className="text-sm font-medium">{option.displayText}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </section>

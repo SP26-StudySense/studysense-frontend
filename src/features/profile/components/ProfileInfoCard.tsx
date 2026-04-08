@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { User, Phone, MapPin, Calendar, Users, Pencil, X, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { formatDateInUserTimeZone, toLocalDateInputValue } from '@/shared/lib/date-time';
 import { cn } from '@/shared/lib/utils';
 import type { UserProfile, UpdateProfileRequest } from '../types';
 import { GENDER_OPTIONS } from '../types';
@@ -66,25 +67,12 @@ export function ProfileInfoCard({ profile, onUpdate, isUpdating }: ProfileInfoCa
     // Format date for display
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return '—';
-        try {
-            return new Date(dateStr).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-            });
-        } catch {
-            return '—';
-        }
+        return formatDateInUserTimeZone(dateStr, { fallback: '—' });
     };
 
     // Format date for input
     const formatDateForInput = (dateStr: string | null | undefined) => {
-        if (!dateStr) return '';
-        try {
-            return new Date(dateStr).toISOString().split('T')[0];
-        } catch {
-            return '';
-        }
+        return toLocalDateInputValue(dateStr ?? undefined);
     };
 
     const getGenderLabel = (value: string | null) => {

@@ -26,7 +26,11 @@ const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
     }));
 };
 
-export function SessionsPage() {
+interface SessionsPageProps {
+    studyPlanId?: string;
+}
+
+export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const selectedNode = useSessionStore((state) => state.selectedNode);
     const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
@@ -38,13 +42,28 @@ export function SessionsPage() {
     const sessionId = useSessionStore((state) => state.sessionId);
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
+    const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
     const { trackEvent } = useAnalytics();
 
+    useEffect(() => {
+        if (studyPlanId) {
+            setActiveStudyPlanId(studyPlanId);
+        }
+    }, [setActiveStudyPlanId, studyPlanId]);
+
+    const routePlanId = studyPlanId ? Number(studyPlanId) : undefined;
+    const resolvedRoutePlanId =
+        typeof routePlanId === 'number' && Number.isFinite(routePlanId) && routePlanId > 0
+            ? routePlanId
+            : undefined;
+
     const activePlanId = activeStudyPlanId ? Number(activeStudyPlanId) : undefined;
-    const resolvedActivePlanId =
+    const resolvedStorePlanId =
         typeof activePlanId === 'number' && Number.isFinite(activePlanId) && activePlanId > 0
             ? activePlanId
             : undefined;
+
+    const resolvedActivePlanId = resolvedRoutePlanId ?? resolvedStorePlanId;
 
     const hasPlanScopedContext = typeof resolvedActivePlanId === 'number';
 
@@ -54,13 +73,36 @@ export function SessionsPage() {
             ? selectedPlanId
             : undefined;
 
+    const hasStalePlanDraft =
+        hasPlanScopedContext &&
+        typeof resolvedSelectedPlanId === 'number' &&
+        resolvedSelectedPlanId !== resolvedActivePlanId;
+
     // Check for active session on mount (restore interrupted sessions)
     const { data: activeSession, isLoading: isCheckingActive } = useActiveSession(resolvedActivePlanId, {
         // In plan-scoped pages, always re-check with planId to avoid stale cross-roadmap session state.
         enabled: hasPlanScopedContext || !sessionId,
     });
 
+    const isCrossPlanActiveSession =
+        hasPlanScopedContext &&
+        typeof activeSession?.planId === 'number' &&
+        activeSession.planId > 0 &&
+        activeSession.planId !== resolvedActivePlanId;
+
     useEffect(() => {
+        if (isCrossPlanActiveSession) {
+            resetSessionFlow();
+            return;
+        }
+
+        // User may open Sessions from Schedule (draft tasks selected) without actually starting a session.
+        // If they switch roadmap afterward, clear stale draft context from the previous plan.
+        if (!activeSession && hasStalePlanDraft) {
+            resetSessionFlow();
+            return;
+        }
+
         if (activeSession && activeSession.sessionId !== sessionId) {
             setActiveSessionFromApi(activeSession);
             return;
@@ -75,7 +117,9 @@ export function SessionsPage() {
         }
     }, [
         activeSession,
+        hasStalePlanDraft,
         hasPlanScopedContext,
+        isCrossPlanActiveSession,
         resolvedActivePlanId,
         resolvedSelectedPlanId,
         resetSessionFlow,

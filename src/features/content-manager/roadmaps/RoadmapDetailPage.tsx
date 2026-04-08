@@ -1655,7 +1655,7 @@ export function RoadmapDetailPage() {
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
   const [metadataForm, setMetadataForm] = useState({ title: "", description: "" });
   const [selectedNodeId, setSelectedNodeId] = useState<number | string | null>(null);
-  const [reformatSignal, setReformatSignal] = useState(0);
+  const [reformatSignal, setReformatSignal] = useState<number | null>(null);
 
   // Track which nodes had their contents loaded from the API
   const loadedNodeIdsRef = useRef<Set<number>>(new Set());
@@ -1754,7 +1754,7 @@ export function RoadmapDetailPage() {
   }, [editedData, roadmapId, selectedNodeId, updateNodes]);
 
   const handleReformatGraph = useCallback(() => {
-    setReformatSignal((prev) => prev + 1);
+    setReformatSignal((prev) => (prev ?? 0) + 1);
   }, []);
 
   const handleDeleteNode = useCallback(
@@ -2240,7 +2240,7 @@ export function RoadmapDetailPage() {
               nodes={editedData.nodes}
               edges={editedData.edges}
               selectedNodeId={selectedNodeId}
-              reformatSignal={reformatSignal}
+              reformatSignal={reformatSignal ?? undefined}
               onNodeSelect={setSelectedNodeId}
               className="h-full"
             />

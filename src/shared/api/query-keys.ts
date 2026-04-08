@@ -65,7 +65,8 @@ export const queryKeys = {
     },
     history: (params?: QueryParams) => ['studySessions', 'history', params] as const,
     recent: (limit?: number) => ['studySessions', 'recent', limit] as const,
-    statistics: (period?: string) => ['studySessions', 'statistics', period] as const,
+    statistics: (params?: { period?: string; planId?: number; studyPlanId?: number }) =>
+      ['studySessions', 'statistics', params] as const,
     events: (id: string) => ['studySessions', 'detail', id, 'events'] as const,
   },
 

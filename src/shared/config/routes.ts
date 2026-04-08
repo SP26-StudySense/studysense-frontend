@@ -54,9 +54,11 @@ export const routes = {
     // Study Sessions
     sessions: {
       list: '/sessions',
+      listByPlan: (studyPlanId: string) => `/sessions/${studyPlanId}`,
       detail: (id: string) => `/sessions/${id}`,
       active: '/sessions/active',
       history: '/sessions/history',
+      historyByPlan: (studyPlanId: string) => `/sessions/${studyPlanId}/history`,
     },
 
     // Chat
@@ -80,7 +82,7 @@ export const routes = {
 
   // Admin routes
   admin: {
-    home: '/admin',
+    home: '/admin-dashboard',
     users: {
       list: '/admin/users',
       detail: (id: string) => `/admin/users/${id}`,

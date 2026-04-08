@@ -18,7 +18,7 @@ interface DashboardLayoutProps {
 // Map routes to titles
 function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/profile')) return 'Profile';
-  if (pathname.startsWith('/study-plans')) return 'Schedule';
+  if (pathname.startsWith('/study-plans')) return 'Study Plan';
   if (pathname.startsWith('/my-roadmap')) return 'My Roadmap';
   if (pathname.startsWith('/roadmaps')) return 'Roadmaps';
   if (pathname.startsWith('/chat')) return 'Chat';
@@ -33,7 +33,7 @@ function getPageTitle(pathname: string): string {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
-  const showChatbot = pathname === '/sessions';
+  const showChatbot = pathname.startsWith('/sessions') && !pathname.endsWith('/history');
 
   return (
     <AuthGuard>

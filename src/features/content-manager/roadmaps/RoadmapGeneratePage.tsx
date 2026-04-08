@@ -24,7 +24,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { CMSRoadmapGraph } from "../components/CMSRoadmapGraph";
 import { useCreateRoadmapGraph } from "../api/mutations";
-import { useGenerateRoadmapAI } from "../api/queries";
+import { useGenerateRoadmapAI, useSubjectsByContentManager } from "../api/queries";
 import type {
   RoadmapNode,
   RoadmapEdge,
@@ -36,6 +36,7 @@ import type {
   RoadmapStatus,
   GenerateRoadmapRequest,
   AIRoadmapGraph,
+  LearningSubject,
 } from "../api/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -929,16 +930,26 @@ function ConnectorPanel({
 // ─── GeneratePopup ────────────────────────────────────────────────────────────
 
 interface GeneratePopupProps {
-  onSubmit: (message: string) => void;
+  subjects: LearningSubject[];
+  isSubjectsLoading?: boolean;
+  onSubmit: (payload: { message: string; subjectId: number }) => void;
   onCancel: () => void;
 }
 
-function GeneratePopup({ onSubmit, onCancel }: GeneratePopupProps) {
+function GeneratePopup({ subjects, isSubjectsLoading, onSubmit, onCancel }: GeneratePopupProps) {
   const [message, setMessage] = useState("");
+  const [subjectId, setSubjectId] = useState<number>(0);
+
+  useEffect(() => {
+    if (!subjects.length) return;
+    if (!subjectId) {
+      setSubjectId(subjects[0].id);
+    }
+  }, [subjectId, subjects]);
 
   const handleSubmit = () => {
-    if (message.trim()) {
-      onSubmit(message.trim());
+    if (message.trim() && subjectId > 0) {
+      onSubmit({ message: message.trim(), subjectId });
     }
   };
 
@@ -968,6 +979,42 @@ function GeneratePopup({ onSubmit, onCancel }: GeneratePopupProps) {
         {/* Message input */}
         <div className="mb-8">
           <label className="block text-sm font-semibold text-neutral-900 mb-3">
+            Subject <span className="text-red-500">*</span>
+          </label>
+          {subjects.length === 1 ? (
+            <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+              {subjects[0].name}
+            </div>
+          ) : subjects.length > 1 ? (
+            <select
+              value={subjectId || ""}
+              onChange={(e) => setSubjectId(Number(e.target.value))}
+              className="mb-4 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+              disabled={isSubjectsLoading}
+              required
+            >
+              <option value="" disabled>
+                Select subject
+              </option>
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="number"
+              min={1}
+              value={subjectId || ""}
+              onChange={(e) => setSubjectId(Number(e.target.value))}
+              className="mb-4 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+              placeholder="Enter subject id"
+              required
+            />
+          )}
+
+          <label className="block text-sm font-semibold text-neutral-900 mb-3">
             Your Message <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -994,7 +1041,7 @@ function GeneratePopup({ onSubmit, onCancel }: GeneratePopupProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!message.trim()}
+            disabled={!message.trim() || !subjectId || isSubjectsLoading}
             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg transition-all"
           >
             <Sparkles className="h-4 w-4" />
@@ -1015,10 +1062,15 @@ function generateClientId() {
 
 export function RoadmapGeneratePage() {
   const router = useRouter();
+  const { data: managerSubjectsResult, isLoading: isSubjectsLoading } = useSubjectsByContentManager();
+  const managerSubjects = managerSubjectsResult?.subjects ?? [];
   
   // Generation state
   const [showPopup, setShowPopup] = useState(true);
-  const [generateRequest, setGenerateRequest] = useState<GenerateRoadmapRequest>({ message: "" });
+  const [generateRequest, setGenerateRequest] = useState<GenerateRoadmapRequest>({
+    message: "",
+    subjectId: 0,
+  });
   const [hasGenerated, setHasGenerated] = useState(false);
   
   // Data query using manual trigger
@@ -1180,8 +1232,11 @@ export function RoadmapGeneratePage() {
   };
 
   // ── Generate popup handlers ──
-  const handleGenerate = (message: string) => {
-    setGenerateRequest({ message });
+  const handleGenerate = ({ message, subjectId }: { message: string; subjectId: number }) => {
+    setGenerateRequest({
+      message,
+      subjectId
+    });
     setShowPopup(false);
   };
 
@@ -1257,7 +1312,14 @@ export function RoadmapGeneratePage() {
 
   // ── Loading / Error states ──
   if (showPopup) {
-    return <GeneratePopup onSubmit={handleGenerate} onCancel={handleCancelGenerate} />;
+    return (
+      <GeneratePopup
+        subjects={managerSubjects}
+        isSubjectsLoading={isSubjectsLoading}
+        onSubmit={handleGenerate}
+        onCancel={handleCancelGenerate}
+      />
+    );
   }
 
   if (isGenerating) {
@@ -1298,7 +1360,7 @@ export function RoadmapGeneratePage() {
               onClick={() => {
                 setHasGenerated(false);
                 setShowPopup(true);
-                setGenerateRequest({ message: "" });
+                setGenerateRequest({ message: "", subjectId: 0 });
               }}
               className="flex items-center gap-2 rounded-xl border-2 border-[#00bae2] px-5 py-2.5 text-sm font-medium text-[#00bae2] hover:bg-[#00bae2]/5 transition-colors"
             >
