@@ -174,9 +174,6 @@ export const endpoints = {
     },
     analytics: {
       overview: '/admin/analytics/overview',
-      users: '/admin/analytics/users',
-      sessions: '/admin/analytics/sessions',
-      effectiveness: '/admin/analytics/effectiveness',
     },
   },
 } as const;
