@@ -30,7 +30,7 @@ export function TaskSelector({
 }: TaskSelectorProps) {
     return (
         <div className={cn(
-            "rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-6 shadow-xl shadow-neutral-900/5",
+            "rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-6 shadow-xl shadow-neutral-900/5 flex flex-col",
             className
         )}>
             {/* Header */}
@@ -47,7 +47,7 @@ export function TaskSelector({
             </p>
 
             {/* Task List */}
-            <div className="space-y-3">
+            <div className="space-y-3 md:max-h-[460px] md:overflow-y-auto md:pr-1 lg:max-h-none lg:flex-1 lg:min-h-0">
                 {tasks.map(task => (
                     <div
                         key={task.id}

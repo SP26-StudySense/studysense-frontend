@@ -92,7 +92,7 @@ export function SessionContent({ className }: SessionContentProps) {
     return (
         <div
             className={cn(
-                'rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-6 shadow-xl shadow-neutral-900/5',
+                'rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-6 shadow-xl shadow-neutral-900/5 flex flex-col',
                 className
             )}
         >
@@ -133,7 +133,7 @@ export function SessionContent({ className }: SessionContentProps) {
             )}
 
             {hasContext && !isLoading && !contentsError && nodeContents.length > 0 && (
-                <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1 lg:max-h-none lg:flex-1 lg:min-h-0">
                     {nodeContents.map((content) => (
                         <div
                             key={content.id}
