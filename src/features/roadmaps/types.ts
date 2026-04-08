@@ -3,6 +3,7 @@ export type RoadmapCategory = 'frontend' | 'backend' | 'devops' | 'ai-data' | 'm
 
 export interface RoadmapTemplate {
     id: string;
+    subjectId: number;
     title: string;
     description: string;
     difficulty: RoadmapDifficulty;
@@ -31,6 +32,6 @@ export interface UserLearningRoadmap {
 
 export interface RoadmapFilters {
     search: string;
-    difficulty: RoadmapDifficulty | 'all';
-    category: RoadmapCategory | 'all';
+    categoryId?: number;
+    subjectId?: number;
 }

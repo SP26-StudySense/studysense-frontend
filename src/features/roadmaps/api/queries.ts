@@ -8,6 +8,10 @@ import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { queryKeys } from '@/shared/api/query-keys';
 import type {
+    GetAllLearningCategoriesParams,
+    GetAllLearningCategoriesResult,
+    GetAllLearningSubjectsParams,
+    GetAllLearningSubjectsResult,
     GetAllRoadmapsResult,
     GenericResponse,
     RoadmapGraphDTO,
@@ -45,6 +49,41 @@ export function useRoadmaps(params: RoadmapsQueryParams = {}) {
             const url = `${endpoints.roadmaps.base}?${searchParams.toString()}`;
             return get<GetAllRoadmapsResult>(url);
         },
+    });
+}
+
+export function useLearningCategories(params: GetAllLearningCategoriesParams = { pageIndex: 1, pageSize: 100 }) {
+    const { pageIndex = 1, pageSize = 100 } = params;
+
+    return useQuery({
+        queryKey: ['roadmaps', 'learning-categories', { pageIndex, pageSize }],
+        queryFn: async () => {
+            const searchParams = new URLSearchParams();
+            searchParams.set('pageIndex', String(pageIndex));
+            searchParams.set('pageSize', String(pageSize));
+
+            return get<GetAllLearningCategoriesResult>(`/learning-categories?${searchParams.toString()}`);
+        },
+    });
+}
+
+export function useLearningSubjects(params: GetAllLearningSubjectsParams = { pageIndex: 1, pageSize: 100 }) {
+    const { pageIndex = 1, pageSize = 100, categoryId } = params;
+
+    return useQuery({
+        queryKey: ['roadmaps', 'learning-subjects', { pageIndex, pageSize, categoryId }],
+        queryFn: async () => {
+            const searchParams = new URLSearchParams();
+            searchParams.set('pageIndex', String(pageIndex));
+            searchParams.set('pageSize', String(pageSize));
+
+            if (categoryId !== undefined) {
+                searchParams.set('categoryId', String(categoryId));
+            }
+
+            return get<GetAllLearningSubjectsResult>(`/learning-subjects?${searchParams.toString()}`);
+        },
+        enabled: categoryId !== undefined,
     });
 }
 
