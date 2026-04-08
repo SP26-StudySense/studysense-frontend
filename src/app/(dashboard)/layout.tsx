@@ -18,7 +18,7 @@ interface DashboardLayoutProps {
 // Map routes to titles
 function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/profile')) return 'Profile';
-  if (pathname.startsWith('/study-plans')) return 'Schedule';
+  if (pathname.startsWith('/study-plans')) return 'Study Plan';
   if (pathname.startsWith('/my-roadmap')) return 'My Roadmap';
   if (pathname.startsWith('/roadmaps')) return 'Roadmaps';
   if (pathname.startsWith('/chat')) return 'Chat';

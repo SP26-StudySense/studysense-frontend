@@ -105,21 +105,26 @@ export function Sidebar() {
                 href: `/my-roadmap/${activeStudyPlanId}`,
                 icon: Map,
             },
+                        {
+                title: 'Study Plan',
+                href: `/study-plans/${activeStudyPlanId}`,
+                icon: BookOpen,
+            },
             {
                 title: 'Sessions',
                 href: `/sessions/${activeStudyPlanId}`,
                 icon: Calendar,
             },
             {
-                title: 'Chat',
-                href: '/chat',
-                icon: MessageSquare,
-            },
-            {
                 title: 'History',
                 href: `/sessions/${activeStudyPlanId}/history`,
                 icon: History,
             },
+            {
+                title: 'Chat',
+                href: '/chat',
+                icon: MessageSquare,
+            }
         ]
         : baseSidebarItems;
 
