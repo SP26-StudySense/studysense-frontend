@@ -24,12 +24,6 @@ interface RoadmapCardProps {
     roadmapToStudyPlanMap?: Map<number, number>; // Map roadmapId to studyPlanId
 }
 
-const difficultyColors = {
-    beginner: 'bg-green-100 text-green-700 border-green-200',
-    intermediate: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    advanced: 'bg-red-100 text-red-700 border-red-200',
-};
-
 function isFreePlan(subscriptionType: unknown): boolean {
     if (typeof subscriptionType === 'number') {
         return subscriptionType <= 1;
@@ -235,12 +229,6 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
                     )}>
                         <Icon className="h-6 w-6" />
                     </div>
-                    <span className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium",
-                        difficultyColors[roadmap.difficulty]
-                    )}>
-                        {roadmap.difficulty.charAt(0).toUpperCase() + roadmap.difficulty.slice(1)}
-                    </span>
                 </div>
 
                 <h3 className="text-xl font-semibold text-neutral-900 mb-2 group-hover:text-[#00bae2] transition-colors">

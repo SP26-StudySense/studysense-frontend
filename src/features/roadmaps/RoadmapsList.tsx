@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
 import { useQueries } from '@tanstack/react-query';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { RoadmapCard } from './components/RoadmapCard';
 import { SearchFilterBar } from './components/SearchFilterBar';
-import { useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
+import { useLearningCategories, useLearningSubjects, useRoadmaps, RoadmapListItemDTO, RoadmapGraphDTO } from './api';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -17,6 +17,7 @@ import type { RoadmapFilters, RoadmapTemplate, UserLearningRoadmap } from './typ
 function mapApiToTemplate(item: RoadmapListItemDTO, nodeCount?: number): RoadmapTemplate {
     return {
         id: String(item.id),
+        subjectId: item.subjectId,
         title: item.title,
         description: item.description || 'No description available',
         difficulty: 'intermediate', // Default, could be derived from nodes later
@@ -121,13 +122,11 @@ export function RoadmapsList() {
     const [activeTab, setActiveTab] = useState<'explore' | 'my-roadmap'>('explore');
     const [exploreFilters, setExploreFilters] = useState<RoadmapFilters>({
         search: '',
-        difficulty: 'all',
-        category: 'all',
+        categoryId: undefined,
+        subjectId: undefined,
     });
     const [myRoadmapFilters, setMyRoadmapFilters] = useState<RoadmapFilters>({
         search: '',
-        difficulty: 'all',
-        category: 'all',
     });
 
     // Fetch user's study plans from API
@@ -147,13 +146,35 @@ export function RoadmapsList() {
         }
     }, [isAuthenticated, activeTab]);
 
+    const { data: categoriesResult } = useLearningCategories({
+        pageIndex: 1,
+        pageSize: 100,
+    });
+
+    const { data: subjectsResult, isLoading: isSubjectsLoading } = useLearningSubjects({
+        pageIndex: 1,
+        pageSize: 100,
+        categoryId: exploreFilters.categoryId,
+    });
+
+    const categories = useMemo(
+        () => categoriesResult?.categories.items.filter((category) => category.isActive) ?? [],
+        [categoriesResult]
+    );
+
+    const subjects = useMemo(
+        () => subjectsResult?.subjects.items.filter((subject) => subject.isActive) ?? [],
+        [subjectsResult]
+    );
+
     // Fetch roadmaps from API
     const { data: roadmapsData, isLoading, error } = useRoadmaps({
         pageIndex: 1,
-        pageSize: 50,
+        pageSize: 100,
         q: exploreFilters.search || undefined,
         isLatest: true,
         status: 'Active',
+        subjectId: exploreFilters.subjectId,
     });
 
     // Get roadmap IDs for fetching node counts
@@ -173,18 +194,32 @@ export function RoadmapsList() {
         );
     }, [roadmapsData, nodeCounts]);
 
-    // Filter templates based on filters (difficulty and category)
+    const selectedCategorySubjectIds = useMemo(() => {
+        if (!exploreFilters.categoryId) {
+            return null;
+        }
+
+        return new Set(subjects.map((subject) => subject.id));
+    }, [exploreFilters.categoryId, subjects]);
+
+    // Filter templates based on category and subject selection
     const filteredTemplates = useMemo(() => {
-        return apiTemplates.filter(roadmap => {
-            if (exploreFilters.difficulty !== 'all' && roadmap.difficulty !== exploreFilters.difficulty) {
+        return apiTemplates.filter((roadmap) => {
+            if (exploreFilters.subjectId && roadmap.subjectId !== exploreFilters.subjectId) {
                 return false;
             }
-            if (exploreFilters.category !== 'all' && roadmap.category !== exploreFilters.category) {
+
+            if (
+                exploreFilters.categoryId &&
+                selectedCategorySubjectIds &&
+                !selectedCategorySubjectIds.has(roadmap.subjectId)
+            ) {
                 return false;
             }
+
             return true;
         });
-    }, [apiTemplates, exploreFilters]);
+    }, [apiTemplates, exploreFilters.categoryId, exploreFilters.subjectId, selectedCategorySubjectIds]);
 
     const studyPlanIds = useMemo(() => studyPlans.map((plan) => plan.id), [studyPlans]);
     const studyPlanModuleStats = useStudyPlanModuleStats(studyPlanIds);
@@ -209,14 +244,6 @@ export function RoadmapsList() {
                 }
             }
 
-            if (myRoadmapFilters.difficulty !== 'all' && roadmap.difficulty !== myRoadmapFilters.difficulty) {
-                return false;
-            }
-
-            if (myRoadmapFilters.category !== 'all' && roadmap.category !== myRoadmapFilters.category) {
-                return false;
-            }
-
             return true;
         });
     }, [learningRoadmaps, myRoadmapFilters]);
@@ -235,7 +262,7 @@ export function RoadmapsList() {
 
     const activeFilters = activeTab === 'explore' ? exploreFilters : myRoadmapFilters;
     const setActiveFilters = activeTab === 'explore' ? setExploreFilters : setMyRoadmapFilters;
-    const hasActiveFilters = Boolean(activeFilters.search || activeFilters.difficulty !== 'all' || activeFilters.category !== 'all');
+    const hasActiveFilters = Boolean(activeFilters.search || activeFilters.categoryId || activeFilters.subjectId);
 
     return (
         <div className="space-y-8">
@@ -250,7 +277,14 @@ export function RoadmapsList() {
             </div>
 
             {/* Search and Filters */}
-            <SearchFilterBar filters={activeFilters} onFiltersChange={setActiveFilters} />
+            <SearchFilterBar
+                filters={activeFilters}
+                onFiltersChange={setActiveFilters}
+                categories={categories}
+                subjects={subjects}
+                isSubjectsLoading={isSubjectsLoading}
+                showTaxonomyFilters={activeTab === 'explore'}
+            />
 
             {/* Tabs */}
             <div className="border-b border-neutral-200">
@@ -292,7 +326,7 @@ export function RoadmapsList() {
                 <section className="space-y-4">
                     {isLoadingStudyPlans ? (
                         <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
+                            <LoadingSpinner size="md" />
                         </div>
                     ) : studyPlansError ? (
                         <div className="flex items-center justify-center py-12">
@@ -316,7 +350,7 @@ export function RoadmapsList() {
                 <section className="space-y-4">
                     {isLoading ? (
                         <div className="flex items-center justify-center py-16">
-                            <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
+                            <LoadingSpinner size="md" />
                         </div>
                     ) : error ? (
                         <div className="flex items-center justify-center py-16">

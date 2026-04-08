@@ -8,7 +8,7 @@ import Link from "next/link";
 import { ConfirmationModal } from "@/shared/ui";
 import { ApiException } from "@/shared/api/errors";
 import { toast } from "@/shared/lib";
-import { formatDateInUserTimeZone } from "@/shared/lib/date-time";
+import { formatDateTimeHmDdMmYyyyInUserTimeZone } from "@/shared/lib/date-time";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ContentManagerLoading } from "../components";
 import { useManagerRoadmaps, useSubjectsByContentManager } from "../api/queries";
@@ -21,6 +21,7 @@ type ModalState =
   | { type: 'delete'; roadmapId: number; title: string }
   | { type: 'publish'; roadmapId: number; title: string; description: string }
   | { type: 'disable'; roadmapId: number; title: string }
+  | { type: 'activate'; roadmapId: number; title: string }
   | { type: 'aiGenerate' };
 
 // Roadmap Form Modal Component
@@ -542,6 +543,27 @@ export function RoadmapListPage() {
     );
   };
 
+  const handleActivateRoadmap = () => {
+    if (modalState.type !== 'activate') return;
+
+    updateRoadmapMutation.mutate(
+      {
+        id: modalState.roadmapId,
+        status: RoadmapStatus.Active,
+      },
+      {
+        onSuccess: () => {
+          setModalState({ type: 'none' });
+          toast.success('Roadmap activated successfully.');
+          refetch();
+        },
+        onError: (error) => {
+          toast.apiError(error, 'Failed to activate roadmap');
+        },
+      }
+    );
+  };
+
   const handleDeleteRoadmap = () => {
     if (modalState.type !== 'delete') return;
     
@@ -717,9 +739,6 @@ export function RoadmapListPage() {
                 >
                   {normalizedStatus}
                 </span>
-                <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
-                  v{roadmap.version}
-                </span>
               </div>
 
               {/* Content */}
@@ -734,7 +753,7 @@ export function RoadmapListPage() {
 
               {/* Stats */}
               <div className="mb-4 flex items-center gap-4 text-xs text-neutral-500">
-                <div>Created at {formatDateInUserTimeZone(roadmap.createdAt)}</div>
+                <div>Created at {formatDateTimeHmDdMmYyyyInUserTimeZone(roadmap.createdAt, { fallback: '-' })}</div>
               </div>
 
               {/* Actions */}
@@ -776,6 +795,16 @@ export function RoadmapListPage() {
                     disabled={updateRoadmapMutation.isPending}
                   >
                     Disable
+                  </button>
+                )}
+
+                {normalizedStatus === RoadmapStatus.Disabled && (
+                  <button
+                    onClick={() => setModalState({ type: 'activate', roadmapId: roadmap.id, title: roadmap.title })}
+                    className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-medium text-emerald-700 transition-all hover:bg-emerald-50"
+                    disabled={updateRoadmapMutation.isPending}
+                  >
+                    Activate
                   </button>
                 )}
               </div>
@@ -869,6 +898,16 @@ export function RoadmapListPage() {
         title="Disable Roadmap"
         description={`Are you sure you want to disable "${modalState.type === 'disable' ? modalState.title : ''}"?`}
         confirmText="Disable"
+        variant="default"
+      />
+
+      <ConfirmationModal
+        isOpen={modalState.type === 'activate'}
+        onClose={() => setModalState({ type: 'none' })}
+        onConfirm={handleActivateRoadmap}
+        title="Activate Roadmap"
+        description={`Are you sure you want to activate "${modalState.type === 'activate' ? modalState.title : ''}"?`}
+        confirmText="Activate"
         variant="default"
       />
     </div>

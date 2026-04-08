@@ -3,7 +3,7 @@
  * Core API calls without React Query
  */
 
-import { get, post, put, del } from '@/shared/api/client';
+import { get, post, put, del, patch } from '@/shared/api/client';
 import { RoadmapStatus } from './types';
 import type {
   // Request types
@@ -129,7 +129,7 @@ export async function updateRoadmap(
   request: UpdateRoadmapRequest
 ): Promise<UpdateRoadmapResponse> {
   const { id, ...payload } = request;
-  return put<UpdateRoadmapResponse>(`/roadmaps/${id}`, payload);
+  return patch<UpdateRoadmapResponse>(`/roadmaps/${id}`, payload);
 }
 
 export async function getRoadmapDetail(
