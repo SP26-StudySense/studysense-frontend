@@ -37,6 +37,25 @@ function getRolesFromToken(token: string): string[] {
     }
 }
 
+function isTokenExpired(token: string): boolean {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return true;
+
+        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        const exp = Number(decoded?.exp);
+
+        if (!Number.isFinite(exp)) {
+            return true;
+        }
+
+        const nowInSeconds = Math.floor(Date.now() / 1000);
+        return exp <= nowInSeconds;
+    } catch {
+        return true;
+    }
+}
+
 // API Proxy prefix
 const API_PROXY_PREFIX = '/api/proxy';
 
@@ -244,6 +263,7 @@ function applyRefreshedAuthCookies(
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    const isAuthPath = isAuthRoute(pathname);
 
     // Handle API proxy requests
     if (pathname.startsWith(API_PROXY_PREFIX)) {
@@ -258,17 +278,17 @@ export async function middleware(request: NextRequest) {
 
     let refreshedAuth: { accessToken: string; refreshSetCookie: string | null } | null = null;
 
-    if (!accessToken && refreshToken) {
+    if (!isAuthPath && !accessToken && refreshToken) {
         refreshedAuth = await tryRefreshToken(refreshToken);
         if (refreshedAuth?.accessToken) {
             accessToken = refreshedAuth.accessToken;
         }
     }
 
-    const isAuthenticated = !!accessToken;
+    const isAuthenticated = !!accessToken && !isTokenExpired(accessToken);
 
     // Redirect authenticated users away from auth pages
-    if (isAuthRoute(pathname) && isAuthenticated) {
+    if (isAuthPath && isAuthenticated) {
         const roles = getRolesFromToken(accessToken!);
         if (hasRole(roles, 'ContentManager')) {
             const response = NextResponse.redirect(new URL(routes.contentManager.dashboard, request.url));

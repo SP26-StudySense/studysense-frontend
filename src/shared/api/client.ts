@@ -15,13 +15,13 @@ import axios, {
 import Cookies from 'js-cookie';
 
 import { env } from '@/shared/config';
-import { endpoints } from '@/shared/api/endpoints';
 import type { ApiResponse } from '@/shared/types';
 import { parseApiError } from './errors';
 
 // Token storage keys (still needed for client-side token management)
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
 const REFRESH_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_REFRESH_KEY;
+const USER_STORAGE_KEY = 'sss_user';
 
 // Create axios instance - now pointing to proxy endpoint
 const apiClient: AxiosInstance = axios.create({
@@ -52,7 +52,6 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const requestUrl = String(error.config?.url || '');
-    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     const isAuthEndpoint =
       requestUrl.includes('/auth/login') ||
       requestUrl.includes('/auth/register') ||
@@ -61,19 +60,8 @@ apiClient.interceptors.response.use(
       requestUrl.includes('/auth/reset-password') ||
       requestUrl.includes('/auth/confirm-email');
 
-    // Handle 401 by attempting one client-side refresh + retry before redirecting.
-    if (error.response?.status === 401 && !isAuthEndpoint && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        await apiClient.post(endpoints.auth.refresh, {});
-        return apiClient(originalRequest);
-      } catch {
-        // Fall through to forced logout below.
-      }
-    }
-
-    // Proxy/client refresh failed, redirect to login.
+    // Proxy already handles refresh and one retry on 401.
+    // If we still get 401 here, treat session as expired.
     // Skip redirect for auth form endpoints so invalid credentials do not reload the page.
     if (error.response?.status === 401 && !isAuthEndpoint) {
       // Clear tokens and redirect to login
@@ -109,6 +97,10 @@ export function clearTokens(): void {
   Cookies.remove(ACCESS_TOKEN_KEY);
   Cookies.remove(REFRESH_TOKEN_KEY);
   Cookies.remove('refreshToken');
+
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }
 }
 
 export function getAccessToken(): string | undefined {

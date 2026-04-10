@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimerCard } from './components/TimerCard';
 import { TaskSelector, SessionTask } from './components/TaskSelector';
 import { SessionContent } from './components/SessionContent';
@@ -12,6 +12,9 @@ import { useActiveSession } from './api/queries';
 import { SessionStatus } from '@/shared/types';
 import { useAnalytics } from '@/shared/hooks/use-analytics';
 import { LearningEventName } from './types';
+import { ConfirmationModal } from '@/shared/ui';
+
+const QUICK_DONE_THRESHOLD_MS = 60 * 1000;
 
 // Helper to convert SelectedTask to SessionTask format
 const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
@@ -44,6 +47,16 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
     const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
     const { trackEvent } = useAnalytics();
+    const [quickDoneConfirmTaskId, setQuickDoneConfirmTaskId] = useState<string | null>(null);
+    const [quickDoneElapsedMs, setQuickDoneElapsedMs] = useState(0);
+    const quickDoneStartedAtRef = useRef<number | null>(null);
+    const previousSessionIdRef = useRef<string | null>(null);
+
+    const completeTask = useCallback((taskId: string) => {
+        trackEvent(LearningEventName.TASK_COMPLETED, { taskId, page: 'sessions', sessionId });
+        markTaskCompleted(taskId);
+        quickDoneStartedAtRef.current = Date.now();
+    }, [markTaskCompleted, sessionId, trackEvent]);
 
     useEffect(() => {
         if (studyPlanId) {
@@ -142,9 +155,53 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
 
     const handleCompleteTask = (taskId: string) => {
         if (!canInteractTasks) return;
-        trackEvent(LearningEventName.TASK_COMPLETED, { taskId, page: 'sessions', sessionId });
-        markTaskCompleted(taskId);
+
+        const now = Date.now();
+        const startedAt = quickDoneStartedAtRef.current ?? now;
+        const elapsedMs = now - startedAt;
+
+        setQuickDoneElapsedMs(elapsedMs);
+        setQuickDoneConfirmTaskId(taskId);
     };
+
+    const confirmQuickDone = useCallback(() => {
+        if (!quickDoneConfirmTaskId) {
+            return;
+        }
+
+        completeTask(quickDoneConfirmTaskId);
+        setQuickDoneConfirmTaskId(null);
+        setQuickDoneElapsedMs(0);
+    }, [completeTask, quickDoneConfirmTaskId]);
+
+    const isQuickDoneWarning =
+        quickDoneConfirmTaskId !== null && quickDoneElapsedMs < QUICK_DONE_THRESHOLD_MS;
+
+    useEffect(() => {
+        const normalizedSessionId = sessionId ?? null;
+
+        if (previousSessionIdRef.current !== normalizedSessionId) {
+            previousSessionIdRef.current = normalizedSessionId;
+            quickDoneStartedAtRef.current = null;
+            setQuickDoneConfirmTaskId(null);
+            setQuickDoneElapsedMs(0);
+        }
+
+        if (sessionStatus === SessionStatus.IN_PROGRESS && quickDoneStartedAtRef.current == null) {
+            quickDoneStartedAtRef.current = Date.now();
+            return;
+        }
+
+        if (
+            sessionStatus === SessionStatus.NOT_STARTED ||
+            sessionStatus === SessionStatus.COMPLETED ||
+            sessionStatus === SessionStatus.CANCELLED
+        ) {
+            quickDoneStartedAtRef.current = null;
+            setQuickDoneConfirmTaskId(null);
+            setQuickDoneElapsedMs(0);
+        }
+    }, [sessionId, sessionStatus]);
 
     // Show success screen (full page)
     if (showSuccess) {
@@ -202,6 +259,19 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
 
             {/* Session Summary Modal */}
             <SessionSummaryModal isOpen={showSummary} />
+
+            <ConfirmationModal
+                isOpen={quickDoneConfirmTaskId !== null}
+                onClose={() => setQuickDoneConfirmTaskId(null)}
+                onConfirm={confirmQuickDone}
+                title={isQuickDoneWarning ? "Task completed too quickly" : "Confirm task completion"}
+                description={isQuickDoneWarning
+                    ? "This task was completed in less than 1 minute. Are you sure you want to mark it as done?"
+                    : "Are you sure you want to mark this task as done?"}
+                confirmText="Yes, mark as done"
+                cancelText="Keep studying"
+                variant={isQuickDoneWarning ? "warning" : "default"}
+            />
         </>
     );
 }

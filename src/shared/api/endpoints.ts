@@ -121,10 +121,7 @@ export const endpoints = {
   chat: {
     send: '/ai/chat/send',
     createConversation: '/ai/chat/conversations',
-    conversations: (roadmapId?: number) =>
-      roadmapId != null
-        ? `/ai/chat/conversations/${roadmapId}`
-        : '/ai/chat/conversations',
+    conversations: '/ai/chat/conversations',
     history: (conversationId: string) => `/ai/chat/${conversationId}/history`,
   },
 
