@@ -7,7 +7,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/shared/lib/toast';
 import { queryKeys } from '@/shared/api/query-keys';
 import { useStudyPlan, useStudyPlans, useTasksByPlan } from '@/features/study-plan/api/queries';
-import { useRoadmapGraph } from '@/features/roadmaps/api/queries';
 import { useCurrentUser } from '@/features/auth/api/queries';
 import { useSessionStore } from '@/store/session.store';
 
@@ -147,60 +146,61 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { data: studyPlans = [] } = useStudyPlans();
     const { data: studyPlan } = useStudyPlan(studyPlanId ?? undefined);
 
-    const fallbackRoadmapId = studyPlans[0]?.roadmapId ?? null;
-    const fallbackRoadmapTitle = studyPlans[0]?.roadmapTitle;
+    const latestStudyPlan = useMemo(() => {
+        if (studyPlans.length === 0) {
+            return null;
+        }
+
+        const sortedPlans = [...studyPlans].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        return sortedPlans[0] ?? null;
+    }, [studyPlans]);
+
+    const fallbackRoadmapId = latestStudyPlan?.roadmapId ?? null;
+    const fallbackRoadmapTitle = latestStudyPlan?.roadmapTitle;
 
     const resolvedRoadmapId = routeContext.directRoadmapId ?? studyPlan?.roadmapId ?? null;
+    const effectiveRoadmapId = resolvedRoadmapId ?? fallbackRoadmapId ?? null;
 
-    const { data: roadmapGraph } = useRoadmapGraph(resolvedRoadmapId);
     const { data: tasksByPlan = [] } = useTasksByPlan(studyPlanId ?? undefined);
 
     const availableModules = useMemo<AvailableModule[]>(() => {
-        if (!roadmapGraph?.nodes) {
+        if (!studyPlan?.modules) {
             return [];
         }
 
         const taskCountMap = new Map<number, number>();
-        if (studyPlan?.modules && tasksByPlan.length > 0) {
-            const studyPlanModuleMap = new Map(
-                studyPlan.modules.map((module) => [module.id, module.roadmapNodeId])
-            );
-
+        if (tasksByPlan.length > 0) {
             tasksByPlan.forEach((task) => {
-                const moduleId = studyPlanModuleMap.get(task.studyPlanModuleId);
-                if (moduleId == null) {
-                    return;
-                }
-                taskCountMap.set(moduleId, (taskCountMap.get(moduleId) ?? 0) + 1);
+                taskCountMap.set(
+                    task.studyPlanModuleId,
+                    (taskCountMap.get(task.studyPlanModuleId) ?? 0) + 1
+                );
             });
         }
 
-        const statusByNode = new Map(
-            (studyPlan?.modules ?? []).map((module) => [module.roadmapNodeId, module.status])
-        );
-
-        return roadmapGraph.nodes.map((node) => ({
-            id: node.id,
-            title: node.title,
-            taskCount: taskCountMap.get(node.id) ?? 0,
-            status: statusByNode.get(node.id) ?? undefined,
+        return studyPlan.modules.map((module) => ({
+            id: module.id,
+            title: module.roadmapNodeName,
+            taskCount: taskCountMap.get(module.id) ?? 0,
+            status: module.status,
         }));
-    }, [roadmapGraph?.nodes, studyPlan?.modules, tasksByPlan]);
+    }, [studyPlan?.modules, tasksByPlan]);
 
     const availableTasks = useMemo<AvailableTask[]>(() => {
         if (tasksByPlan.length > 0 && studyPlan?.modules) {
-            const moduleIdByStudyPlanModuleId = new Map(
-                studyPlan.modules.map((module) => [module.id, module.roadmapNodeId])
+            const moduleTitleById = new Map(
+                studyPlan.modules.map((module) => [module.id, module.roadmapNodeName])
             );
-            const moduleTitleById = new Map(availableModules.map((module) => [module.id, module.title]));
 
             return tasksByPlan.map((task) => {
-                const moduleId = moduleIdByStudyPlanModuleId.get(task.studyPlanModuleId);
                 return {
                     id: task.id,
                     title: task.title,
-                    moduleId,
-                    moduleTitle: moduleId ? moduleTitleById.get(moduleId) : undefined,
+                    moduleId: task.studyPlanModuleId,
+                    moduleTitle: moduleTitleById.get(task.studyPlanModuleId),
                     isCompleted: task.status === 'Completed',
                 };
             });
@@ -222,7 +222,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         [availableTasks]
     );
 
-    const conversationsQuery = useChatConversations(resolvedRoadmapId, currentUser?.id);
+    const conversationsQuery = useChatConversations(effectiveRoadmapId, currentUser?.id);
     const historyQuery = useChatHistory(state.selectedConversationId);
     const sendMessageMutation = useSendChatMessage();
     const createConversationMutation = useCreateChatConversation();
@@ -291,7 +291,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const createConversation = useCallback(async () => {
-        const activeRoadmapId = resolvedRoadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
+        const activeRoadmapId = effectiveRoadmapId ?? selectedConversation?.roadmapId ?? null;
         if (!activeRoadmapId) {
             toast.error('Không xác định được roadmap để tạo conversation.');
             return;
@@ -324,7 +324,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         fallbackRoadmapId,
         fallbackRoadmapTitle,
         selectedConversation?.roadmapId,
-        resolvedRoadmapId,
+        effectiveRoadmapId,
         studyPlan?.roadmapName,
     ]);
 
@@ -335,7 +335,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            const activeRoadmapId = resolvedRoadmapId ?? selectedConversation?.roadmapId ?? fallbackRoadmapId ?? null;
+            const activeRoadmapId = effectiveRoadmapId ?? selectedConversation?.roadmapId ?? null;
             if (!activeRoadmapId) {
                 toast.error('Không xác định được roadmap từ URL hiện tại.');
                 return;
@@ -434,7 +434,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             state.isLoading,
             state.pendingAttachments,
             state.selectedConversationId,
-            resolvedRoadmapId,
+            effectiveRoadmapId,
             studyPlan?.roadmapName,
         ]
     );
@@ -493,7 +493,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const contextValue: ChatContextType = {
         ...state,
-        roadmapId: resolvedRoadmapId,
+        roadmapId: effectiveRoadmapId,
         availableModules,
         availableTasks,
         isConversationLoading: conversationsQuery.isLoading,
