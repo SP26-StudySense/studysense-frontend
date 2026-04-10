@@ -1,12 +1,23 @@
 import type { PaginatedResponse } from "@/shared/types/api";
 
+export interface AssignedSubject {
+  subjectId: number;
+  subjectName: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
+  userName?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  roleNames?: string[];
   role: string;
   assignedSubjectId?: number;
   assignedSubjectName?: string;
+  assignedSubjects?: AssignedSubject[];
   status: string;
   joinDate: string;
   isLocked?: boolean;
@@ -45,6 +56,7 @@ export type UserManagementUserDto = {
   roleNames: string[];
   assignedSubjectId?: number | null;
   assignedSubjectName?: string | null;
+  assignedSubjects?: AssignedSubject[] | null;
 };
 
 export type LearningSubjectDto = {

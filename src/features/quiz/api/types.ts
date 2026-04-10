@@ -17,7 +17,7 @@ export type QuizAttemptStatusValue =
 
 export interface CreateQuizAttemptPayload {
 	studyPlanModuleId: number;
-	level: QuizLevel;
+	level?: QuizLevel;
 }
 
 export interface CreateQuizAttemptRequest {
@@ -27,8 +27,9 @@ export interface CreateQuizAttemptRequest {
 export interface SubmitQuizAttemptAnswer {
 	questionId: number;
 	optionId?: number | null;
-	textValue?: string;
-	numberValue?: number;
+	optionIds?: number[] | null;
+	textValue?: string | null;
+	numberValue?: number | null;
 }
 
 export interface SubmitQuizAttemptPayload {
@@ -60,10 +61,18 @@ export interface QuizQuestionOptionDto {
 export interface QuizAttemptQuestionDto {
 	questionId: number;
 	prompt: string;
+	type: QuizQuestionType;
 	orderNo: number;
 	selectedOptionId: number | null;
+	selectedOptionIds: number[];
+	selectedTextValue: string | null;
+	correctOptionId: number | null;
+	correctOptionIds: number[];
+	correctTextValue: string | null;
 	options: QuizQuestionOptionDto[];
 }
+
+export type QuizQuestionType = 'SingleChoice' | 'MultipleChoice' | 'ShortAnswer';
 
 export interface QuizDetailDto {
 	quizId: number;
@@ -93,19 +102,35 @@ export interface GetCurrentQuizAttemptByModuleResponse {
 	quizAttempt: QuizAttemptDto | null;
 }
 
-export interface SaveQuizAnswerItem {
-	id?: number;
-	attemptId: number;
+/**
+ * Individual answer item for save request payload.
+ * Matches SaveQuizAnswerByQuestionDto from backend.
+ * Sent per-question to save draft answers.
+ */
+export interface SaveQuizAnswerRequestItem {
 	questionId: number;
 	optionId?: number | null;
+	optionIds?: number[] | null;
 	textValue?: string | null;
-	numberValue?: number | null;
+	answeredAt?: string;
+}
+
+/**
+ * Response item when fetching saved answers.
+ * Includes id for tracking and full answer state.
+ */
+export interface SaveQuizAnswerItem {
+	id?: number;
+	questionId: number;
+	optionId?: number | null;
+	optionIds?: number[] | null;
+	textValue?: string | null;
 	answeredAt?: string;
 }
 
 export interface SaveQuizAnswersByAttemptRequest {
 	attemptId: number;
-	quizAnswers: SaveQuizAnswerItem[];
+	quizAnswers: SaveQuizAnswerRequestItem[];
 }
 
 export interface SaveQuizAnswersByAttemptResponse {
@@ -116,9 +141,14 @@ export interface SaveQuizAnswersByAttemptResponse {
 export interface SubmittedQuizQuestionResultDto {
 	questionId: number;
 	prompt: string;
+	type: QuizQuestionType;
 	selectedOptionId: number | null;
+	selectedOptionIds: number[];
+	selectedTextValue: string | null;
 	selectedOptionText: string | null;
 	correctOptionId: number | null;
+	correctOptionIds: number[];
+	correctTextValue: string | null;
 	correctOptionText: string | null;
 	isCorrect: boolean;
 }

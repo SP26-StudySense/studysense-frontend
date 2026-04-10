@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
     ArrowRight,
@@ -13,9 +13,11 @@ import {
     Container,
     BrainCircuit,
     LayoutTemplate,
+    Loader2,
 } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useRoadmaps, type RoadmapListItemDTO } from '@/features/roadmaps/api';
 
 if (typeof window !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger);
@@ -23,6 +25,71 @@ if (typeof window !== 'undefined') {
 
 export const Roadmaps = () => {
     const sectionRef = useRef<HTMLElement>(null);
+    const { data: roadmapsData, isLoading } = useRoadmaps({
+        pageIndex: 1,
+        pageSize: 8,
+        isLatest: true,
+        status: 'Active',
+    });
+
+    const liveRoadmaps = useMemo(() => roadmapsData?.roadmaps?.items ?? [], [roadmapsData]);
+
+    const featuredRoadmaps = useMemo(() => {
+        const fallback = [
+            {
+                id: -1,
+                title: 'Communication Mastery',
+                description:
+                    'Build confidence in speaking, writing, and presenting ideas clearly in academic, workplace, and everyday contexts.',
+            },
+            {
+                id: -2,
+                title: 'Language Learning',
+                description:
+                    'Build vocabulary, improve listening and speaking, and practice with a structured weekly plan.',
+            },
+            {
+                id: -3,
+                title: 'Study Skills',
+                description: 'Time management, active recall, note systems, and exam strategy.',
+            },
+            {
+                id: -4,
+                title: 'Business & Career',
+                description: 'Project planning, stakeholder communication, and career growth skills.',
+            },
+        ];
+
+        return Array.from({ length: 4 }, (_, index) => {
+            const live = liveRoadmaps[index];
+            if (live) {
+                return {
+                    id: live.id,
+                    title: live.title,
+                    description: live.description || fallback[index].description,
+                };
+            }
+            return fallback[index];
+        });
+    }, [liveRoadmaps]);
+
+    const tagCandidates = useMemo(() => {
+        const source = liveRoadmaps.length > 0 ? liveRoadmaps : featuredRoadmaps;
+        const words = source
+            .flatMap((item) => `${item.title} ${item.description ?? ''}`.toLowerCase().split(/[^a-z0-9]+/g))
+            .filter((word) => word.length >= 4);
+
+        const uniqueTags = Array.from(new Set(words));
+        return uniqueTags.slice(0, 3);
+    }, [featuredRoadmaps, liveRoadmaps]);
+
+    const firstRoadmap = featuredRoadmaps[0];
+    const secondRoadmap = featuredRoadmaps[1];
+    const thirdRoadmap = featuredRoadmaps[2];
+    const fourthRoadmap = featuredRoadmaps[3];
+
+    const toRoadmapHref = (roadmap: { id: number }) =>
+        roadmap.id > 0 ? `/roadmaps/${roadmap.id}` : '/roadmaps';
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -93,28 +160,30 @@ export const Roadmaps = () => {
                         <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#00bae2] backdrop-blur transition-transform duration-300 group-hover:scale-110">
                             <Monitor width="24" />
                         </div>
-                        <h3 className="mb-2 text-2xl font-semibold text-white">Communication Mastery</h3>
+                        <h3 className="mb-2 text-2xl font-semibold text-white">{firstRoadmap.title}</h3>
                         <p className="mb-6 max-w-xs text-sm text-neutral-400">
-                            Build confidence in speaking, writing, and presenting ideas clearly in academic,
-                            workplace, and everyday contexts.
+                            {firstRoadmap.description}
                         </p>
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-neutral-300 transition-colors hover:bg-white/10">
                                 <FileCode className="text-blue-400" />
-                                <span>Audience &amp; message framing</span>
-                                <span className="ml-auto rounded bg-neutral-800 px-1.5 py-0.5 text-[10px]">Basics</span>
+                                <span>{secondRoadmap.title}</span>
+                                <span className="ml-auto rounded bg-neutral-800 px-1.5 py-0.5 text-[10px]">Roadmap</span>
                             </div>
                             <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-neutral-300 transition-colors hover:bg-white/10">
                                 <Boxes className="text-yellow-400" />
-                                <span>Storytelling &amp; persuasive delivery</span>
+                                <span>{thirdRoadmap.title}</span>
                                 <span className="ml-auto rounded bg-neutral-800 px-1.5 py-0.5 text-[10px]">
-                                    Adv
+                                    Explore
                                 </span>
                             </div>
                         </div>
-                        <button className="mt-8 w-full rounded-full bg-white py-3 text-sm font-semibold text-neutral-900 transition-all duration-300 hover:bg-neutral-200 hover:shadow-lg cursor-pointer">
+                        <Link
+                            href={toRoadmapHref(firstRoadmap)}
+                            className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-white py-3 text-sm font-semibold text-neutral-900 transition-all duration-300 hover:bg-neutral-200 hover:shadow-lg"
+                        >
                             Start Path
-                        </button>
+                        </Link>
                     </div>
                 </div>
 
@@ -127,13 +196,12 @@ export const Roadmaps = () => {
                         <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm transition-transform duration-300 group-hover:scale-110">
                             <Globe width="24" />
                         </div>
-                        <h3 className="mb-2 text-2xl font-semibold text-neutral-900">Language Learning</h3>
+                        <h3 className="mb-2 text-2xl font-semibold text-neutral-900">{secondRoadmap.title}</h3>
                         <p className="mb-6 max-w-sm text-sm text-neutral-600">
-                            Build vocabulary, improve listening and speaking, and practice with a structured
-                            weekly plan.
+                            {secondRoadmap.description}
                         </p>
                         <Link
-                            href="#"
+                            href={toRoadmapHref(secondRoadmap)}
                             className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:underline"
                         >
                             Explore Curriculum <ArrowRight className="ml-1" />
@@ -166,21 +234,20 @@ export const Roadmaps = () => {
                         <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-100 text-neutral-900 transition-all duration-300 group-hover:scale-110 group-hover:bg-[#00bae2]/20">
                             <Container width="20" />
                         </div>
-                        <h3 className="mb-2 text-xl font-semibold text-neutral-900">Study Skills</h3>
+                        <h3 className="mb-2 text-xl font-semibold text-neutral-900">{thirdRoadmap.title}</h3>
                         <p className="text-sm text-neutral-500">
-                            Time management, active recall, note systems, and exam strategy.
+                            {thirdRoadmap.description}
                         </p>
                     </div>
                     <div className="mt-6 flex flex-wrap gap-2">
-                        <span className="rounded border border-neutral-200 bg-neutral-50 px-2 py-1 font-mono text-xs text-neutral-600 transition-colors hover:bg-neutral-100">
-                            planning
-                        </span>
-                        <span className="rounded border border-neutral-200 bg-neutral-50 px-2 py-1 font-mono text-xs text-neutral-600 transition-colors hover:bg-neutral-100">
-                            focus
-                        </span>
-                        <span className="rounded border border-neutral-200 bg-neutral-50 px-2 py-1 font-mono text-xs text-neutral-600 transition-colors hover:bg-neutral-100">
-                            review
-                        </span>
+                        {tagCandidates.map((tag) => (
+                            <span
+                                key={tag}
+                                className="rounded border border-neutral-200 bg-neutral-50 px-2 py-1 font-mono text-xs text-neutral-600 transition-colors hover:bg-neutral-100"
+                            >
+                                {tag}
+                            </span>
+                        ))}
                     </div>
                 </div>
 
@@ -193,9 +260,9 @@ export const Roadmaps = () => {
                         <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-white text-green-600 shadow-sm transition-all duration-300 group-hover:scale-110">
                             <BrainCircuit width="20" />
                         </div>
-                        <h3 className="mb-2 text-xl font-semibold text-neutral-900">Business &amp; Career</h3>
+                        <h3 className="mb-2 text-xl font-semibold text-neutral-900">{fourthRoadmap.title}</h3>
                         <p className="text-sm text-neutral-600">
-                            Project planning, stakeholder communication, and career growth skills.
+                            {fourthRoadmap.description}
                         </p>
                     </div>
                     <div className="relative mt-6 h-12 w-full overflow-hidden rounded-lg border border-green-100 bg-white/50">
@@ -210,6 +277,13 @@ export const Roadmaps = () => {
                     </div>
                 </div>
             </div>
+
+            {isLoading && (
+                <div className="mt-6 flex items-center gap-2 text-sm text-neutral-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Syncing latest roadmap highlights...
+                </div>
+            )}
         </section>
     );
 };

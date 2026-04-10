@@ -88,6 +88,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
 
                 const template: RoadmapTemplate = {
                     id: String(data.roadmap.id),
+                    subjectId: data.roadmap.subjectId,
                     title: data.roadmap.title,
                     description: data.roadmap.description || 'No description available',
                     difficulty: 'intermediate',

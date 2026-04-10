@@ -177,9 +177,9 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[calc(100vh-10rem)] lg:min-h-0">
                     {/* Left Column - Timer & Tasks */}
-                    <div className="lg:col-span-7 space-y-6">
+                    <div className="lg:col-span-7 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
                         <TimerCard />
                         {displayTasks.length > 0 && (
                             <TaskSelector
@@ -187,13 +187,14 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
                                 canInteract={canInteractTasks}
                                 onSetActiveTask={handleSetActiveTask}
                                 onCompleteTask={handleCompleteTask}
+                                className="lg:flex-1 lg:min-h-0"
                             />
                         )}
                     </div>
 
                     {/* Right Column - Content & Tips */}
-                    <div className="lg:col-span-5 space-y-6">
-                        <SessionContent />
+                    <div className="lg:col-span-5 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
+                        <SessionContent className="lg:flex-1 lg:min-h-0" />
                         <FocusTips />
                     </div>
                 </div>

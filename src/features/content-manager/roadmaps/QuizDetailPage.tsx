@@ -53,7 +53,6 @@ type ExistingOptionDraft = UpdateQuizQuestionOptionDto;
 const QUESTION_TYPES: Array<{ label: string; value: QuizQuestionType }> = [
   { label: "Single Choice", value: QuizQuestionTypeEnum.SingleChoice },
   { label: "Multiple Choice", value: QuizQuestionTypeEnum.MultipleChoice },
-  { label: "Scale", value: QuizQuestionTypeEnum.Scale },
   { label: "Short Answer", value: QuizQuestionTypeEnum.ShortAnswer },
 ];
 
@@ -61,7 +60,10 @@ const QUESTION_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
 const HAS_OPTIONS = (type: QuizQuestionType) =>
   type === QuizQuestionTypeEnum.SingleChoice ||
-  type === QuizQuestionTypeEnum.MultipleChoice;
+  type === QuizQuestionTypeEnum.MultipleChoice ||
+  type === QuizQuestionTypeEnum.ShortAnswer;
+
+const isShortAnswerType = (type: QuizQuestionType) => type === QuizQuestionTypeEnum.ShortAnswer;
 
 const newOption = (orderNo: number): OptionDraft => ({
   _id: `opt-${Date.now()}-${Math.random()}`,
@@ -85,11 +87,17 @@ const newQuestion = (orderNo: number): QuestionDraft => ({
 });
 
 const parseQuestionType = (value: QuizQuestionType | string): QuizQuestionType => {
-  if (typeof value === "number") return value;
+  if (typeof value === "number") {
+    if (value === QuizQuestionTypeEnum.Scale) {
+      // Scale is no longer supported in this page. Map old data to ShortAnswer.
+      return QuizQuestionTypeEnum.ShortAnswer;
+    }
+    return value;
+  }
   const normalized = String(value).toLowerCase();
   if (normalized === "singlechoice") return QuizQuestionTypeEnum.SingleChoice;
   if (normalized === "multiplechoice") return QuizQuestionTypeEnum.MultipleChoice;
-  if (normalized === "scale") return QuizQuestionTypeEnum.Scale;
+  if (normalized === "scale") return QuizQuestionTypeEnum.ShortAnswer;
   if (normalized === "shortanswer") return QuizQuestionTypeEnum.ShortAnswer;
   return QuizQuestionTypeEnum.SingleChoice;
 };
@@ -161,15 +169,39 @@ const toAiOptionDraft = (
   orderNo,
 });
 
+const ensureShortAnswerOption = (options: OptionDraft[]): OptionDraft[] => {
+  const first = options[0] ?? newOption(1);
+
+  return [
+    {
+      ...first,
+      valueKey: first.valueKey?.trim() || "answer",
+      displayText: first.displayText ?? "",
+      isCorrect: true,
+      orderNo: 1,
+      scoreValue: first.scoreValue ?? 0,
+    },
+  ];
+};
+
+const normalizeOptionsByType = (type: QuizQuestionType, options: OptionDraft[]): OptionDraft[] => {
+  if (isShortAnswerType(type)) {
+    return ensureShortAnswerOption(options);
+  }
+
+  if (type === QuizQuestionTypeEnum.SingleChoice || type === QuizQuestionTypeEnum.MultipleChoice) {
+    return options.length > 0 ? options : [newOption(1), newOption(2)];
+  }
+
+  return [];
+};
+
 const toAiQuestionDraft = (question: AiQuizQuestionItem, orderNo: number): QuestionDraft => {
   const type = parseQuestionType((question.type as QuizQuestionType | string) ?? QuizQuestionTypeEnum.SingleChoice);
   const rawOptions = Array.isArray(question.options) ? question.options : [];
 
-  const options = HAS_OPTIONS(type)
-    ? rawOptions.length > 0
-      ? rawOptions.map((option, index) => toAiOptionDraft(option, index + 1))
-      : [newOption(1), newOption(2)]
-    : [];
+  const mappedOptions = rawOptions.map((option, index) => toAiOptionDraft(option, index + 1));
+  const options = normalizeOptionsByType(type, mappedOptions);
 
   return {
     _qid: `ai-q-${Date.now()}-${Math.random()}`,
@@ -212,6 +244,7 @@ export function QuizDetailPage() {
   const [editingOptionIds, setEditingOptionIds] = useState<Record<number, boolean>>({});
   const [questionEdits, setQuestionEdits] = useState<Record<number, ExistingQuestionDraft>>({});
   const [optionEdits, setOptionEdits] = useState<Record<number, ExistingOptionDraft>>({});
+  const [shortAnswerExpectedEdits, setShortAnswerExpectedEdits] = useState<Record<number, string>>({});
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiQuestionCount, setAiQuestionCount] = useState(10);
   const [aiLevel, setAiLevel] = useState<string>("Beginner");
@@ -220,6 +253,7 @@ export function QuizDetailPage() {
   const [deletingQuestionId, setDeletingQuestionId] = useState<number | null>(null);
   const [deletingOptionId, setDeletingOptionId] = useState<number | null>(null);
   const existingQuestions = quizQuestionsQuery.data?.quizQuestionDtos ?? [];
+  const lightModeOnlyStyle = useMemo(() => ({ colorScheme: "light" as const }), []);
   const aiQuestions = useMemo(() => extractAiQuizQuestions(aiResponse), [aiResponse]);
   const roadmapId = Number.isFinite(fallbackRoadmapId) && fallbackRoadmapId > 0
     ? fallbackRoadmapId
@@ -241,7 +275,7 @@ export function QuizDetailPage() {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q._qid !== qid) return q;
-        return { ...q, type, options: HAS_OPTIONS(type) ? q.options : [] };
+        return { ...q, type, options: normalizeOptionsByType(type, q.options) };
       })
     );
   };
@@ -263,6 +297,9 @@ export function QuizDetailPage() {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q._qid !== qid) return q;
+        if (isShortAnswerType(q.type)) {
+          return { ...q, options: ensureShortAnswerOption(q.options) };
+        }
         return { ...q, options: [...q.options, newOption(q.options.length + 1)] };
       })
     );
@@ -272,8 +309,34 @@ export function QuizDetailPage() {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q._qid !== qid) return q;
+        if (isShortAnswerType(q.type)) {
+          return { ...q, options: ensureShortAnswerOption(q.options) };
+        }
         const filtered = q.options.filter((o) => o._id !== oid);
         return { ...q, options: filtered.map((o, i) => ({ ...o, orderNo: i + 1 })) };
+      })
+    );
+  };
+
+  const setShortAnswerExpectedAnswer = (qid: string, answerText: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q._qid !== qid) return q;
+        if (!isShortAnswerType(q.type)) return q;
+
+        const ensured = ensureShortAnswerOption(q.options);
+        return {
+          ...q,
+          options: [
+            {
+              ...ensured[0],
+              displayText: answerText,
+              valueKey: "answer",
+              isCorrect: true,
+              orderNo: 1,
+            },
+          ],
+        };
       })
     );
   };
@@ -312,6 +375,14 @@ export function QuizDetailPage() {
         toast.warning(`Question ${num}: fill in Question Key and Prompt`);
         return;
       }
+      if (isShortAnswerType(q.type)) {
+        const shortOptions = ensureShortAnswerOption(q.options);
+        const answerText = shortOptions[0]?.displayText?.trim() || "";
+        if (!answerText) {
+          toast.warning(`Question ${num}: Short Answer requires exactly 1 answer option`);
+          return;
+        }
+      }
       if (HAS_OPTIONS(q.type) && q.options.length === 0) {
         toast.warning(`Question ${num}: add at least one option`);
         return;
@@ -322,22 +393,30 @@ export function QuizDetailPage() {
       }
     }
 
-    const dtos: CreateQuizQuestionWithOptionsDto[] = questions.map((q) => ({
-      quizId,
-      questionKey: q.questionKey.trim(),
-      prompt: q.prompt.trim(),
-      level: q.level || "Beginner",
-      type: q.type,
-      scoreWeight: q.scoreWeight > 0 ? q.scoreWeight : 1,
-      orderNo: Math.max(1, Math.trunc(q.orderNo)),
-      isRequired: q.isRequired,
-      options: q.options.map(({ _id: _ignored, ...rest }) => ({
-        ...rest,
-        valueKey: rest.valueKey.trim(),
-        displayText: rest.displayText.trim(),
-        scoreValue: rest.scoreValue ?? 0,
-      })),
-    }));
+    const dtos: CreateQuizQuestionWithOptionsDto[] = questions.map((q) => {
+      const normalizedOptions = isShortAnswerType(q.type)
+        ? ensureShortAnswerOption(q.options)
+        : q.options;
+
+      return {
+        quizId,
+        questionKey: q.questionKey.trim(),
+        prompt: q.prompt.trim(),
+        level: q.level || "Beginner",
+        type: q.type,
+        scoreWeight: q.scoreWeight > 0 ? q.scoreWeight : 1,
+        orderNo: Math.max(1, Math.trunc(q.orderNo)),
+        isRequired: q.isRequired,
+        options: normalizedOptions.map(({ _id: _ignored, ...rest }, index) => ({
+          ...rest,
+          valueKey: isShortAnswerType(q.type) ? "answer" : rest.valueKey.trim(),
+          displayText: rest.displayText.trim(),
+          isCorrect: isShortAnswerType(q.type) ? true : !!rest.isCorrect,
+          orderNo: isShortAnswerType(q.type) ? 1 : index + 1,
+          scoreValue: rest.scoreValue ?? 0,
+        })),
+      };
+    });
 
     try {
       await createQuestionMutation.mutateAsync({ createQuizQuestionDtos: dtos });
@@ -419,7 +498,7 @@ export function QuizDetailPage() {
     setAiDraftQuestions((prev) =>
       prev.map((q) => {
         if (q._qid !== qid) return q;
-        return { ...q, type, options: HAS_OPTIONS(type) ? (q.options.length > 0 ? q.options : [newOption(1), newOption(2)]) : [] };
+        return { ...q, type, options: normalizeOptionsByType(type, q.options) };
       })
     );
   };
@@ -428,6 +507,9 @@ export function QuizDetailPage() {
     setAiDraftQuestions((prev) =>
       prev.map((q) => {
         if (q._qid !== qid) return q;
+        if (isShortAnswerType(q.type)) {
+          return { ...q, options: ensureShortAnswerOption(q.options) };
+        }
         return { ...q, options: [...q.options, newOption(q.options.length + 1)] };
       })
     );
@@ -437,8 +519,34 @@ export function QuizDetailPage() {
     setAiDraftQuestions((prev) =>
       prev.map((q) => {
         if (q._qid !== qid) return q;
+        if (isShortAnswerType(q.type)) {
+          return { ...q, options: ensureShortAnswerOption(q.options) };
+        }
         const filtered = q.options.filter((o) => o._id !== oid);
         return { ...q, options: filtered.map((o, i) => ({ ...o, orderNo: i + 1 })) };
+      })
+    );
+  };
+
+  const setAiShortAnswerExpectedAnswer = (qid: string, answerText: string) => {
+    setAiDraftQuestions((prev) =>
+      prev.map((q) => {
+        if (q._qid !== qid) return q;
+        if (!isShortAnswerType(q.type)) return q;
+
+        const ensured = ensureShortAnswerOption(q.options);
+        return {
+          ...q,
+          options: [
+            {
+              ...ensured[0],
+              displayText: answerText,
+              valueKey: "answer",
+              isCorrect: true,
+              orderNo: 1,
+            },
+          ],
+        };
       })
     );
   };
@@ -482,6 +590,14 @@ export function QuizDetailPage() {
         toast.warning(`AI Question ${num}: fill in Question Key and Prompt`);
         return;
       }
+      if (isShortAnswerType(q.type)) {
+        const shortOptions = ensureShortAnswerOption(q.options);
+        const answerText = shortOptions[0]?.displayText?.trim() || "";
+        if (!answerText) {
+          toast.warning(`AI Question ${num}: Short Answer requires exactly 1 answer option`);
+          return;
+        }
+      }
       if (HAS_OPTIONS(q.type) && q.options.length === 0) {
         toast.warning(`AI Question ${num}: add at least one option`);
         return;
@@ -492,22 +608,30 @@ export function QuizDetailPage() {
       }
     }
 
-    const dtos: CreateQuizQuestionWithOptionsDto[] = aiDraftQuestions.map((q, index) => ({
-      quizId,
-      questionKey: q.questionKey.trim(),
-      prompt: q.prompt.trim(),
-      level: q.level || "Beginner",
-      type: q.type,
-      scoreWeight: q.scoreWeight > 0 ? q.scoreWeight : 1,
-      orderNo: Math.max(1, Math.trunc(q.orderNo || index + 1)),
-      isRequired: q.isRequired,
-      options: q.options.map(({ _id: _ignored, ...rest }) => ({
-        ...rest,
-        valueKey: rest.valueKey.trim(),
-        displayText: rest.displayText.trim(),
-        scoreValue: rest.scoreValue ?? 0,
-      })),
-    }));
+    const dtos: CreateQuizQuestionWithOptionsDto[] = aiDraftQuestions.map((q, index) => {
+      const normalizedOptions = isShortAnswerType(q.type)
+        ? ensureShortAnswerOption(q.options)
+        : q.options;
+
+      return {
+        quizId,
+        questionKey: q.questionKey.trim(),
+        prompt: q.prompt.trim(),
+        level: q.level || "Beginner",
+        type: q.type,
+        scoreWeight: q.scoreWeight > 0 ? q.scoreWeight : 1,
+        orderNo: Math.max(1, Math.trunc(q.orderNo || index + 1)),
+        isRequired: q.isRequired,
+        options: normalizedOptions.map(({ _id: _ignored, ...rest }, optionIndex) => ({
+          ...rest,
+          valueKey: isShortAnswerType(q.type) ? "answer" : rest.valueKey.trim(),
+          displayText: rest.displayText.trim(),
+          isCorrect: isShortAnswerType(q.type) ? true : !!rest.isCorrect,
+          orderNo: isShortAnswerType(q.type) ? 1 : optionIndex + 1,
+          scoreValue: rest.scoreValue ?? 0,
+        })),
+      };
+    });
 
     try {
       await createQuestionMutation.mutateAsync({ createQuizQuestionDtos: dtos });
@@ -527,10 +651,24 @@ export function QuizDetailPage() {
       ...prev,
       [question.id]: prev[question.id] ?? toQuestionDraft(question),
     }));
+
+    if (parseQuestionType(question.type) === QuizQuestionTypeEnum.ShortAnswer) {
+      setShortAnswerExpectedEdits((prev) => ({
+        ...prev,
+        [question.id]: prev[question.id] ?? (question.options?.[0]?.displayText ?? ""),
+      }));
+    }
   };
 
   const cancelEditQuestion = () => {
     setEditingQuestionId(null);
+  };
+
+  const handleShortAnswerExpectedEditChange = (questionId: number, value: string) => {
+    setShortAnswerExpectedEdits((prev) => ({
+      ...prev,
+      [questionId]: value,
+    }));
   };
 
   const handleEditQuestionChange = (
@@ -557,9 +695,16 @@ export function QuizDetailPage() {
 
   const saveQuestion = async (question: QuizQuestionItem) => {
     const edit = questionEdits[question.id] ?? toQuestionDraft(question);
+    const isShortAnswer = edit.type === QuizQuestionTypeEnum.ShortAnswer;
+    const expectedAnswer = (shortAnswerExpectedEdits[question.id] ?? question.options?.[0]?.displayText ?? "").trim();
 
     if (!edit.questionKey.trim() || !edit.prompt.trim()) {
       toast.warning("Question Key and Prompt are required");
+      return;
+    }
+
+    if (isShortAnswer && !expectedAnswer) {
+      toast.warning("Short Answer requires Expected Answer");
       return;
     }
 
@@ -577,6 +722,31 @@ export function QuizDetailPage() {
           isRequired: !!edit.isRequired,
         },
       });
+
+      if (isShortAnswer) {
+        const firstOption = [...(question.options ?? [])]
+          .sort((a, b) => a.orderNo - b.orderNo)[0];
+
+        if (!firstOption) {
+          toast.error("Missing short answer option", {
+            description: "This question has no option to update. Please recreate this question.",
+          });
+          return;
+        }
+
+        await updateOptionMutation.mutateAsync({
+          id: firstOption.id,
+          quizId,
+          updateQuizQuestionOptionDto: {
+            id: firstOption.id,
+            valueKey: "answer",
+            displayText: expectedAnswer,
+            isCorrect: true,
+            scoreValue: firstOption.scoreValue ?? 0,
+            orderNo: 1,
+          },
+        });
+      }
 
       setEditingQuestionId(null);
       toast.success("Question updated");
@@ -699,7 +869,7 @@ export function QuizDetailPage() {
 
   if (!isValidQuizId) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" style={lightModeOnlyStyle}>
         <button
           onClick={() => router.back()}
           className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
@@ -715,13 +885,17 @@ export function QuizDetailPage() {
   }
 
   if (quizDetailQuery.isLoading && !quizDetailQuery.data) {
-    return <ContentManagerLoading variant="page" title="Loading quiz..." />;
+    return (
+      <div style={lightModeOnlyStyle}>
+        <ContentManagerLoading variant="page" title="Loading quiz..." />
+      </div>
+    );
   }
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" style={lightModeOnlyStyle}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -812,7 +986,7 @@ export function QuizDetailPage() {
               .map((question, qIndex) => (
                 <div
                   key={question.id}
-                  className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-2"
+                  className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-2 transition-all hover:border-neutral-300 hover:bg-white hover:shadow-sm"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-neutral-900">
@@ -831,7 +1005,7 @@ export function QuizDetailPage() {
                         type="button"
                         onClick={() => deleteQuestion(question.id)}
                         disabled={deletingQuestionId === question.id || deleteQuestionMutation.isPending}
-                        className="text-xs rounded border border-red-300 bg-red-50 px-2 py-1 text-red-700 hover:bg-red-100 disabled:opacity-60"
+                        className="text-xs rounded border border-red-300 bg-red-50 px-2 py-1 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-60"
                       >
                         {deletingQuestionId === question.id ? "Deleting..." : "Delete Question"}
                       </button>
@@ -840,7 +1014,7 @@ export function QuizDetailPage() {
                           <button
                             type="button"
                             onClick={() => cancelEditQuestion()}
-                            className="text-xs rounded border border-neutral-200 px-2 py-1 text-neutral-600 hover:bg-neutral-100"
+                            className="text-xs rounded border border-neutral-200 bg-white px-2 py-1 text-neutral-600 transition-colors hover:bg-neutral-100"
                           >
                             Cancel
                           </button>
@@ -848,7 +1022,7 @@ export function QuizDetailPage() {
                             type="button"
                             onClick={() => saveQuestion(question)}
                             disabled={updateQuestionMutation.isPending}
-                            className="text-xs rounded border border-[#00bae2]/30 bg-[#00bae2]/10 px-2 py-1 text-[#007f9c] hover:bg-[#00bae2]/20 disabled:opacity-60"
+                            className="text-xs rounded border border-[#00bae2]/30 bg-[#00bae2]/10 px-2 py-1 text-[#007f9c] transition-colors hover:bg-[#00bae2]/20 disabled:opacity-60"
                           >
                             {updateQuestionMutation.isPending ? "Saving..." : "Save Question"}
                           </button>
@@ -857,7 +1031,7 @@ export function QuizDetailPage() {
                         <button
                           type="button"
                           onClick={() => startEditQuestion(question)}
-                          className="text-xs rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-700 hover:bg-amber-100"
+                          className="text-xs rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-700 transition-colors hover:bg-amber-100"
                         >
                           Edit Question
                         </button>
@@ -934,6 +1108,22 @@ export function QuizDetailPage() {
                         />
                         Required question
                       </label>
+
+                      {(questionEdits[question.id] ?? toQuestionDraft(question)).type === QuizQuestionTypeEnum.ShortAnswer && (
+                        <div className="md:col-span-2 rounded-lg border border-cyan-200 bg-cyan-50/60 p-3 space-y-2">
+                          <p className="text-xs font-semibold text-cyan-800">Expected Answer (required)</p>
+                          <p className="text-[11px] text-cyan-700">
+                            Short Answer stores exactly one option. Its display text is the correct answer.
+                          </p>
+                          <input
+                            type="text"
+                            value={shortAnswerExpectedEdits[question.id] ?? (question.options?.[0]?.displayText ?? "")}
+                            onChange={(e) => handleShortAnswerExpectedEditChange(question.id, e.target.value)}
+                            className="w-full rounded-md border border-cyan-300 bg-white px-2.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
+                            placeholder="Enter correct short answer"
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-xs text-neutral-600">
@@ -941,7 +1131,13 @@ export function QuizDetailPage() {
                     </div>
                   )}
 
-                  {question.options?.length ? (
+                  {parseQuestionType(question.type) === QuizQuestionTypeEnum.ShortAnswer && (
+                    <div className="rounded-md border border-cyan-200 bg-cyan-50/60 px-3 py-2 text-xs text-cyan-800">
+                      Expected Answer: <span className="font-semibold">{question.options?.[0]?.displayText || "(empty)"}</span>
+                    </div>
+                  )}
+
+                  {parseQuestionType(question.type) !== QuizQuestionTypeEnum.ShortAnswer && (question.options?.length ? (
                     <div className="space-y-1 pt-1">
                       {[...question.options]
                         .sort((a, b) => a.orderNo - b.orderNo)
@@ -1028,7 +1224,7 @@ export function QuizDetailPage() {
                                   <button
                                     type="button"
                                     onClick={() => cancelEditOption(option.id)}
-                                    className="rounded border border-neutral-300 px-2 py-1 text-[11px] text-neutral-600"
+                                    className="rounded border border-neutral-300 bg-white px-2 py-1 text-[11px] text-neutral-600 transition-colors hover:bg-neutral-100"
                                   >
                                     Cancel
                                   </button>
@@ -1036,7 +1232,7 @@ export function QuizDetailPage() {
                                     type="button"
                                     onClick={() => saveOption(question, option)}
                                     disabled={updateOptionMutation.isPending}
-                                    className="rounded border border-[#00bae2]/30 bg-[#00bae2]/10 px-2 py-1 text-[11px] text-[#007f9c] disabled:opacity-60"
+                                    className="rounded border border-[#00bae2]/30 bg-[#00bae2]/10 px-2 py-1 text-[11px] text-[#007f9c] transition-colors hover:bg-[#00bae2]/20 disabled:opacity-60"
                                   >
                                     {updateOptionMutation.isPending ? "Saving..." : "Save Option"}
                                   </button>
@@ -1053,7 +1249,7 @@ export function QuizDetailPage() {
                                   <button
                                     type="button"
                                     onClick={() => startEditOption(option)}
-                                    className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-700 hover:bg-amber-100"
+                                    className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-700 transition-colors hover:bg-amber-100"
                                   >
                                     Edit Option
                                   </button>
@@ -1061,7 +1257,7 @@ export function QuizDetailPage() {
                                     type="button"
                                     onClick={() => deleteOption(option.id)}
                                     disabled={deletingOptionId === option.id || deleteOptionMutation.isPending}
-                                    className="rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] text-red-700 hover:bg-red-100 disabled:opacity-60"
+                                    className="rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] text-red-700 transition-colors hover:bg-red-100 disabled:opacity-60"
                                   >
                                     {deletingOptionId === option.id ? "Deleting..." : "Delete Option"}
                                   </button>
@@ -1073,7 +1269,7 @@ export function QuizDetailPage() {
                     </div>
                   ) : (
                     <p className="text-xs text-neutral-500 italic">No options for this question type.</p>
-                  )}
+                  ))}
                 </div>
               ))}
           </div>
@@ -1199,6 +1395,21 @@ export function QuizDetailPage() {
               {/* Answer Options */}
               {HAS_OPTIONS(q.type) && (
                 <div className="space-y-2">
+                  {isShortAnswerType(q.type) ? (
+                    <div className="rounded-lg border border-cyan-200 bg-cyan-50/60 p-3 space-y-2">
+                      <p className="text-xs font-semibold text-cyan-800">Expected Answer (required)</p>
+                      <p className="text-[11px] text-cyan-700">
+                        Short Answer supports exactly 1 answer option. The value below is used as the correct answer.
+                      </p>
+                      <input
+                        type="text"
+                        value={ensureShortAnswerOption(q.options)[0]?.displayText ?? ""}
+                        onChange={(e) => setShortAnswerExpectedAnswer(q._qid, e.target.value)}
+                        className="w-full rounded-md border border-cyan-300 bg-white px-2.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
+                        placeholder="Enter correct short answer"
+                      />
+                    </div>
+                  ) : (
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold text-neutral-700">
                       Answer Options
@@ -1216,11 +1427,13 @@ export function QuizDetailPage() {
                       Add Option
                     </button>
                   </div>
+                  )}
 
-                  {q.options.length === 0 && (
+                  {q.options.length === 0 && !isShortAnswerType(q.type) && (
                     <p className="text-xs text-neutral-400 italic">No options yet. Click "+ Add Option".</p>
                   )}
 
+                  {!isShortAnswerType(q.type) && (
                   <div className="space-y-2">
                     {q.options.map((opt, oIdx) => (
                       <div
@@ -1235,6 +1448,7 @@ export function QuizDetailPage() {
                           <button
                             type="button"
                             onClick={() => removeOption(q._qid, opt._id)}
+                            disabled={isShortAnswerType(q.type)}
                             className="ml-auto text-red-400 hover:text-red-600 transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1296,7 +1510,7 @@ export function QuizDetailPage() {
                             />
                             Correct answer
                           </label>
-                        ) : (
+                        ) : q.type === QuizQuestionTypeEnum.MultipleChoice ? (
                           <label className="inline-flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1306,10 +1520,13 @@ export function QuizDetailPage() {
                             />
                             Correct answer
                           </label>
+                        ) : (
+                          <div className="text-xs text-cyan-700 font-medium">This option is always the correct short answer.</div>
                         )}
                       </div>
                     ))}
                   </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1354,7 +1571,7 @@ export function QuizDetailPage() {
       )}
 
       {isAiModalOpen && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={lightModeOnlyStyle}>
           <div
             className="absolute inset-0 bg-neutral-950/55 backdrop-blur-sm"
             onClick={handleCloseAiModal}
@@ -1404,7 +1621,7 @@ export function QuizDetailPage() {
                     max="20"
                     value={aiQuestionCount}
                     onChange={(e) => setAiQuestionCount(Number(e.target.value))}
-                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition-colors focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                   />
                 </div>
 
@@ -1415,10 +1632,10 @@ export function QuizDetailPage() {
                   <select
                     value={aiLevel}
                     onChange={(e) => setAiLevel(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-colors focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                   >
                     {QUESTION_LEVELS.map((level) => (
-                      <option key={level} value={level}>
+                      <option key={level} value={level} className="bg-white text-neutral-900">
                         {level}
                       </option>
                     ))}
@@ -1449,7 +1666,7 @@ export function QuizDetailPage() {
                       return (
                         <div
                           key={question._qid}
-                          className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5"
+                          className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 transition-all hover:border-neutral-300 hover:bg-white hover:shadow-sm"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
@@ -1475,16 +1692,16 @@ export function QuizDetailPage() {
                               type="text"
                               value={question.questionKey}
                               onChange={(e) => updateAiQuestion(question._qid, { questionKey: e.target.value })}
-                              className="rounded border border-neutral-300 px-2 py-1.5"
+                              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-neutral-900 placeholder:text-neutral-400"
                               placeholder="Question key"
                             />
                             <select
                               value={question.level}
                               onChange={(e) => updateAiQuestion(question._qid, { level: e.target.value })}
-                              className="rounded border border-neutral-300 px-2 py-1.5"
+                              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-neutral-900"
                             >
                               {QUESTION_LEVELS.map((level) => (
-                                <option key={level} value={level}>
+                                <option key={level} value={level} className="bg-white text-neutral-900">
                                   {level}
                                 </option>
                               ))}
@@ -1492,16 +1709,16 @@ export function QuizDetailPage() {
                             <select
                               value={question.type}
                               onChange={(e) => changeAiQuestionType(question._qid, Number(e.target.value) as QuizQuestionType)}
-                              className="rounded border border-neutral-300 px-2 py-1.5"
+                              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-neutral-900"
                             >
                               {QUESTION_TYPES.map((t) => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
+                                <option key={t.value} value={t.value} className="bg-white text-neutral-900">{t.label}</option>
                               ))}
                             </select>
                             <textarea
                               value={question.prompt}
                               onChange={(e) => updateAiQuestion(question._qid, { prompt: e.target.value })}
-                              className="md:col-span-2 rounded border border-neutral-300 px-2 py-1.5 min-h-[70px]"
+                              className="md:col-span-2 rounded border border-neutral-300 bg-white px-2 py-1.5 min-h-[70px] text-neutral-900 placeholder:text-neutral-400"
                               placeholder="Prompt"
                             />
                             <input
@@ -1510,7 +1727,7 @@ export function QuizDetailPage() {
                               step="0.1"
                               value={question.scoreWeight}
                               onChange={(e) => updateAiQuestion(question._qid, { scoreWeight: Number(e.target.value) })}
-                              className="rounded border border-neutral-300 px-2 py-1.5"
+                              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-neutral-900"
                               placeholder="Score weight"
                             />
                             <input
@@ -1519,7 +1736,7 @@ export function QuizDetailPage() {
                               step="1"
                               value={question.orderNo}
                               onChange={(e) => updateAiQuestion(question._qid, { orderNo: Number(e.target.value) })}
-                              className="rounded border border-neutral-300 px-2 py-1.5"
+                              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-neutral-900"
                               placeholder="Order"
                             />
                             <label className="md:col-span-2 inline-flex items-center gap-2 text-xs text-neutral-700">
@@ -1534,25 +1751,41 @@ export function QuizDetailPage() {
 
                           {HAS_OPTIONS(question.type) && (
                             <div className="mt-4 space-y-2">
+                              {isShortAnswerType(question.type) ? (
+                                <div className="rounded-lg border border-cyan-200 bg-cyan-50/60 p-3 space-y-2">
+                                  <p className="text-xs font-semibold text-cyan-800">Expected Answer (required)</p>
+                                  <p className="text-[11px] text-cyan-700">
+                                    Short Answer supports exactly 1 answer option. The value below is used as the correct answer.
+                                  </p>
+                                  <input
+                                    type="text"
+                                    value={ensureShortAnswerOption(options)[0]?.displayText ?? ""}
+                                    onChange={(e) => setAiShortAnswerExpectedAnswer(question._qid, e.target.value)}
+                                    className="w-full rounded-md border border-cyan-300 bg-white px-2.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
+                                    placeholder="Enter correct short answer"
+                                  />
+                                </div>
+                              ) : (
                               <div className="flex items-center justify-between">
                                 <p className="text-xs font-semibold text-neutral-700">Answer Options ({options.length})</p>
                                 <button
                                   type="button"
                                   onClick={() => addAiOption(question._qid)}
-                                  className="rounded border border-[#00bae2]/30 px-2 py-1 text-[11px] font-medium text-[#007f9c]"
+                                  className="rounded border border-[#00bae2]/30 px-2 py-1 text-[11px] font-medium text-[#007f9c] transition-colors hover:bg-[#00bae2]/10"
                                 >
                                   Add Option
                                 </button>
                               </div>
+                              )}
 
-                              {options.map((option) => (
-                                <div key={option._id} className="rounded-lg border border-neutral-200 bg-white p-3 space-y-2">
+                              {!isShortAnswerType(question.type) && options.map((option) => (
+                                <div key={option._id} className="rounded-lg border border-neutral-200 bg-white p-3 space-y-2 transition-colors hover:border-neutral-300 hover:bg-neutral-50/50">
                                   <div className="grid grid-cols-2 gap-2">
                                     <input
                                       type="text"
                                       value={option.valueKey}
                                       onChange={(e) => updateAiOption(question._qid, option._id, "valueKey", e.target.value)}
-                                      className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                                      className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400"
                                       placeholder="Value key"
                                     />
                                     <input
@@ -1561,14 +1794,14 @@ export function QuizDetailPage() {
                                       step="0.1"
                                       value={option.scoreValue ?? 0}
                                       onChange={(e) => updateAiOption(question._qid, option._id, "scoreValue", Number(e.target.value))}
-                                      className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                                      className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900"
                                       placeholder="Score"
                                     />
                                     <input
                                       type="text"
                                       value={option.displayText}
                                       onChange={(e) => updateAiOption(question._qid, option._id, "displayText", e.target.value)}
-                                      className="col-span-2 rounded border border-neutral-300 px-2 py-1 text-xs"
+                                      className="col-span-2 rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 placeholder:text-neutral-400"
                                       placeholder="Display text"
                                     />
                                   </div>
@@ -1584,7 +1817,7 @@ export function QuizDetailPage() {
                                         />
                                         Correct answer
                                       </label>
-                                    ) : (
+                                    ) : question.type === QuizQuestionTypeEnum.MultipleChoice ? (
                                       <label className="inline-flex items-center gap-2 text-xs text-neutral-700">
                                         <input
                                           type="checkbox"
@@ -1593,12 +1826,15 @@ export function QuizDetailPage() {
                                         />
                                         Correct answer
                                       </label>
+                                    ) : (
+                                      <div className="text-xs text-cyan-700 font-medium">This option is always the correct short answer.</div>
                                     )}
 
                                     <button
                                       type="button"
                                       onClick={() => removeAiOption(question._qid, option._id)}
-                                      className="text-xs text-red-500 hover:text-red-700"
+                                      disabled={isShortAnswerType(question.type)}
+                                      className="text-xs text-red-500 transition-colors hover:text-red-700"
                                     >
                                       Remove Option
                                     </button>

@@ -71,15 +71,23 @@ export function useAdminUsersManager(options: UseAdminUsersManagerOptions = {}) 
   );
 
   const handleAssignSubject = useCallback(
-    async (user: User, subjectId: number) => {
-      await assignSubjectMutation.mutateAsync({ userId: user.id, subjectId });
+    async (user: User, subjectIds: number[]) => {
+      if (subjectIds.length === 0) {
+        return;
+      }
+
+      await Promise.all(
+        subjectIds.map((subjectId) =>
+          assignSubjectMutation.mutateAsync({ userId: user.id, subjectId })
+        )
+      );
     },
     [assignSubjectMutation]
   );
 
   const handleUnassignSubject = useCallback(
-    async (user: User) => {
-      await unassignSubjectMutation.mutateAsync(user.id);
+    async (user: User, subjectId?: number) => {
+      await unassignSubjectMutation.mutateAsync({ userId: user.id, subjectId });
     },
     [unassignSubjectMutation]
   );
@@ -139,6 +147,8 @@ export function useAdminUsersManager(options: UseAdminUsersManagerOptions = {}) 
     isMutating:
       deactivateUserMutation.isPending ||
       activateUserMutation.isPending ||
+      assignSubjectMutation.isPending ||
+      unassignSubjectMutation.isPending ||
       createUserMutation.isPending,
     isCreatingUser: createUserMutation.isPending,
     onRoleFilterChange,

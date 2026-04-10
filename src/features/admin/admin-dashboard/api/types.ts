@@ -1,49 +1,3 @@
-import type { PaginatedResponse } from "@/shared/types/api";
-
-export type AdminUserDto = {
-  id: string;
-  userName: string | null;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  isActive: boolean;
-  roleNames: string[];
-  assignedSubjectId?: number | null;
-};
-
-export type GetAllUsersApiResponse = {
-  users: PaginatedResponse<AdminUserDto>;
-};
-
-export type RoadmapListItem = {
-  id: number;
-  title: string;
-  status: string | number | null;
-  createdAt: string | Date;
-};
-
-export type GetAllRoadmapsApiResponse = {
-  roadmaps: PaginatedResponse<RoadmapListItem>;
-};
-
-export type LearningCategoryListItem = {
-  id: number;
-  isActive: boolean;
-};
-
-export type GetAllLearningCategoriesApiResponse = {
-  categories: PaginatedResponse<LearningCategoryListItem>;
-};
-
-export type LearningSubjectListItem = {
-  id: number;
-  isActive: boolean;
-};
-
-export type GetAllLearningSubjectsApiResponse = {
-  subjects: PaginatedResponse<LearningSubjectListItem>;
-};
-
 export type DashboardStat = {
   title: string;
   value: string;
@@ -53,6 +7,12 @@ export type DashboardStat = {
 
 export type RoleDistributionItem = {
   role: "Admin" | "Analyst" | "Content Manager" | "User";
+  count: number;
+  percentage: number;
+};
+
+export type RoleDistributionApiItem = {
+  role: string;
   count: number;
   percentage: number;
 };
@@ -79,6 +39,24 @@ export type RoadmapStatusBreakdownInsight = {
 export type AdminDashboardData = {
   stats: DashboardStat[];
   roleDistribution: RoleDistributionItem[];
+  learningCoverage: LearningCoverageInsight;
+  roadmapStatusBreakdown: RoadmapStatusBreakdownInsight;
+};
+
+export type AdminDashboardSummary = {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  contentManagers: number;
+  assignedContentManagers: number;
+  analysts: number;
+  totalLatestRoadmaps: number;
+  activeLatestRoadmaps: number;
+};
+
+export type AdminDashboardOverviewApiResponse = {
+  summary: AdminDashboardSummary;
+  roleDistribution: RoleDistributionApiItem[];
   learningCoverage: LearningCoverageInsight;
   roadmapStatusBreakdown: RoadmapStatusBreakdownInsight;
 };

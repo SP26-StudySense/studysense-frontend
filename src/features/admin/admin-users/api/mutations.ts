@@ -8,6 +8,7 @@ import {
   assignSubjectToContentManager,
   createAdminUser,
   deactivateAdminUser,
+  unassignSingleSubjectFromContentManager,
   unassignSubjectFromContentManager,
 } from "./api";
 import type { CreateAdminUserRequest } from "./types";
@@ -50,7 +51,7 @@ export function useAssignSubjectToContentManagerMutation() {
       assignSubjectToContentManager(userId, subjectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.all });
-      toast.success("Subject has been assigned.");
+      toast.success("Subject assignment has been updated.");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to assign subject.");
@@ -62,10 +63,13 @@ export function useUnassignSubjectFromContentManagerMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => unassignSubjectFromContentManager(userId),
+    mutationFn: ({ userId, subjectId }: { userId: string; subjectId?: number }) =>
+      typeof subjectId === "number"
+        ? unassignSingleSubjectFromContentManager(userId, subjectId)
+        : unassignSubjectFromContentManager(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.all });
-      toast.success("Subject has been unassigned.");
+      toast.success("Subject assignment has been removed.");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to unassign subject.");

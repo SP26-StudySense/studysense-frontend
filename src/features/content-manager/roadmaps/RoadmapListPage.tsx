@@ -8,16 +8,20 @@ import Link from "next/link";
 import { ConfirmationModal } from "@/shared/ui";
 import { ApiException } from "@/shared/api/errors";
 import { toast } from "@/shared/lib";
+import { formatDateTimeHmDdMmYyyyInUserTimeZone } from "@/shared/lib/date-time";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ContentManagerLoading } from "../components";
 import { useManagerRoadmaps, useSubjectsByContentManager } from "../api/queries";
-import { useDeleteRoadmap, useCreateRoadmap } from "../api/mutations";
+import { useDeleteRoadmap, useCreateRoadmap, useUpdateRoadmap } from "../api/mutations";
 import { RoadmapStatus, type GetManagerRoadmapsParams, type LearningSubject } from "../api/types";
 
 type ModalState = 
   | { type: 'none' }
   | { type: 'create' }
   | { type: 'delete'; roadmapId: number; title: string }
+  | { type: 'publish'; roadmapId: number; title: string; description: string }
+  | { type: 'disable'; roadmapId: number; title: string }
+  | { type: 'activate'; roadmapId: number; title: string }
   | { type: 'aiGenerate' };
 
 // Roadmap Form Modal Component
@@ -206,7 +210,7 @@ function AIGenerateModal({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    subjectId: 1, // TODO: Get from user's assigned subject
+    subjectId: 0,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -311,12 +315,124 @@ function AIGenerateModal({
   );
 }
 
+function PublishRoadmapModal({
+  isOpen,
+  initialTitle,
+  initialDescription,
+  isSubmitting,
+  onClose,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  initialTitle: string;
+  initialDescription: string;
+  isSubmitting?: boolean;
+  onClose: () => void;
+  onSubmit: (data: { title: string; description: string }) => void;
+}) {
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTitle(initialTitle);
+    setDescription(initialDescription);
+  }, [initialDescription, initialTitle, isOpen]);
+
+  if (!isOpen) return null;
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-3xl bg-white border border-neutral-200 shadow-2xl">
+        <div className="p-6 border-b border-neutral-100">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-neutral-900 m-0">Publish Roadmap</h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-neutral-100 transition-colors"
+              disabled={isSubmitting}
+            >
+              <X className="h-5 w-5 text-neutral-400" />
+            </button>
+          </div>
+        </div>
+
+        <form
+          className="p-6 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!title.trim() || !description.trim()) return;
+            onSubmit({ title: title.trim(), description: description.trim() });
+          }}
+        >
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
+              Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+              placeholder="Roadmap title"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 min-h-[100px]"
+              placeholder="Roadmap description"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-all disabled:opacity-50"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-3 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md disabled:opacity-50"
+              disabled={isSubmitting || !title.trim() || !description.trim()}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <LoadingSpinner size="sm" />
+                  Publishing...
+                </span>
+              ) : (
+                'Publish'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function RoadmapListPage() {
   const router = useRouter();
   const [filters, setFilters] = useState<GetManagerRoadmapsParams>({
     pageIndex: 1,
     pageSize: 6,
     keyword: '',
+    subjectId: undefined,
     status: undefined,
   });
   const [modalState, setModalState] = useState<ModalState>({ type: 'none' });
@@ -331,6 +447,7 @@ export function RoadmapListPage() {
     retry: false,
   });
   const createRoadmapMutation = useCreateRoadmap();
+  const updateRoadmapMutation = useUpdateRoadmap();
   const deleteRoadmapMutation = useDeleteRoadmap();
   const managerSubjects = managerSubjectsResult?.subjects ?? [];
   const roadmapsData = result?.roadmaps;
@@ -362,7 +479,7 @@ export function RoadmapListPage() {
     });
   };
   const handleAIGenerate = (data: { title: string; description: string; subjectId: number }) => {
-    // TODO: Call AI generation API endpoint
+    // Placeholder: list page currently routes to dedicated AI generation screen.
     console.log("AI Generate:", data);
     // createRoadmapMutation.mutate(
     //   {
@@ -380,6 +497,71 @@ export function RoadmapListPage() {
     //     },
     //   }
     // );
+  };
+
+  const handlePublishRoadmap = (data: { title: string; description: string }) => {
+    if (modalState.type !== 'publish') return;
+
+    updateRoadmapMutation.mutate(
+      {
+        id: modalState.roadmapId,
+        title: data.title,
+        description: data.description,
+        status: RoadmapStatus.Active,
+      },
+      {
+        onSuccess: () => {
+          setModalState({ type: 'none' });
+          toast.success('Roadmap published successfully.');
+          refetch();
+        },
+        onError: (error) => {
+          toast.apiError(error, 'Failed to publish roadmap');
+        },
+      }
+    );
+  };
+
+  const handleDisableRoadmap = () => {
+    if (modalState.type !== 'disable') return;
+
+    updateRoadmapMutation.mutate(
+      {
+        id: modalState.roadmapId,
+        status: RoadmapStatus.Disabled,
+      },
+      {
+        onSuccess: () => {
+          setModalState({ type: 'none' });
+          toast.success('Roadmap disabled successfully.');
+          refetch();
+        },
+        onError: (error) => {
+          toast.apiError(error, 'Failed to disable roadmap');
+        },
+      }
+    );
+  };
+
+  const handleActivateRoadmap = () => {
+    if (modalState.type !== 'activate') return;
+
+    updateRoadmapMutation.mutate(
+      {
+        id: modalState.roadmapId,
+        status: RoadmapStatus.Active,
+      },
+      {
+        onSuccess: () => {
+          setModalState({ type: 'none' });
+          toast.success('Roadmap activated successfully.');
+          refetch();
+        },
+        onError: (error) => {
+          toast.apiError(error, 'Failed to activate roadmap');
+        },
+      }
+    );
   };
 
   const handleDeleteRoadmap = () => {
@@ -427,7 +609,9 @@ export function RoadmapListPage() {
   }
 
   const getStatusLabel = (status: number | string) => {
-    if (typeof status === "string") return status;
+    if (typeof status === "string") {
+      return status;
+    }
 
     switch (status) {
       case 0:
@@ -435,7 +619,7 @@ export function RoadmapListPage() {
       case 1:
         return RoadmapStatus.Active;
       case 2:
-        return RoadmapStatus.Archived;
+        return RoadmapStatus.Disabled;
       default:
         return "Unknown";
     }
@@ -445,6 +629,7 @@ export function RoadmapListPage() {
     const normalized = getStatusLabel(status);
     if (normalized === RoadmapStatus.Active) return "bg-green-100 text-green-700";
     if (normalized === RoadmapStatus.Draft) return "bg-yellow-100 text-yellow-700";
+    if (normalized === RoadmapStatus.Disabled) return "bg-red-100 text-red-700";
     return "bg-gray-100 text-gray-700";
   };
 
@@ -491,6 +676,19 @@ export function RoadmapListPage() {
         </div>
 
         <div className="flex gap-2">
+            <select
+              value={filters.subjectId ?? ''}
+              onChange={(e) => handleFilterChange({ subjectId: e.target.value ? Number(e.target.value) : undefined })}
+              className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-sm outline-none transition-all focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
+            >
+              <option value="">All Subjects</option>
+              {managerSubjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+
           <select
             value={filters.status || ''}
             onChange={(e) => handleFilterChange({ status: (e.target.value || undefined) as RoadmapStatus | undefined })}
@@ -499,7 +697,7 @@ export function RoadmapListPage() {
             <option value="">All Status</option>
             <option value={RoadmapStatus.Draft}>Draft</option>
             <option value={RoadmapStatus.Active}>Active</option>
-            <option value={RoadmapStatus.Archived}>Archived</option>
+              <option value={RoadmapStatus.Disabled}>Disabled</option>
           </select>
         </div>
       </div>
@@ -526,40 +724,40 @@ export function RoadmapListPage() {
           )}
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {roadmapsData?.items.map((roadmap) => (
+            {roadmapsData?.items.map((roadmap) => {
+              const normalizedStatus = getStatusLabel(roadmap.status);
+
+              return (
               <div
                 key={roadmap.id}
-                className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg"
+                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg"
               >
               {/* Status & Version Badge */}
               <div className="absolute right-4 top-4 flex gap-2">
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusBadgeClassName(roadmap.status)}`}
                 >
-                  {getStatusLabel(roadmap.status)}
-                </span>
-                <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
-                  v{roadmap.version}
+                  {normalizedStatus}
                 </span>
               </div>
 
               {/* Content */}
-              <div className="mb-4 mt-6">
-                <h3 className="mb-2 text-lg font-bold text-neutral-900 group-hover:text-[#00bae2] transition-colors">
+              <div className="mb-4 mt-6 flex-1">
+                <h3 className="mb-2 line-clamp-2 min-h-[3.5rem] text-lg font-bold text-neutral-900 group-hover:text-[#00bae2] transition-colors">
                   {roadmap.title}
                 </h3>
-                <p className="line-clamp-2 text-sm text-neutral-600">
+                <p className="line-clamp-3 min-h-[4.5rem] text-sm text-neutral-600">
                   {roadmap.description || 'No description'}
                 </p>
               </div>
 
               {/* Stats */}
               <div className="mb-4 flex items-center gap-4 text-xs text-neutral-500">
-                <div>Created at {new Date(roadmap.createdAt).toLocaleDateString()}</div>
+                <div>Created at {formatDateTimeHmDdMmYyyyInUserTimeZone(roadmap.createdAt, { fallback: '-' })}</div>
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="mt-auto flex gap-2">
                 <Link
                   href={`/content-roadmaps/${roadmap.id}`}
                   className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-center text-xs font-medium text-neutral-700 transition-all hover:bg-neutral-50"
@@ -574,9 +772,45 @@ export function RoadmapListPage() {
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
+
+                {normalizedStatus === RoadmapStatus.Draft && (
+                  <button
+                    onClick={() => setModalState({
+                      type: 'publish',
+                      roadmapId: roadmap.id,
+                      title: roadmap.title,
+                      description: roadmap.description || '',
+                    })}
+                    className="rounded-xl border border-green-200 bg-white px-3 py-2 text-xs font-medium text-green-700 transition-all hover:bg-green-50"
+                    disabled={updateRoadmapMutation.isPending}
+                  >
+                    Publish
+                  </button>
+                )}
+
+                {normalizedStatus === RoadmapStatus.Active && (
+                  <button
+                    onClick={() => setModalState({ type: 'disable', roadmapId: roadmap.id, title: roadmap.title })}
+                    className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-medium text-orange-700 transition-all hover:bg-orange-50"
+                    disabled={updateRoadmapMutation.isPending}
+                  >
+                    Disable
+                  </button>
+                )}
+
+                {normalizedStatus === RoadmapStatus.Disabled && (
+                  <button
+                    onClick={() => setModalState({ type: 'activate', roadmapId: roadmap.id, title: roadmap.title })}
+                    className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-medium text-emerald-700 transition-all hover:bg-emerald-50"
+                    disabled={updateRoadmapMutation.isPending}
+                  >
+                    Activate
+                  </button>
+                )}
               </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       )}
@@ -638,6 +872,15 @@ export function RoadmapListPage() {
         isSubmitting={createRoadmapMutation.isPending}
       />
 
+      <PublishRoadmapModal
+        isOpen={modalState.type === 'publish'}
+        initialTitle={modalState.type === 'publish' ? modalState.title : ''}
+        initialDescription={modalState.type === 'publish' ? modalState.description : ''}
+        onClose={() => setModalState({ type: 'none' })}
+        onSubmit={handlePublishRoadmap}
+        isSubmitting={updateRoadmapMutation.isPending}
+      />
+
       <ConfirmationModal
         isOpen={modalState.type === 'delete'}
         onClose={() => setModalState({ type: 'none' })}
@@ -646,6 +889,26 @@ export function RoadmapListPage() {
         description={`Are you sure you want to delete "${modalState.type === 'delete' ? modalState.title : ''}"? This action cannot be undone.`}
         confirmText="Delete"
         variant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={modalState.type === 'disable'}
+        onClose={() => setModalState({ type: 'none' })}
+        onConfirm={handleDisableRoadmap}
+        title="Disable Roadmap"
+        description={`Are you sure you want to disable "${modalState.type === 'disable' ? modalState.title : ''}"?`}
+        confirmText="Disable"
+        variant="default"
+      />
+
+      <ConfirmationModal
+        isOpen={modalState.type === 'activate'}
+        onClose={() => setModalState({ type: 'none' })}
+        onConfirm={handleActivateRoadmap}
+        title="Activate Roadmap"
+        description={`Are you sure you want to activate "${modalState.type === 'activate' ? modalState.title : ''}"?`}
+        confirmText="Activate"
+        variant="default"
       />
     </div>
   );

@@ -7,7 +7,6 @@ interface TakeQuizPageProps {
   }>;
   searchParams: Promise<{
     moduleTitle?: string;
-    level?: string;
     attemptId?: string;
   }>;
 }
@@ -17,7 +16,7 @@ export default async function StudyPlanModuleTakeQuizPage({
   searchParams,
 }: TakeQuizPageProps) {
   const { id, moduleId } = await params;
-  const { moduleTitle, level, attemptId } = await searchParams;
+  const { moduleTitle, attemptId } = await searchParams;
   const parsedAttemptId = Number(attemptId);
   const quizAttemptId = Number.isFinite(parsedAttemptId) && parsedAttemptId > 0 ? parsedAttemptId : undefined;
 
@@ -27,7 +26,6 @@ export default async function StudyPlanModuleTakeQuizPage({
       moduleId={Number(moduleId)}
       quizAttemptId={quizAttemptId}
       moduleTitle={moduleTitle}
-      level={level}
     />
   );
 }

@@ -1,31 +1,16 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { Lock, Plus, Unlock, X } from "lucide-react";
+import { useState } from "react";
+import { Eye, Lock, Plus, Unlock } from "lucide-react";
+
 import { AdminTable, TableColumn } from "../../components";
-import { ConfirmationModal } from "@/shared/ui";
 import type { CreateAdminUserRequest, User } from "../api";
-
-type CreateUserFormState = {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  firstName: string;
-  lastName: string;
-  roleName: string;
-};
-
-type CreateUserField = keyof CreateUserFormState;
-type CreateUserFormErrors = Partial<Record<CreateUserField, string>>;
-
-const emptyCreateUserForm: CreateUserFormState = {
-  email: "",
-  password: "",
-  confirmPassword: "",
-  firstName: "",
-  lastName: "",
-  roleName: "",
-};
+import {
+  AdminUsersActionModal,
+  type AdminUsersConfirmModalState,
+} from "./AdminUsersActionModal";
+import { AdminUsersCreateUserModal } from "./AdminUsersCreateUserModal";
+import { AdminUsersProfileModal } from "./AdminUsersProfileModal";
 
 interface AdminUsersPageProps {
   users?: User[];
@@ -36,9 +21,26 @@ interface AdminUsersPageProps {
   isCreatingUser?: boolean;
   onLockUser?: (user: User) => void;
   onUnlockUser?: (user: User) => void;
-  onAssignSubject?: (user: User, subjectId: number) => void;
-  onUnassignSubject?: (user: User) => void;
+  onAssignSubject?: (user: User, subjectIds: number[]) => void;
+  onUnassignSubject?: (user: User, subjectId?: number) => void;
   onCreateUser?: (payload: CreateAdminUserRequest) => Promise<void>;
+}
+
+function isContentManager(user: User) {
+  return user.role
+    .split(",")
+    .map((role) => role.replace(/\s+/g, "").toLowerCase())
+    .includes("contentmanager");
+}
+
+function getAssignedSubjectText(user: User): string {
+  const assignedSubjects = user.assignedSubjects ?? [];
+
+  if (assignedSubjects.length > 0) {
+    return assignedSubjects.map((subject) => subject.subjectName).join(", ");
+  }
+
+  return user.assignedSubjectName || (isContentManager(user) ? "Not assigned" : "-");
 }
 
 export function AdminUsersPage({
@@ -54,122 +56,15 @@ export function AdminUsersPage({
   onUnassignSubject,
   onCreateUser,
 }: AdminUsersPageProps) {
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    user: User | null;
-    action: "lock" | "unlock" | "assign" | "unassign";
-  }>({
+  const [confirmModal, setConfirmModal] = useState<AdminUsersConfirmModalState>({
     isOpen: false,
     user: null,
     action: "lock",
   });
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | "">("");
+  const [selectedAssignSubjectIds, setSelectedAssignSubjectIds] = useState<number[]>([]);
+  const [selectedUnassignSubjectId, setSelectedUnassignSubjectId] = useState<number | "">("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateUserFormState>(emptyCreateUserForm);
-  const [createFormErrors, setCreateFormErrors] = useState<CreateUserFormErrors>({});
-
-  const validateCreateUserForm = () => {
-    const errors: CreateUserFormErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!createForm.firstName.trim()) {
-      errors.firstName = "First name is required.";
-    }
-
-    if (!createForm.email.trim()) {
-      errors.email = "Email is required.";
-    } else if (!emailRegex.test(createForm.email.trim())) {
-      errors.email = "Please enter a valid email address.";
-    }
-
-    if (!createForm.password) {
-      errors.password = "Password is required.";
-    } else if (createForm.password.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
-    }
-
-    if (!createForm.confirmPassword) {
-      errors.confirmPassword = "Please confirm the password.";
-    } else if (createForm.confirmPassword !== createForm.password) {
-      errors.confirmPassword = "Passwords do not match.";
-    }
-
-    if (!createForm.roleName.trim()) {
-      errors.roleName = "Role is required.";
-    }
-
-    return errors;
-  };
-
-  const handleOpenCreateModal = () => {
-    const defaultRole = roleOptions.includes("User")
-      ? "User"
-      : roleOptions[0] ?? "";
-
-    setCreateForm({
-      ...emptyCreateUserForm,
-      roleName: defaultRole,
-    });
-    setCreateFormErrors({});
-    setIsCreateModalOpen(true);
-  };
-
-  const handleCloseCreateModal = () => {
-    if (isCreatingUser) return;
-
-    setIsCreateModalOpen(false);
-    setCreateForm(emptyCreateUserForm);
-    setCreateFormErrors({});
-  };
-
-  const handleCreateInputChange = (field: CreateUserField, value: string) => {
-    setCreateForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    if (createFormErrors[field]) {
-      setCreateFormErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-  };
-
-  const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!onCreateUser) return;
-
-    const validationErrors = validateCreateUserForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setCreateFormErrors(validationErrors);
-      return;
-    }
-
-    try {
-      await onCreateUser({
-        email: createForm.email.trim(),
-        password: createForm.password,
-        confirmPassword: createForm.confirmPassword,
-        firstName: createForm.firstName.trim(),
-        lastName: createForm.lastName.trim() || undefined,
-        roleName: createForm.roleName.trim(),
-      });
-
-      setIsCreateModalOpen(false);
-      setCreateForm(emptyCreateUserForm);
-      setCreateFormErrors({});
-    } catch {
-      // Toast is handled by mutation.
-    }
-  };
-
-  const isContentManager = (user: User) =>
-    user.role
-      .split(",")
-      .map((role) => role.replace(/\s+/g, "").toLowerCase())
-      .includes("contentmanager");
+  const [profileUser, setProfileUser] = useState<User | null>(null);
 
   const handleLockClick = (user: User) => {
     setConfirmModal({
@@ -188,8 +83,7 @@ export function AdminUsersPage({
   };
 
   const handleAssignClick = (user: User) => {
-    const fallbackSubjectId = subjectOptions[0]?.id ?? "";
-    setSelectedSubjectId(user.assignedSubjectId ?? fallbackSubjectId);
+    setSelectedAssignSubjectIds([]);
     setConfirmModal({
       isOpen: true,
       user,
@@ -198,11 +92,31 @@ export function AdminUsersPage({
   };
 
   const handleUnassignClick = (user: User) => {
+    const assignedSubjectIds = (user.assignedSubjects ?? []).map((subject) => subject.subjectId);
+    const fallbackSubjectId = assignedSubjectIds[0] ?? user.assignedSubjectId ?? "";
+
+    setSelectedUnassignSubjectId(fallbackSubjectId);
     setConfirmModal({
       isOpen: true,
       user,
       action: "unassign",
     });
+  };
+
+  const handleOpenCreateModal = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    if (isCreatingUser) {
+      return;
+    }
+
+    setIsCreateModalOpen(false);
+  };
+
+  const handleCloseProfileModal = () => {
+    setProfileUser(null);
   };
 
   const handleConfirm = () => {
@@ -215,22 +129,38 @@ export function AdminUsersPage({
     } else if (
       confirmModal.action === "assign" &&
       onAssignSubject &&
-      typeof selectedSubjectId === "number" &&
-      Number.isFinite(selectedSubjectId) &&
-      selectedSubjectId > 0
+      selectedAssignSubjectIds.length > 0
     ) {
-      onAssignSubject(confirmModal.user, selectedSubjectId);
-    } else if (confirmModal.action === "unassign" && onUnassignSubject) {
-      onUnassignSubject(confirmModal.user);
+      onAssignSubject(confirmModal.user, selectedAssignSubjectIds);
+    } else if (
+      confirmModal.action === "unassign" &&
+      onUnassignSubject &&
+      typeof selectedUnassignSubjectId === "number" &&
+      Number.isFinite(selectedUnassignSubjectId) &&
+      selectedUnassignSubjectId > 0
+    ) {
+      onUnassignSubject(confirmModal.user, selectedUnassignSubjectId);
     }
 
     setConfirmModal({ isOpen: false, user: null, action: "lock" });
-    setSelectedSubjectId("");
+    setSelectedAssignSubjectIds([]);
+    setSelectedUnassignSubjectId("");
   };
 
-  const handleCloseModal = () => {
+  const handleCloseActionModal = () => {
     setConfirmModal({ isOpen: false, user: null, action: "lock" });
-    setSelectedSubjectId("");
+    setSelectedAssignSubjectIds([]);
+    setSelectedUnassignSubjectId("");
+  };
+
+  const toggleAssignSubject = (subjectId: number, checked: boolean) => {
+    setSelectedAssignSubjectIds((prev) => {
+      if (checked) {
+        return [...prev, subjectId];
+      }
+
+      return prev.filter((id) => id !== subjectId);
+    });
   };
 
   const columns: TableColumn<User>[] = [
@@ -241,9 +171,7 @@ export function AdminUsersPage({
       key: "assignedSubjectName",
       label: "Assigned Subject",
       render: (user: User) => (
-        <span className="text-sm text-neutral-700">
-          {user.assignedSubjectName || (isContentManager(user) ? "Not assigned" : "-")}
-        </span>
+        <span className="text-sm text-neutral-700">{getAssignedSubjectText(user)}</span>
       ),
     },
     {
@@ -268,12 +196,25 @@ export function AdminUsersPage({
     const isLocked = user.isLocked || false;
     const isCurrentUser = !!currentUserId && user.id === currentUserId;
     const canAssignSubject = isContentManager(user);
-    const canUnassignSubject = canAssignSubject && !!user.assignedSubjectId;
+    const canUnassignSubject =
+      canAssignSubject &&
+      (((user.assignedSubjects ?? []).length > 0) || !!user.assignedSubjectId);
     const disableAssign = isSubjectOptionsLoading || subjectOptions.length === 0;
+    const viewProfileButton = (
+      <button
+        onClick={() => setProfileUser(user)}
+        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-blue-700 transition-all hover:bg-blue-50"
+        title="View profile"
+      >
+        <Eye className="h-4 w-4" />
+        View Profile
+      </button>
+    );
 
     if (isLocked) {
       return (
         <div className="flex items-center gap-2">
+          {viewProfileButton}
           {canUnassignSubject && (
             <button
               onClick={() => handleUnassignClick(user)}
@@ -306,6 +247,7 @@ export function AdminUsersPage({
 
     return (
       <div className="flex items-center gap-2">
+        {viewProfileButton}
         {canUnassignSubject && (
           <button
             onClick={() => handleUnassignClick(user)}
@@ -338,101 +280,6 @@ export function AdminUsersPage({
     );
   };
 
-  const getModalContent = () => {
-    if (!confirmModal.user) return { title: "", description: "" };
-
-    const isLock = confirmModal.action === "lock";
-    const isAssign = confirmModal.action === "assign";
-    const isUnassign = confirmModal.action === "unassign";
-    const { name, email } = confirmModal.user;
-
-    if (isAssign) {
-      return {
-        title: "Assign Subject",
-        description: (
-          <div>
-            <p className="mb-3">Assign subject for:</p>
-            <div className="mb-3 rounded-lg bg-neutral-100 p-3">
-              <p className="font-medium text-neutral-900">{name}</p>
-              <p className="text-sm text-neutral-600">{email}</p>
-            </div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-              Learning Subject
-            </label>
-            <select
-              value={selectedSubjectId}
-              onChange={(event) => {
-                const value = event.target.value;
-                setSelectedSubjectId(value ? Number(value) : "");
-              }}
-              disabled={isSubjectOptionsLoading || subjectOptions.length === 0}
-              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-cyan-400"
-            >
-              {isSubjectOptionsLoading ? (
-                <option value="">Loading subjects...</option>
-              ) : subjectOptions.length === 0 ? (
-                <option value="">No active subjects</option>
-              ) : (
-                subjectOptions.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-        ),
-        confirmText: "Assign",
-        variant: "default" as const,
-      };
-    }
-
-    if (isUnassign) {
-      return {
-        title: "Unassign Subject",
-        description: (
-          <div>
-            <p className="mb-3">Remove current subject assignment for:</p>
-            <div className="rounded-lg bg-neutral-100 p-3">
-              <p className="font-medium text-neutral-900">{name}</p>
-              <p className="text-sm text-neutral-600">{email}</p>
-              <p className="mt-2 text-xs text-neutral-500">
-                Current subject: {confirmModal.user.assignedSubjectName || "-"}
-              </p>
-            </div>
-          </div>
-        ),
-        confirmText: "Unassign",
-        variant: "danger" as const,
-      };
-    }
-
-    return {
-      title: isLock ? "Block User Account" : "Unblock User Account",
-      description: (
-        <div>
-          <p className="mb-3">
-            Are you sure you want to {isLock ? "block" : "unblock"} the account
-            for:
-          </p>
-          <div className="rounded-lg bg-neutral-100 p-3">
-            <p className="font-medium text-neutral-900">{name}</p>
-            <p className="text-sm text-neutral-600">{email}</p>
-          </div>
-          <p className="mt-3 text-xs text-neutral-500">
-            {isLock
-              ? "The user will not be able to access their account until unblocked."
-              : "The user will regain access to their account."}
-          </p>
-        </div>
-      ),
-      confirmText: isLock ? "Block Account" : "Unblock Account",
-      variant: isLock ? ("default" as const) : ("default" as const),
-    };
-  };
-
-  const modalContent = getModalContent();
-
   return (
     <>
       <div className="space-y-6">
@@ -458,180 +305,30 @@ export function AdminUsersPage({
         />
       </div>
 
-      <ConfirmationModal
-        isOpen={confirmModal.isOpen}
-        onClose={handleCloseModal}
+      <AdminUsersActionModal
+        confirmModal={confirmModal}
+        subjectOptions={subjectOptions}
+        isSubjectOptionsLoading={isSubjectOptionsLoading}
+        selectedAssignSubjectIds={selectedAssignSubjectIds}
+        selectedUnassignSubjectId={selectedUnassignSubjectId}
+        onToggleAssignSubject={toggleAssignSubject}
+        onSelectUnassignSubject={setSelectedUnassignSubjectId}
+        onClose={handleCloseActionModal}
         onConfirm={handleConfirm}
-        title={modalContent.title}
-        description={modalContent.description}
-        confirmText={modalContent.confirmText}
-        variant={modalContent.variant}
       />
 
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-neutral-900/50 backdrop-blur-sm"
-            onClick={handleCloseCreateModal}
-          />
+      <AdminUsersCreateUserModal
+        isOpen={isCreateModalOpen}
+        roleOptions={roleOptions}
+        isCreatingUser={isCreatingUser}
+        onClose={handleCloseCreateModal}
+        onCreateUser={onCreateUser}
+      />
 
-          <div className="relative w-full max-w-2xl rounded-2xl border border-neutral-200/60 bg-white/95 p-6 shadow-2xl backdrop-blur-xl">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-neutral-900">Create User</h3>
-                <p className="mt-1 text-sm text-neutral-600">
-                  Create a new account for the system.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseCreateModal}
-                disabled={isCreatingUser}
-                className="rounded-lg p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={createForm.firstName}
-                    onChange={(event) =>
-                      handleCreateInputChange("firstName", event.target.value)
-                    }
-                    placeholder="Enter first name"
-                    className="w-full rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
-                  />
-                  {createFormErrors.firstName && (
-                    <p className="mt-1 text-xs text-red-600">{createFormErrors.firstName}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={createForm.lastName}
-                    onChange={(event) =>
-                      handleCreateInputChange("lastName", event.target.value)
-                    }
-                    placeholder="Enter last name (optional)"
-                    className="w-full rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={createForm.email}
-                  onChange={(event) =>
-                    handleCreateInputChange("email", event.target.value)
-                  }
-                  placeholder="Enter email address"
-                  className="w-full rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
-                />
-                {createFormErrors.email && (
-                  <p className="mt-1 text-xs text-red-600">{createFormErrors.email}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                  Role
-                </label>
-                <select
-                  value={createForm.roleName}
-                  onChange={(event) =>
-                    handleCreateInputChange("roleName", event.target.value)
-                  }
-                  className="w-full rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
-                >
-                  <option value="">Select role</option>
-                  {roleOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-                {createFormErrors.roleName && (
-                  <p className="mt-1 text-xs text-red-600">{createFormErrors.roleName}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={createForm.password}
-                    onChange={(event) =>
-                      handleCreateInputChange("password", event.target.value)
-                    }
-                    placeholder="Enter password"
-                    className="w-full rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
-                  />
-                  {createFormErrors.password && (
-                    <p className="mt-1 text-xs text-red-600">{createFormErrors.password}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    value={createForm.confirmPassword}
-                    onChange={(event) =>
-                      handleCreateInputChange("confirmPassword", event.target.value)
-                    }
-                    placeholder="Re-enter password"
-                    className="w-full rounded-xl border border-cyan-100 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none transition-colors focus:border-cyan-400"
-                  />
-                  {createFormErrors.confirmPassword && (
-                    <p className="mt-1 text-xs text-red-600">{createFormErrors.confirmPassword}</p>
-                  )}
-                </div>
-              </div>
-
-              <p className="rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
-                The selected role will be assigned immediately when the account is created.
-              </p>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleCloseCreateModal}
-                  disabled={isCreatingUser}
-                  className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingUser}
-                  className="rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2.5 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isCreatingUser ? "Creating..." : "Create User"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AdminUsersProfileModal
+        profileUser={profileUser}
+        onClose={handleCloseProfileModal}
+      />
     </>
   );
 }

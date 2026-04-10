@@ -2,12 +2,12 @@
 
 import { useRef, useEffect } from "react";
 import gsap from "gsap";
-import { Loader2 } from "lucide-react";
 
 import { useProfileData } from "@/features/profile/hooks";
 import { ProfileHeader } from "@/features/profile/components/ProfileHeader";
 import { ProfileInfoCard } from "@/features/profile/components/ProfileInfoCard";
 import { PasswordChangeCard } from "@/features/profile/components/PasswordChangeCard";
+import { ContentManagerLoading } from "@/features/content-manager/components";
 
 export default function ContentProfilePage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -53,12 +53,7 @@ export default function ContentProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-          <p className="text-sm text-neutral-500">Loading profile...</p>
-        </div>
-      </div>
+      <ContentManagerLoading variant="page" title="Loading profile..." />
     );
   }
 

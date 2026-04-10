@@ -1,10 +1,10 @@
 import { SessionsPage } from '@/features/sessions/SessionsPage';
 
 interface SessionsByPlanRouteProps {
-    params: { studyPlanId: string };
+    params: Promise<{ studyPlanId: string }>;
 }
 
-export default function SessionsByPlanRoute({ params }: SessionsByPlanRouteProps) {
-    const { studyPlanId } = params;
+export default async function SessionsByPlanRoute({ params }: SessionsByPlanRouteProps) {
+    const { studyPlanId } = await params;
     return <SessionsPage studyPlanId={studyPlanId} />;
 }

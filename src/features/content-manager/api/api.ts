@@ -3,7 +3,7 @@
  * Core API calls without React Query
  */
 
-import { get, post, put, del } from '@/shared/api/client';
+import { get, post, put, del, patch } from '@/shared/api/client';
 import { RoadmapStatus } from './types';
 import type {
   // Request types
@@ -11,6 +11,7 @@ import type {
   GetManagerRoadmapsParams,
   GetContentManagerStatsParams,
   CreateRoadmapRequest,
+  UpdateRoadmapRequest,
   GetNodeContentsRequest,
   CreateRoadmapGraphRequest,
   SyncRoadmapGraphRequest,
@@ -35,6 +36,7 @@ import type {
   GetManagerSubjectsResponse,
   GetContentManagerStatsResponse,
   CreateRoadmapResponse,
+  UpdateRoadmapResponse,
   RoadmapDetail,
   NodeContent,
   CreateRoadmapGraphResponse,
@@ -121,6 +123,13 @@ export async function createRoadmap(
     ...request,
     status: request.status ?? RoadmapStatus.Draft,
   });
+}
+
+export async function updateRoadmap(
+  request: UpdateRoadmapRequest
+): Promise<UpdateRoadmapResponse> {
+  const { id, ...payload } = request;
+  return patch<UpdateRoadmapResponse>(`/roadmaps/${id}`, payload);
 }
 
 export async function getRoadmapDetail(

@@ -44,6 +44,21 @@ export interface RoadmapListItemDTO {
     status: string | null;
 }
 
+export interface LearningCategoryDto {
+    id: number;
+    name: string;
+    description?: string | null;
+    isActive: boolean;
+}
+
+export interface LearningSubjectDto {
+    id: number;
+    categoryId: number;
+    name: string;
+    description?: string | null;
+    isActive: boolean;
+}
+
 // Roadmap basic info
 export interface RoadmapBasicDTO {
     id: number;
@@ -93,6 +108,25 @@ export interface GenericResponse<T> {
 // API response for roadmap list
 export interface GetAllRoadmapsResult {
     roadmaps: PaginatedResponse<RoadmapListItemDTO>;
+}
+
+export interface GetAllLearningCategoriesResult {
+    categories: PaginatedResponse<LearningCategoryDto>;
+}
+
+export interface GetAllLearningSubjectsResult {
+    subjects: PaginatedResponse<LearningSubjectDto>;
+}
+
+export interface GetAllLearningCategoriesParams {
+    pageIndex: number;
+    pageSize: number;
+}
+
+export interface GetAllLearningSubjectsParams {
+    pageIndex: number;
+    pageSize: number;
+    categoryId?: number;
 }
 
 // Query params for fetching roadmaps

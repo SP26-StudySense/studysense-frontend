@@ -135,7 +135,7 @@ export const Footer = () => {
 
                     {/* Bottom bar */}
                     <div className="mt-6 flex items-center justify-between border-t border-neutral-900/10 pt-4 text-xs text-neutral-600">
-                        <p>© 2024 StudySense</p>
+                        <p>© 2026 StudySense</p>
                         <div className="flex gap-3">
                             <Link href="#" className="hover:text-neutral-900"><Twitter size={16} /></Link>
                             <Link href="#" className="hover:text-neutral-900"><Github size={16} /></Link>

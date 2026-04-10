@@ -153,12 +153,6 @@ export function AdminDashboardPage() {
                 {roadmapStatusBreakdown?.draft ?? 0}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-neutral-100 px-4 py-3 text-sm">
-              <span className="text-neutral-700">Archived</span>
-              <span className="font-semibold text-neutral-800">
-                {roadmapStatusBreakdown?.archived ?? 0}
-              </span>
-            </div>
             <div className="pt-2 text-xs text-neutral-500">
               Active rate: {roadmapStatusBreakdown?.activeRate ?? 0}% of {" "}
               {roadmapStatusBreakdown?.total ?? 0} latest roadmap(s)
