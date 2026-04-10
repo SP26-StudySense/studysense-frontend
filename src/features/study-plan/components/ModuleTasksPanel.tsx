@@ -357,7 +357,7 @@ export function ModuleTasksPanel({
     const shouldShowBehaviorInsight =
         viewFilter === 'module' &&
         !isFirstModuleInPlan &&
-        module.tasks.length === 0;
+        (module?.tasks?.length ?? 0) === 0;
 
     const {
         data: behaviorInsightResponse,
