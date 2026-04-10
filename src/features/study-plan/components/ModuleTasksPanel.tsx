@@ -13,6 +13,7 @@ import {
 } from '@/shared/lib/date-time';
 import { useSessionStore, SelectedTask, SelectedNodeInfo } from '@/store/session.store';
 import { useCreateTask, useUpdateTask, useDeleteTask, useCreateAiTaskItems, useCreateTasksBatch } from '../api/mutations';
+import { useModuleBehaviorInsight } from '../api/queries';
 import { useActiveSession } from '@/features/sessions/api/queries';
 import { TaskItemInput, TaskStatus, TaskItemDto } from '../api/types';
 import { useCurrentQuizAttemptByModule } from '@/features/quiz';
@@ -303,6 +304,28 @@ export function ModuleTasksPanel({
             .filter((task): task is AiPreviewTask => task !== null);
     };
 
+    const renderBehaviorInsightLines = (text: string) => {
+        const parts = text
+            .split(/\n+/)
+            .flatMap((line) => line.split(/\.\s+/))
+            .map((part) => part.trim())
+            .filter(Boolean);
+
+        if (parts.length === 0) {
+            return null;
+        }
+
+        return parts.map((part, index) => {
+            const shouldAppendPeriod = index < parts.length - 1 && !part.endsWith('.');
+
+            return (
+                <p key={`${index}-${part}`} className="leading-relaxed">
+                    {part}{shouldAppendPeriod ? '.' : ''}
+                </p>
+            );
+        });
+    };
+
     // A task is selectable only when its module is in an "open" state.
     const isOpenModuleStatus = (status?: string): boolean => {
         if (!status) return false;
@@ -324,6 +347,28 @@ export function ModuleTasksPanel({
         typeof parsedPlanId === 'number' && Number.isFinite(parsedPlanId) && parsedPlanId > 0
             ? parsedPlanId
             : undefined;
+
+    const isFirstModuleInPlan =
+        viewFilter === 'module' &&
+        !!module?.id &&
+        allModules.length > 0 &&
+        String(allModules[0]?.id) === String(module.id);
+
+    const shouldShowBehaviorInsight =
+        viewFilter === 'module' &&
+        !isFirstModuleInPlan &&
+        module.tasks.length === 0;
+
+    const {
+        data: behaviorInsightResponse,
+        isLoading: isLoadingBehaviorInsight,
+    } = useModuleBehaviorInsight(studyPlanId, {
+        enabled: shouldShowBehaviorInsight,
+    });
+
+    const behaviorInsight = behaviorInsightResponse?.success
+        ? behaviorInsightResponse.insight?.trim()
+        : undefined;
 
     // Prevent creating a new session when a previous one is still active in this plan.
     const { data: activeSession } = useActiveSession(scopedPlanId);
@@ -1059,6 +1104,21 @@ export function ModuleTasksPanel({
                                         }
                                     </p>
 
+                                    {viewFilter === 'module' && !isLocked && !isFirstModuleInPlan && (
+                                        <div className="mb-6 w-full max-w-xl rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 text-left">
+                                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-violet-700">
+                                                AI behavior insight
+                                            </p>
+                                            <div className="space-y-1 text-sm text-violet-900">
+                                                {isLoadingBehaviorInsight
+                                                    ? 'Loading insight...'
+                                                    : behaviorInsight
+                                                        ? renderBehaviorInsightLines(behaviorInsight)
+                                                        : <p className="leading-relaxed">No insight available yet for this study plan.</p>}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {viewFilter === 'module' && !isLocked && (
                                         <button
                                             onClick={handleGenerateAiTasks}
@@ -1081,7 +1141,9 @@ export function ModuleTasksPanel({
                                             ) : (
                                                 <>
                                                     <Sparkles className="h-5 w-5 text-yellow-300" />
-                                                    <span>Generate Tasks for {viewFilter === 'module' ? module.title : 'this module'}</span>
+                                                    <span className="max-w-[240px] truncate">
+                                                        Generate Tasks for {viewFilter === 'module' ? module.title : 'this module'}
+                                                    </span>
                                                 </>
                                             )}
                                         </button>
