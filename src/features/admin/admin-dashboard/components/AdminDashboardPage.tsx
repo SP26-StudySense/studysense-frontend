@@ -1,7 +1,49 @@
 "use client";
 
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
 import { StatCard } from "../../components";
 import { useAdminDashboardQuery } from "../hooks";
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatCompactCurrency(value: number): string {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
 
 export function AdminDashboardPage() {
   const {
@@ -15,6 +57,15 @@ export function AdminDashboardPage() {
   const roleDistribution = data?.roleDistribution ?? [];
   const learningCoverage = data?.learningCoverage;
   const roadmapStatusBreakdown = data?.roadmapStatusBreakdown;
+  const revenueInsights = data?.revenueInsights;
+  const monthlyRevenue = revenueInsights?.monthlyRevenue ?? [];
+
+  const revenueChartData = monthlyRevenue.map((item) => ({
+    month: MONTH_LABELS[item.month - 1],
+    revenue: item.revenue,
+  }));
+
+  const hasRevenueData = revenueChartData.some((item) => item.revenue > 0);
 
   if (isLoading) {
     return (
@@ -65,6 +116,74 @@ export function AdminDashboardPage() {
             trend={stat.trend}
           />
         ))}
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white/80 shadow-sm backdrop-blur-xl">
+        <div className="border-b border-neutral-200/60 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-neutral-900">
+              Revenue by Month ({revenueInsights?.year ?? new Date().getFullYear()})
+            </h2>
+            <p className="text-sm text-neutral-600">
+              Successful payments: {formatCurrency(revenueInsights?.totalRevenue ?? 0)}
+            </p>
+          </div>
+        </div>
+        <div className="space-y-4 p-6">
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={revenueChartData}
+                margin={{ top: 8, right: 12, left: 6, bottom: 8 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#e5e7eb"
+                />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#525252", fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  width={84}
+                  tick={{ fill: "#737373", fontSize: 12 }}
+                  tickFormatter={(value: number) =>
+                    formatCompactCurrency(value)
+                  }
+                />
+                <Tooltip
+                  cursor={{ fill: "rgba(6, 182, 212, 0.08)" }}
+                  formatter={(value) => formatCurrency(Number(value ?? 0))}
+                  contentStyle={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                  }}
+                  labelStyle={{ color: "#171717", fontWeight: 600 }}
+                />
+                <Bar
+                  dataKey="revenue"
+                  fill="#06b6d4"
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={42}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          {!hasRevenueData && (
+            <p className="text-xs text-neutral-500">
+              No successful payment recorded for this year yet.
+            </p>
+          )}
+          <p className="text-xs text-neutral-500">
+            Current month revenue: {formatCurrency(revenueInsights?.currentMonthRevenue ?? 0)}
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
