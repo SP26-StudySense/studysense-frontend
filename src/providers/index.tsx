@@ -5,8 +5,6 @@ import { usePathname } from 'next/navigation';
 import { QueryProvider } from './query-provider';
 import { ThemeProvider } from './theme-provider';
 import { ToastProvider } from './toast-provider';
-import { CSPostHogProvider } from './posthog-provider';
-import { PostHogPageView } from './PostHogPageView';
 import { OneSignalBootstrap } from '@/features/notification';
 import { DailyLoginBootstrap } from '@/features/gamification/DailyLoginBootstrap';
 import { GamificationRealtimeBootstrap } from '@/features/gamification/GamificationRealtimeBootstrap';
@@ -25,8 +23,7 @@ export function Providers({ children }: ProvidersProps) {
     pathname === '/confirm-email';
 
   return (
-    <CSPostHogProvider>
-      <PostHogPageView />
+    <>
       {!isAuthPage && <OneSignalBootstrap />}
       <QueryProvider>
         {!isAuthPage && <DailyLoginBootstrap />}
@@ -36,6 +33,6 @@ export function Providers({ children }: ProvidersProps) {
           <ToastProvider />
         </ThemeProvider>
       </QueryProvider>
-    </CSPostHogProvider>
+    </>
   );
 }

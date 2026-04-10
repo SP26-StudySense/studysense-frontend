@@ -14,13 +14,6 @@ import { env } from '@/shared/config/env';
 
 // The claim key ASP.NET Core Identity uses for roles in JWT
 const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
-const ENABLE_AUTH_DEBUG =
-    process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV !== 'production';
-
-function authDebugLog(event: string, details: Record<string, unknown> = {}): void {
-    if (!ENABLE_AUTH_DEBUG) return;
-    console.log('[AuthDebug]', event, details);
-}
 
 function hasRole(roles: string[], targetRole: string): boolean {
     const normalizedTargetRole = targetRole.replace(/\s+/g, '').toLowerCase();
@@ -63,35 +56,22 @@ function isTokenExpired(token: string): boolean {
     }
 }
 
-function getTokenExpiryMeta(token?: string): {
-    present: boolean;
-    expired: boolean;
-    exp?: number;
-    expiresInSec?: number;
-} {
-    if (!token) {
-        return { present: false, expired: true };
-    }
-
+function getTokenMaxAgeSeconds(token: string): number | undefined {
     try {
         const payload = token.split('.')[1];
-        if (!payload) return { present: true, expired: true };
+        if (!payload) return undefined;
 
         const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
         const exp = Number(decoded?.exp);
         if (!Number.isFinite(exp)) {
-            return { present: true, expired: true };
+            return undefined;
         }
 
         const nowInSeconds = Math.floor(Date.now() / 1000);
-        return {
-            present: true,
-            expired: exp <= nowInSeconds,
-            exp,
-            expiresInSec: exp - nowInSeconds,
-        };
+        const remainingSeconds = exp - nowInSeconds;
+        return remainingSeconds > 0 ? remainingSeconds : 0;
     } catch {
-        return { present: true, expired: true };
+        return undefined;
     }
 }
 
@@ -112,13 +92,6 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     const apiPath = pathname.replace(API_PROXY_PREFIX, '');
     const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
 
-    console.log('[Proxy] Request:', {
-        method: request.method,
-        pathname,
-        apiPath,
-        targetUrl,
-    });
-
     // Handle OPTIONS requests natively
     if (request.method === 'OPTIONS') {
         const origin = request.headers.get('origin') || '*';
@@ -138,13 +111,6 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     const refreshToken =
         request.cookies.get(env.NEXT_PUBLIC_AUTH_REFRESH_KEY)?.value ||
         request.cookies.get('refreshToken')?.value;
-
-    authDebugLog('proxy_request_start', {
-        pathname,
-        method: request.method,
-        accessToken: getTokenExpiryMeta(accessToken),
-        hasRefreshToken: !!refreshToken,
-    });
 
     // Prepare headers
     const headers = new Headers(request.headers);
@@ -187,18 +153,9 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
         // Handle 401 - Token expired, try to refresh
         if (response.status === 401 && refreshToken && !pathname.includes('/auth/refresh')) {
-            authDebugLog('proxy_401_received', {
-                pathname,
-                method: request.method,
-                hasRefreshToken: !!refreshToken,
-            });
             const refreshed = await tryRefreshToken(refreshToken);
 
             if (refreshed) {
-                authDebugLog('proxy_refresh_success_retrying', {
-                    pathname,
-                    method: request.method,
-                });
                 // Retry request with new access token
                 headers.set('Authorization', `Bearer ${refreshed.accessToken}`);
 
@@ -215,11 +172,14 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
                 });
 
                 // Set new tokens in cookies
+                const refreshedAccessMaxAge = getTokenMaxAgeSeconds(refreshed.accessToken);
                 proxyResponse.cookies.set(env.NEXT_PUBLIC_AUTH_TOKEN_KEY, refreshed.accessToken, {
                     httpOnly: false,
                     secure: process.env.NODE_ENV === 'production',
                     sameSite: 'lax',
-                    maxAge: 60 * 60 * 24, // 1 day
+                    ...(typeof refreshedAccessMaxAge === 'number'
+                        ? { maxAge: refreshedAccessMaxAge }
+                        : {}),
                 });
 
                 // Forward rotated refresh cookie from backend refresh response.
@@ -230,11 +190,6 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
 
                 return proxyResponse;
             }
-
-            authDebugLog('proxy_refresh_failed_after_401', {
-                pathname,
-                method: request.method,
-            });
         }
 
         // Return proxied response
@@ -269,10 +224,6 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
  */
 async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: string; refreshSetCookie: string | null } | null> {
     try {
-        authDebugLog('refresh_attempt', {
-            hasRefreshToken: !!refreshToken,
-        });
-
         const response = await fetch(`${BACKEND_API_URL}/auth/refresh`, {
             method: 'POST',
             headers: {
@@ -281,10 +232,6 @@ async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: str
         });
 
         if (!response.ok) {
-            authDebugLog('refresh_failed_http', {
-                status: response.status,
-                statusText: response.statusText,
-            });
             return null;
         }
 
@@ -292,23 +239,14 @@ async function tryRefreshToken(refreshToken: string): Promise<{ accessToken: str
         const payload = data?.data ?? data;
 
         if (!payload?.accessToken) {
-            authDebugLog('refresh_failed_no_access_token', {});
             return null;
         }
-
-        authDebugLog('refresh_success', {
-            hasRotatedRefreshCookie: !!response.headers.get('set-cookie'),
-            accessToken: getTokenExpiryMeta(payload.accessToken),
-        });
 
         return {
             accessToken: payload.accessToken,
             refreshSetCookie: response.headers.get('set-cookie') || null,
         };
-    } catch (error) {
-        authDebugLog('refresh_exception', {
-            message: error instanceof Error ? error.message : String(error),
-        });
+    } catch {
         return null;
     }
 }
@@ -324,11 +262,14 @@ function applyRefreshedAuthCookies(
         return response;
     }
 
+    const refreshedAccessMaxAge = getTokenMaxAgeSeconds(refreshed.accessToken);
     response.cookies.set(env.NEXT_PUBLIC_AUTH_TOKEN_KEY, refreshed.accessToken, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24,
+        ...(typeof refreshedAccessMaxAge === 'number'
+            ? { maxAge: refreshedAccessMaxAge }
+            : {}),
     });
 
     if (refreshed.refreshSetCookie) {
@@ -356,48 +297,18 @@ export async function middleware(request: NextRequest) {
     let refreshedAuth: { accessToken: string; refreshSetCookie: string | null } | null = null;
     const hasExpiredAccessToken = !!accessToken && isTokenExpired(accessToken);
 
-    authDebugLog('middleware_entry', {
-        pathname,
-        isAuthPath,
-        isProtected: isProtectedRoute(pathname),
-        accessToken: getTokenExpiryMeta(accessToken),
-        hasRefreshToken: !!refreshToken,
-    });
-
     if (!isAuthPath && refreshToken && (!accessToken || hasExpiredAccessToken)) {
-        authDebugLog('middleware_refresh_needed', {
-            pathname,
-            reason: !accessToken ? 'missing_access_token' : 'expired_access_token',
-        });
         refreshedAuth = await tryRefreshToken(refreshToken);
         if (refreshedAuth?.accessToken) {
             accessToken = refreshedAuth.accessToken;
-            authDebugLog('middleware_refresh_applied', {
-                pathname,
-                accessToken: getTokenExpiryMeta(accessToken),
-            });
-        } else {
-            authDebugLog('middleware_refresh_not_applied', {
-                pathname,
-            });
         }
     }
 
     const isAuthenticated = !!accessToken && !isTokenExpired(accessToken);
 
-    authDebugLog('middleware_auth_evaluated', {
-        pathname,
-        isAuthenticated,
-        accessToken: getTokenExpiryMeta(accessToken),
-    });
-
     // Redirect authenticated users away from auth pages
     if (isAuthPath && isAuthenticated) {
         const roles = getRolesFromToken(accessToken!);
-        authDebugLog('middleware_auth_page_redirect', {
-            pathname,
-            roles,
-        });
         if (hasRole(roles, 'ContentManager')) {
             const response = NextResponse.redirect(new URL(routes.contentManager.dashboard, request.url));
             return applyRefreshedAuthCookies(response, refreshedAuth);
@@ -414,12 +325,6 @@ export async function middleware(request: NextRequest) {
     if (isProtectedRoute(pathname) && !isAuthenticated) {
         const loginUrl = new URL(routes.auth.login, request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
-        authDebugLog('middleware_redirect_to_login', {
-            pathname,
-            loginUrl: `${loginUrl.pathname}${loginUrl.search}`,
-            accessToken: getTokenExpiryMeta(accessToken),
-            hasRefreshToken: !!refreshToken,
-        });
         const response = NextResponse.redirect(loginUrl);
         return applyRefreshedAuthCookies(response, refreshedAuth);
     }

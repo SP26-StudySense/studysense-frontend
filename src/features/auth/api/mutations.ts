@@ -9,8 +9,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
 import Cookies from 'js-cookie';
 
-import posthog from 'posthog-js';
-
 import { post } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { queryKeys } from '@/shared/api/query-keys';
@@ -50,16 +48,44 @@ function hasNormalizedRole(roles: string[] | undefined, targetRole: string): boo
   return !!roles?.some((role) => role.replace(/\s+/g, '').toLowerCase() === normalizedTargetRole);
 }
 
+function getTokenExpiryDate(accessToken: string): Date | undefined {
+  try {
+    const payload = accessToken.split('.')[1];
+    if (!payload) return undefined;
+
+    const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    const exp = Number(decodedPayload?.exp);
+    if (!Number.isFinite(exp)) return undefined;
+
+    return new Date(exp * 1000);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Set access token in cookie
  */
 function setAccessToken(accessToken: string, expiresUtc?: string): void {
-  const expiresDate = expiresUtc ? new Date(expiresUtc) : undefined;
-  Cookies.set(ACCESS_TOKEN_KEY, accessToken, {
-    expires: expiresDate || 1, // 1 day default
+  const expiresFromBackend = expiresUtc ? new Date(expiresUtc) : undefined;
+  const isBackendExpiryValid = !!expiresFromBackend && !Number.isNaN(expiresFromBackend.getTime());
+  const expiresDate = isBackendExpiryValid ? expiresFromBackend : getTokenExpiryDate(accessToken);
+
+  const baseCookieOptions = {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-  });
+    sameSite: 'lax' as const,
+  };
+
+  Cookies.set(
+    ACCESS_TOKEN_KEY,
+    accessToken,
+    expiresDate
+      ? {
+          ...baseCookieOptions,
+          expires: expiresDate,
+        }
+      : baseCookieOptions
+  );
 }
 
 /**
@@ -141,15 +167,6 @@ export function useLogin() {
 
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
-
-      // Identify user in PostHog
-      if (env.NEXT_PUBLIC_ENABLE_ANALYTICS && env.NEXT_PUBLIC_POSTHOG_KEY) {
-        posthog.identify(response.user.id, {
-          email: response.user.email,
-          name: response.user.firstName || undefined,
-          roles: response.user.roles,
-        });
-      }
 
       // Show success toast
       toast.success('Login successful!', {
@@ -240,11 +257,6 @@ export function useLogout() {
       // No toast on logout as requested
     },
     onSettled: () => {
-      // Reset PostHog identity
-      if (env.NEXT_PUBLIC_ENABLE_ANALYTICS && env.NEXT_PUBLIC_POSTHOG_KEY) {
-        posthog.reset();
-      }
-
       // Always clear tokens and cache, even if logout API fails
       deactivateStoredPushToken().catch(() => {
         // Ignore deactivation failures during logout.
@@ -424,15 +436,6 @@ export function useGoogleLogin() {
 
         // Update user cache with NORMALIZED data
         queryClient.setQueryData(queryKeys.auth.me(), normalizedUser);
-
-        // Identify user in PostHog
-        if (env.NEXT_PUBLIC_ENABLE_ANALYTICS && env.NEXT_PUBLIC_POSTHOG_KEY) {
-          posthog.identify(normalizedUser.id, {
-            email: normalizedUser.email,
-            name: normalizedUser.firstName || undefined,
-            roles: normalizedUser.roles,
-          });
-        }
 
         // Show success toast
         toast.success('Login successful!', {
