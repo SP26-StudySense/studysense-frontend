@@ -12,7 +12,7 @@ interface ConfirmationModalProps {
   description: string | ReactNode;
   confirmText?: string;
   cancelText?: string;
-  variant?: "default" | "danger";
+  variant?: "default" | "warning" | "danger";
 }
 
 export function ConfirmationModal({
@@ -73,6 +73,8 @@ export function ConfirmationModal({
             className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium shadow-sm transition-all hover:shadow-md ${
               variant === "danger"
                 ? "bg-red-600 text-white hover:bg-red-700"
+                : variant === "warning"
+                ? "bg-amber-500 text-white hover:bg-amber-600"
                 : "bg-gradient-to-r from-[#fec5fb] to-[#00bae2] text-neutral-900"
             }`}
           >

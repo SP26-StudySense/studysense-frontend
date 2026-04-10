@@ -15,7 +15,6 @@ import axios, {
 import Cookies from 'js-cookie';
 
 import { env } from '@/shared/config';
-import { endpoints } from '@/shared/api/endpoints';
 import type { ApiResponse } from '@/shared/types';
 import { parseApiError } from './errors';
 
@@ -53,33 +52,21 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const requestUrl = String(error.config?.url || '');
-    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     const isAuthEndpoint =
       requestUrl.includes('/auth/login') ||
       requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/logout') ||
       requestUrl.includes('/auth/refresh') ||
       requestUrl.includes('/auth/forgot-password') ||
       requestUrl.includes('/auth/reset-password') ||
       requestUrl.includes('/auth/confirm-email');
 
-    // Handle 401 by attempting one client-side refresh + retry before redirecting.
-    if (error.response?.status === 401 && !isAuthEndpoint && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        await apiClient.post(endpoints.auth.refresh, {});
-        return apiClient(originalRequest);
-      } catch {
-        // Fall through to forced logout below.
-      }
-    }
-
-    // Proxy/client refresh failed, redirect to login.
+    // Proxy already handles refresh and one retry on 401.
+    // If we still get 401 here, treat session as expired.
     // Skip redirect for auth form endpoints so invalid credentials do not reload the page.
     if (error.response?.status === 401 && !isAuthEndpoint) {
-      // Clear tokens and redirect to login
-      clearTokens();
-
+      // Do not clear tokens here: a single API 401 can be endpoint-specific
+      // and clearing cookies globally causes access token to disappear unexpectedly.
       if (typeof window !== 'undefined') {
         window.location.href = '/login?expired=true';
       }

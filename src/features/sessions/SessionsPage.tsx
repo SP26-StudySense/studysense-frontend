@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TimerCard } from './components/TimerCard';
 import { TaskSelector, SessionTask } from './components/TaskSelector';
 import { SessionContent } from './components/SessionContent';
@@ -12,6 +12,9 @@ import { useActiveSession } from './api/queries';
 import { SessionStatus } from '@/shared/types';
 import { useAnalytics } from '@/shared/hooks/use-analytics';
 import { LearningEventName } from './types';
+import { ConfirmationModal } from '@/shared/ui';
+
+const QUICK_DONE_THRESHOLD_MS = 60 * 1000;
 
 // Helper to convert SelectedTask to SessionTask format
 const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
@@ -44,6 +47,16 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
     const setActiveSessionFromApi = useSessionStore((state) => state.setActiveSessionFromApi);
     const setActiveStudyPlanId = useSessionStore((state) => state.setActiveStudyPlanId);
     const { trackEvent } = useAnalytics();
+    const [quickDoneConfirmTaskId, setQuickDoneConfirmTaskId] = useState<string | null>(null);
+    const [quickDoneElapsedMs, setQuickDoneElapsedMs] = useState(0);
+    const quickDoneStartedAtRef = useRef<number | null>(null);
+    const previousSessionIdRef = useRef<string | null>(null);
+
+    const completeTask = useCallback((taskId: string) => {
+        trackEvent(LearningEventName.TASK_COMPLETED, { taskId, page: 'sessions', sessionId });
+        markTaskCompleted(taskId);
+        quickDoneStartedAtRef.current = Date.now();
+    }, [markTaskCompleted, sessionId, trackEvent]);
 
     useEffect(() => {
         if (studyPlanId) {
@@ -131,6 +144,7 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
     const displayTasks: SessionTask[] = selectedTasks.length > 0
         ? convertToSessionTasks(selectedTasks)
         : [];
+    const activeTask = displayTasks.find((task) => task.isActive);
 
     const canInteractTasks = sessionStatus !== SessionStatus.NOT_STARTED;
 
@@ -142,9 +156,53 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
 
     const handleCompleteTask = (taskId: string) => {
         if (!canInteractTasks) return;
-        trackEvent(LearningEventName.TASK_COMPLETED, { taskId, page: 'sessions', sessionId });
-        markTaskCompleted(taskId);
+
+        const now = Date.now();
+        const startedAt = quickDoneStartedAtRef.current ?? now;
+        const elapsedMs = now - startedAt;
+
+        setQuickDoneElapsedMs(elapsedMs);
+        setQuickDoneConfirmTaskId(taskId);
     };
+
+    const confirmQuickDone = useCallback(() => {
+        if (!quickDoneConfirmTaskId) {
+            return;
+        }
+
+        completeTask(quickDoneConfirmTaskId);
+        setQuickDoneConfirmTaskId(null);
+        setQuickDoneElapsedMs(0);
+    }, [completeTask, quickDoneConfirmTaskId]);
+
+    const isQuickDoneWarning =
+        quickDoneConfirmTaskId !== null && quickDoneElapsedMs < QUICK_DONE_THRESHOLD_MS;
+
+    useEffect(() => {
+        const normalizedSessionId = sessionId ?? null;
+
+        if (previousSessionIdRef.current !== normalizedSessionId) {
+            previousSessionIdRef.current = normalizedSessionId;
+            quickDoneStartedAtRef.current = null;
+            setQuickDoneConfirmTaskId(null);
+            setQuickDoneElapsedMs(0);
+        }
+
+        if (sessionStatus === SessionStatus.IN_PROGRESS && quickDoneStartedAtRef.current == null) {
+            quickDoneStartedAtRef.current = Date.now();
+            return;
+        }
+
+        if (
+            sessionStatus === SessionStatus.NOT_STARTED ||
+            sessionStatus === SessionStatus.COMPLETED ||
+            sessionStatus === SessionStatus.CANCELLED
+        ) {
+            quickDoneStartedAtRef.current = null;
+            setQuickDoneConfirmTaskId(null);
+            setQuickDoneElapsedMs(0);
+        }
+    }, [sessionId, sessionStatus]);
 
     // Show success screen (full page)
     if (showSuccess) {
@@ -165,35 +223,45 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
 
     return (
         <>
-            <div className="max-w-[1600px] mx-auto">
+            <div className="relative max-w-[1600px] mx-auto">
+                <div className="pointer-events-none absolute inset-x-0 -top-8 h-44 rounded-[2rem] bg-gradient-to-r from-emerald-100/70 via-cyan-100/60 to-amber-100/60 blur-2xl" />
                 {/* Show selected node title if available */}
                 {selectedNode && (
-                    <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
-                        <p className="text-sm text-emerald-600 font-medium">Currently studying:</p>
-                        <h2 className="text-lg font-bold text-neutral-900">{selectedNode.title}</h2>
+                    <div className="relative mb-4 overflow-hidden rounded-2xl border border-emerald-200/70 bg-white/80 p-4 shadow-md shadow-emerald-900/10 backdrop-blur-xl">
+                        <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-emerald-400 to-cyan-400" />
+                        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Current Module</p>
+                        <h2 className="mt-1 text-lg font-bold text-neutral-900">{selectedNode.title}</h2>
                         {selectedNode.planTitle && (
                             <p className="text-sm text-neutral-500">{selectedNode.planTitle}</p>
                         )}
+
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {activeTask && (
+                                <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                                    Active: {activeTask.title}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[calc(100vh-10rem)] lg:min-h-0">
                     {/* Left Column - Timer & Tasks */}
-                    <div className="lg:col-span-7 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
-                        <TimerCard />
+                    <div className="lg:col-span-8 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
+                        <TimerCard className="lg:flex-[0.85]" />
                         {displayTasks.length > 0 && (
                             <TaskSelector
                                 tasks={displayTasks}
                                 canInteract={canInteractTasks}
                                 onSetActiveTask={handleSetActiveTask}
                                 onCompleteTask={handleCompleteTask}
-                                className="lg:flex-1 lg:min-h-0"
+                                className="lg:flex-[1.4] lg:min-h-0"
                             />
                         )}
                     </div>
 
                     {/* Right Column - Content & Tips */}
-                    <div className="lg:col-span-5 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
+                    <div className="lg:col-span-4 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
                         <SessionContent className="lg:flex-1 lg:min-h-0" />
                         <FocusTips />
                     </div>
@@ -202,6 +270,19 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
 
             {/* Session Summary Modal */}
             <SessionSummaryModal isOpen={showSummary} />
+
+            <ConfirmationModal
+                isOpen={quickDoneConfirmTaskId !== null}
+                onClose={() => setQuickDoneConfirmTaskId(null)}
+                onConfirm={confirmQuickDone}
+                title={isQuickDoneWarning ? "Task completed too quickly" : "Confirm task completion"}
+                description={isQuickDoneWarning
+                    ? "This task was completed in less than 1 minute. Are you sure you want to mark it as done?"
+                    : "Are you sure you want to mark this task as done?"}
+                confirmText="Yes, mark as done"
+                cancelText="Keep studying"
+                variant={isQuickDoneWarning ? "warning" : "default"}
+            />
         </>
     );
 }

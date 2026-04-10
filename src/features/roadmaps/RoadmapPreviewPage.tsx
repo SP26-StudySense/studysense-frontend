@@ -26,12 +26,6 @@ interface RoadmapPreviewPageProps {
     roadmapId: string;
 }
 
-const difficultyColors = {
-    beginner: 'bg-green-100 text-green-700 border-green-200',
-    intermediate: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    advanced: 'bg-red-100 text-red-700 border-red-200',
-};
-
 type TabType = 'overview' | 'roadmap';
 
 function isFreePlan(subscriptionType: unknown): boolean {
@@ -193,9 +187,9 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
             try {
                 setLoading(true);
                 const data = await get<RoadmapGraphDTO>(endpoints.roadmaps.byId(roadmapId));
-                
+
                 console.log('🔍 [RoadmapPreviewPage] API Response:', data);
-                
+
                 if (!data) {
                     setError('Roadmap not found');
                     return;
@@ -204,6 +198,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                 const template: RoadmapTemplate = {
                     id: String(data.roadmap.id),
                     subjectId: data.roadmap.subjectId,
+                    subjectName: data.roadmap.subjectName ?? undefined,
                     title: data.roadmap.title,
                     description: data.roadmap.description || 'No description available',
                     difficulty: 'intermediate',
@@ -420,9 +415,6 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                                 <h2 className="text-2xl sm:text-3xl font-bold text-neutral-900 leading-tight">
                                     {roadmap.title}
                                 </h2>
-                                <span className={`rounded-full border px-4 py-1.5 text-sm font-medium ${difficultyColors[roadmap.difficulty]}`}>
-                                    {roadmap.difficulty.charAt(0).toUpperCase() + roadmap.difficulty.slice(1)}
-                                </span>
                             </div>
                             <p className="mb-5 sm:mb-6 text-sm sm:text-base text-neutral-600 leading-relaxed max-w-4xl">
                                 {roadmap.description}
@@ -467,14 +459,14 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                     {activeTab === 'overview' ? (
                         <div className="space-y-8 sm:space-y-10">
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-8 border-b border-neutral-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-8 border-b border-neutral-200">
                             <div className="p-1">
                                 <div className="text-sm text-neutral-600 mb-2">Total Nodes</div>
                                 <div className="text-3xl sm:text-4xl font-bold text-neutral-900">{roadmap.totalNodes}</div>
                             </div>
                             <div className="p-1">
-                                <div className="text-sm text-neutral-600 mb-2">Category</div>
-                                <div className="text-xl sm:text-2xl font-semibold text-neutral-900 capitalize">{roadmap.category.replace('-', ' ')}</div>
+                                <div className="text-sm text-neutral-600 mb-2">Subject</div>
+                                <div className="text-xl sm:text-2xl font-semibold text-neutral-900">{roadmap.subjectName ?? 'Unknown subject'}</div>
                             </div>
                         </div>
 

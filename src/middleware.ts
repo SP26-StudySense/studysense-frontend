@@ -37,6 +37,44 @@ function getRolesFromToken(token: string): string[] {
     }
 }
 
+function isTokenExpired(token: string): boolean {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return true;
+
+        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        const exp = Number(decoded?.exp);
+
+        if (!Number.isFinite(exp)) {
+            return true;
+        }
+
+        const nowInSeconds = Math.floor(Date.now() / 1000);
+        return exp <= nowInSeconds;
+    } catch {
+        return true;
+    }
+}
+
+function getTokenMaxAgeSeconds(token: string): number | undefined {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return undefined;
+
+        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        const exp = Number(decoded?.exp);
+        if (!Number.isFinite(exp)) {
+            return undefined;
+        }
+
+        const nowInSeconds = Math.floor(Date.now() / 1000);
+        const remainingSeconds = exp - nowInSeconds;
+        return remainingSeconds > 0 ? remainingSeconds : 0;
+    } catch {
+        return undefined;
+    }
+}
+
 // API Proxy prefix
 const API_PROXY_PREFIX = '/api/proxy';
 
@@ -53,13 +91,6 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
     // Remove the /api/proxy prefix to get the actual API path
     const apiPath = pathname.replace(API_PROXY_PREFIX, '');
     const targetUrl = `${BACKEND_API_URL}${apiPath}${search}`;
-
-    console.log('[Proxy] Request:', {
-        method: request.method,
-        pathname,
-        apiPath,
-        targetUrl,
-    });
 
     // Handle OPTIONS requests natively
     if (request.method === 'OPTIONS') {
@@ -141,11 +172,14 @@ async function handleApiProxy(request: NextRequest): Promise<NextResponse> {
                 });
 
                 // Set new tokens in cookies
+                const refreshedAccessMaxAge = getTokenMaxAgeSeconds(refreshed.accessToken);
                 proxyResponse.cookies.set(env.NEXT_PUBLIC_AUTH_TOKEN_KEY, refreshed.accessToken, {
                     httpOnly: false,
                     secure: process.env.NODE_ENV === 'production',
                     sameSite: 'lax',
-                    maxAge: 60 * 60 * 24, // 1 day
+                    ...(typeof refreshedAccessMaxAge === 'number'
+                        ? { maxAge: refreshedAccessMaxAge }
+                        : {}),
                 });
 
                 // Forward rotated refresh cookie from backend refresh response.
@@ -228,11 +262,14 @@ function applyRefreshedAuthCookies(
         return response;
     }
 
+    const refreshedAccessMaxAge = getTokenMaxAgeSeconds(refreshed.accessToken);
     response.cookies.set(env.NEXT_PUBLIC_AUTH_TOKEN_KEY, refreshed.accessToken, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24,
+        ...(typeof refreshedAccessMaxAge === 'number'
+            ? { maxAge: refreshedAccessMaxAge }
+            : {}),
     });
 
     if (refreshed.refreshSetCookie) {
@@ -244,6 +281,7 @@ function applyRefreshedAuthCookies(
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    const isAuthPath = isAuthRoute(pathname);
 
     // Handle API proxy requests
     if (pathname.startsWith(API_PROXY_PREFIX)) {
@@ -257,18 +295,19 @@ export async function middleware(request: NextRequest) {
         request.cookies.get('refreshToken')?.value;
 
     let refreshedAuth: { accessToken: string; refreshSetCookie: string | null } | null = null;
+    const hasExpiredAccessToken = !!accessToken && isTokenExpired(accessToken);
 
-    if (!accessToken && refreshToken) {
+    if (!isAuthPath && refreshToken && (!accessToken || hasExpiredAccessToken)) {
         refreshedAuth = await tryRefreshToken(refreshToken);
         if (refreshedAuth?.accessToken) {
             accessToken = refreshedAuth.accessToken;
         }
     }
 
-    const isAuthenticated = !!accessToken;
+    const isAuthenticated = !!accessToken && !isTokenExpired(accessToken);
 
     // Redirect authenticated users away from auth pages
-    if (isAuthRoute(pathname) && isAuthenticated) {
+    if (isAuthPath && isAuthenticated) {
         const roles = getRolesFromToken(accessToken!);
         if (hasRole(roles, 'ContentManager')) {
             const response = NextResponse.redirect(new URL(routes.contentManager.dashboard, request.url));

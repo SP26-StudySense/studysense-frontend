@@ -92,18 +92,18 @@ export function SessionContent({ className }: SessionContentProps) {
     return (
         <div
             className={cn(
-                'rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-6 shadow-xl shadow-neutral-900/5 flex flex-col',
+                'rounded-3xl border border-neutral-200/70 bg-white/80 p-6 shadow-xl shadow-neutral-900/5 backdrop-blur-xl flex flex-col',
                 className
             )}
         >
             <div className="flex items-center gap-2.5 mb-1">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow-lg shadow-sky-500/30">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-lg shadow-cyan-500/30">
                     <BookOpenText className="h-4 w-4" />
                 </div>
                 <h3 className="text-lg font-bold text-neutral-900">Content</h3>
             </div>
 
-            <p className="text-sm text-neutral-500 mb-4 ml-10">
+            <p className="text-sm text-neutral-500 mb-4 ml-12">
                 Learning materials for this module
             </p>
 
@@ -135,10 +135,7 @@ export function SessionContent({ className }: SessionContentProps) {
             {hasContext && !isLoading && !contentsError && nodeContents.length > 0 && (
                 <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1 lg:max-h-none lg:flex-1 lg:min-h-0">
                     {nodeContents.map((content) => (
-                        <div
-                            key={content.id}
-                            className="rounded-2xl border border-neutral-200 bg-white/80 p-4"
-                        >
+                        <div key={content.id} className="rounded-2xl border border-neutral-200 bg-white/90 p-4 shadow-sm">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <h4 className="font-semibold text-neutral-900 leading-snug">{content.title}</h4>
@@ -146,7 +143,7 @@ export function SessionContent({ className }: SessionContentProps) {
                                         <p className="mt-1 text-sm text-neutral-600 line-clamp-3">{content.description}</p>
                                     )}
                                 </div>
-                                <span className="shrink-0 rounded-lg bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700">
+                                <span className="shrink-0 rounded-lg bg-cyan-50 px-2 py-1 text-xs font-medium text-cyan-700">
                                     {content.contentType}
                                 </span>
                             </div>
@@ -161,7 +158,7 @@ export function SessionContent({ className }: SessionContentProps) {
                                         target="_blank"
                                         rel="noreferrer"
                                         onClick={() => handleContentClick(content)}
-                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 hover:text-sky-800"
+                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-700 hover:text-cyan-800"
                                     >
                                         Open
                                         <ExternalLink className="h-3.5 w-3.5" />

@@ -37,6 +37,7 @@ export interface PaginatedResponse<T> {
 export interface RoadmapListItemDTO {
     id: number;
     subjectId: number;
+    subjectName?: string | null;
     title: string;
     description: string | null;
     version: number;
@@ -63,6 +64,7 @@ export interface LearningSubjectDto {
 export interface RoadmapBasicDTO {
     id: number;
     subjectId: number;
+    subjectName?: string | null;
     title: string;
     description: string | null;
     createdById: string | null;

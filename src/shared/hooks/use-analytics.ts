@@ -1,25 +1,13 @@
 'use client';
 
-import { usePostHog } from 'posthog-js/react';
 import { useCallback } from 'react';
-import { env } from '@/shared/config';
 
 export function useAnalytics() {
-  const posthog = usePostHog();
-  const enabled = env.NEXT_PUBLIC_ENABLE_ANALYTICS && !!env.NEXT_PUBLIC_POSTHOG_KEY;
-
   const trackEvent = useCallback(
-    (eventName: string, properties?: Record<string, unknown>) => {
-      if (!enabled || !posthog) return;
-      const payload: Record<string, unknown> = {
-        ...(properties ?? {}),
-        taskId: properties?.taskId ?? null,
-        contentId: properties?.contentId ?? null,
-      };
-
-      posthog.capture(eventName, payload);
+    (_eventName: string, _properties?: Record<string, unknown>) => {
+      // Analytics disabled intentionally.
     },
-    [posthog, enabled]
+    []
   );
 
   const trackClick = useCallback(
@@ -37,17 +25,15 @@ export function useAnalytics() {
   );
 
   const identify = useCallback(
-    (userId: string, traits?: Record<string, unknown>) => {
-      if (!enabled || !posthog) return;
-      posthog.identify(userId, traits);
+    (_userId: string, _traits?: Record<string, unknown>) => {
+      // Analytics disabled intentionally.
     },
-    [posthog, enabled]
+    []
   );
 
   const reset = useCallback(() => {
-    if (!enabled || !posthog) return;
-    posthog.reset();
-  }, [posthog, enabled]);
+    // Analytics disabled intentionally.
+  }, []);
 
   return { trackEvent, trackClick, trackInteraction, identify, reset };
 }
