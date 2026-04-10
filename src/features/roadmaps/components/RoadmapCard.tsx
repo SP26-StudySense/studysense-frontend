@@ -234,6 +234,11 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
                 <h3 className="text-xl font-semibold text-neutral-900 mb-2 group-hover:text-[#00bae2] transition-colors">
                     {roadmap.title}
                 </h3>
+                {'subjectName' in roadmap && roadmap.subjectName && (
+                    <p className="mb-3 text-xs font-medium uppercase tracking-wide text-neutral-500">
+                        {roadmap.subjectName}
+                    </p>
+                )}
                 <p className="text-sm text-neutral-600 line-clamp-2 mb-4">
                     {roadmap.description}
                 </p>
