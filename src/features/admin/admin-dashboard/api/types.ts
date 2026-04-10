@@ -36,11 +36,24 @@ export type RoadmapStatusBreakdownInsight = {
   activeRate: number;
 };
 
+export type MonthlyRevenueItem = {
+  month: number;
+  revenue: number;
+};
+
+export type RevenueInsights = {
+  totalRevenue: number;
+  currentMonthRevenue: number;
+  year: number;
+  monthlyRevenue: MonthlyRevenueItem[];
+};
+
 export type AdminDashboardData = {
   stats: DashboardStat[];
   roleDistribution: RoleDistributionItem[];
   learningCoverage: LearningCoverageInsight;
   roadmapStatusBreakdown: RoadmapStatusBreakdownInsight;
+  revenueInsights: RevenueInsights;
 };
 
 export type AdminDashboardSummary = {
@@ -59,4 +72,5 @@ export type AdminDashboardOverviewApiResponse = {
   roleDistribution: RoleDistributionApiItem[];
   learningCoverage: LearningCoverageInsight;
   roadmapStatusBreakdown: RoadmapStatusBreakdownInsight;
+  revenueInsights: RevenueInsights;
 };

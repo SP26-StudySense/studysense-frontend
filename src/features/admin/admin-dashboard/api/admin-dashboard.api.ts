@@ -13,6 +13,14 @@ function formatCount(value: number): string {
   return new Intl.NumberFormat().format(value);
 }
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function normalizeRoleDistribution(
   item: RoleDistributionApiItem
 ): RoleDistributionItem {
@@ -53,7 +61,21 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     activeLatestRoadmaps,
   } = overview.summary;
 
+  const { totalRevenue, currentMonthRevenue } = overview.revenueInsights;
+
   const stats: DashboardStat[] = [
+    {
+      title: "Total Revenue",
+      value: formatCurrency(totalRevenue),
+      change: "Successful payments only",
+      trend: totalRevenue > 0 ? "up" : "down",
+    },
+    {
+      title: "Revenue This Month",
+      value: formatCurrency(currentMonthRevenue),
+      change: `${Math.round((currentMonthRevenue / Math.max(totalRevenue, 1)) * 100)}% of total revenue`,
+      trend: currentMonthRevenue > 0 ? "up" : "down",
+    },
     {
       title: "Total Users",
       value: formatCount(totalUsers),
@@ -109,5 +131,6 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     roleDistribution: overview.roleDistribution.map(normalizeRoleDistribution),
     learningCoverage: overview.learningCoverage,
     roadmapStatusBreakdown: overview.roadmapStatusBreakdown,
+    revenueInsights: overview.revenueInsights,
   };
 }
