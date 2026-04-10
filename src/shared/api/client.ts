@@ -22,6 +22,7 @@ import { parseApiError } from './errors';
 // Token storage keys (still needed for client-side token management)
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
 const REFRESH_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_REFRESH_KEY;
+const USER_STORAGE_KEY = 'sss_user';
 
 // Create axios instance - now pointing to proxy endpoint
 const apiClient: AxiosInstance = axios.create({
@@ -109,6 +110,10 @@ export function clearTokens(): void {
   Cookies.remove(ACCESS_TOKEN_KEY);
   Cookies.remove(REFRESH_TOKEN_KEY);
   Cookies.remove('refreshToken');
+
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }
 }
 
 export function getAccessToken(): string | undefined {
