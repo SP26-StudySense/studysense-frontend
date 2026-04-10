@@ -283,6 +283,15 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const isAuthPath = isAuthRoute(pathname);
 
+    // Let the long-running AI generation endpoint use a Node route handler.
+    // This avoids Vercel middleware invocation timeout for heavy requests.
+    if (
+        pathname === '/api/proxy/ai/create-road-map' ||
+        pathname === '/api/proxy/ai/create-road-map/'
+    ) {
+        return NextResponse.next();
+    }
+
     // Handle API proxy requests
     if (pathname.startsWith(API_PROXY_PREFIX)) {
         return handleApiProxy(request);
