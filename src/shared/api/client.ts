@@ -65,9 +65,8 @@ apiClient.interceptors.response.use(
     // If we still get 401 here, treat session as expired.
     // Skip redirect for auth form endpoints so invalid credentials do not reload the page.
     if (error.response?.status === 401 && !isAuthEndpoint) {
-      // Clear tokens and redirect to login
-      clearTokens();
-
+      // Do not clear tokens here: a single API 401 can be endpoint-specific
+      // and clearing cookies globally causes access token to disappear unexpectedly.
       if (typeof window !== 'undefined') {
         window.location.href = '/login?expired=true';
       }
