@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { get } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { RoadmapGraphDTO, RoadmapNodeDTO } from './api';
@@ -55,6 +56,7 @@ function isFreePlan(subscriptionType: unknown): boolean {
 
 export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { isAuthenticated, user } = useAuth();
     const { data: studyPlans = [] } = useStudyPlans(isAuthenticated);
     const { data: membership } = useUserMembership(isAuthenticated);
@@ -67,11 +69,124 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const [isCheckingLimit, setIsCheckingLimit] = useState(false);
     const [isCheckingSurvey, setIsCheckingSurvey] = useState(false);
     const [isExpandedNodes, setIsExpandedNodes] = useState(false);
+    const [isRetakeModalOpen, setIsRetakeModalOpen] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const retakeModalResolverRef = useRef<((value: boolean) => void) | null>(null);
     const { startLearning, isLoading } = useStartLearning();
     const isFreeUser = isFreePlan(membership?.subscriptionType ?? user?.subscriptionType);
     const existingStudyPlanId = roadmap
         ? studyPlans.find((plan) => plan.roadmapId === Number(roadmap.id))?.id
         : undefined;
+
+    const buildReturnTo = (skipBehaviorSurveyPrompt = false) => {
+        if (!roadmap) {
+            return '/roadmaps';
+        }
+
+        const params = new URLSearchParams({
+            startRoadmapId: roadmap.id.toString(),
+        });
+
+        if (skipBehaviorSurveyPrompt) {
+            params.set('skipBehaviorSurveyPrompt', '1');
+        }
+
+        return `/roadmaps?${params.toString()}`;
+    };
+
+    const handleBehaviorSurveyRetake = async (): Promise<boolean> => {
+        setIsCheckingSurvey(true);
+        try {
+            const retentionSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_RETENTION_CHECK);
+
+            if (retentionSurvey.hasPendingSurvey && retentionSurvey.surveyCode) {
+                const params = new URLSearchParams({
+                    triggerReason: SurveyTriggerReason.RESURVEY,
+                    returnTo: buildReturnTo(true),
+                });
+
+                router.push(`/surveys/${retentionSurvey.surveyCode}?${params.toString()}`);
+                return false;
+            }
+
+            if (retentionSurvey.blockedReason === 'MaxAttemptsExceeded') {
+                showInfo(
+                    `You have already completed this survey ${retentionSurvey.completedAttempts} time${retentionSurvey.completedAttempts !== 1 ? 's' : ''} (max ${retentionSurvey.maxAttempts}). Proceeding to start learning.`,
+                    { duration: 5000 }
+                );
+            } else if (retentionSurvey.blockedReason === 'CooldownActive' && retentionSurvey.cooldownEndsAt) {
+                const endsAt = new Date(retentionSurvey.cooldownEndsAt);
+                const diffMs = endsAt.getTime() - Date.now();
+                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                showWarning(
+                    `You need to wait ${diffDays} more day${diffDays !== 1 ? 's' : ''} before retaking this survey (available ${endsAt.toLocaleDateString()}). Proceeding to start learning.`,
+                    { duration: 6000 }
+                );
+            }
+
+            return true;
+        } catch {
+            // fail-safe: proceed without survey check
+            return true;
+        } finally {
+            setIsCheckingSurvey(false);
+        }
+    };
+
+    const handleOnStartRoadmapSurvey = async (): Promise<boolean> => {
+        if (!roadmap) return false;
+
+        setIsCheckingSurvey(true);
+        try {
+            const roadmapSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
+            if (roadmapSurvey.hasPendingSurvey && roadmapSurvey.surveyCode) {
+                const params = new URLSearchParams({
+                    triggerReason: SurveyTriggerReason.RESURVEY,
+                    returnTo: buildReturnTo(true),
+                    roadmapId: roadmap.id.toString(),
+                });
+                router.push(`/surveys/${roadmapSurvey.surveyCode}?${params.toString()}`);
+                return false;
+            }
+
+            if (roadmapSurvey.blockedReason === 'MaxAttemptsExceeded') {
+                showInfo(
+                    `You have already completed this survey ${roadmapSurvey.completedAttempts} time${roadmapSurvey.completedAttempts !== 1 ? 's' : ''} (max ${roadmapSurvey.maxAttempts}). Proceeding to start learning.`,
+                    { duration: 5000 }
+                );
+            } else if (roadmapSurvey.blockedReason === 'CooldownActive' && roadmapSurvey.cooldownEndsAt) {
+                const endsAt = new Date(roadmapSurvey.cooldownEndsAt);
+                const diffMs = endsAt.getTime() - Date.now();
+                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                showWarning(
+                    `You need to wait ${diffDays} more day${diffDays !== 1 ? 's' : ''} before retaking this survey (available ${endsAt.toLocaleDateString()}). Proceeding to start learning.`,
+                    { duration: 6000 }
+                );
+            }
+
+            return true;
+        } catch {
+            // fail-safe: proceed without survey check
+            return true;
+        } finally {
+            setIsCheckingSurvey(false);
+        }
+    };
+
+    const askRetakeBehaviorSurvey = () => {
+        return new Promise<boolean>((resolve) => {
+            retakeModalResolverRef.current = resolve;
+            setIsRetakeModalOpen(true);
+        });
+    };
+
+    const resolveRetakeBehaviorSurvey = (shouldRetake: boolean) => {
+        setIsRetakeModalOpen(false);
+        if (retakeModalResolverRef.current) {
+            retakeModalResolverRef.current(shouldRetake);
+            retakeModalResolverRef.current = null;
+        }
+    };
 
     useEffect(() => {
         const fetchRoadmap = async () => {
@@ -139,8 +254,19 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
         };
     }, []);
 
+    useEffect(() => {
+        setIsMounted(true);
+
+        return () => {
+            if (retakeModalResolverRef.current) {
+                retakeModalResolverRef.current(false);
+                retakeModalResolverRef.current = null;
+            }
+        };
+    }, []);
+
     const handleStartLearning = async () => {
-        if (!roadmap || isCheckingLimit || isCheckingSurvey || isLoading) return;
+        if (!roadmap || isCheckingLimit || isCheckingSurvey || isLoading || isRetakeModalOpen) return;
 
         if (!isAuthenticated) {
             const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
@@ -191,41 +317,32 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
             if (registerSurvey.hasPendingSurvey && registerSurvey.surveyCode) {
                 const params = new URLSearchParams({
                     triggerReason: SurveyTriggerReason.INITIAL,
-                    returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
+                    returnTo: buildReturnTo(true),
                 });
                 router.push(`/surveys/${registerSurvey.surveyCode}?${params.toString()}`);
                 return;
-            }
-
-            const roadmapSurvey = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_START_ROADMAP);
-            if (roadmapSurvey.hasPendingSurvey && roadmapSurvey.surveyCode) {
-                const params = new URLSearchParams({
-                    triggerReason: SurveyTriggerReason.RESURVEY,
-                    returnTo: `/roadmaps?startRoadmapId=${roadmap.id}`,
-                    roadmapId: roadmap.id.toString(),
-                });
-                router.push(`/surveys/${roadmapSurvey.surveyCode}?${params.toString()}`);
-                return;
-            }
-
-            if (roadmapSurvey.blockedReason === 'MaxAttemptsExceeded') {
-                showInfo(
-                    `You have already completed this survey ${roadmapSurvey.completedAttempts} time${roadmapSurvey.completedAttempts !== 1 ? 's' : ''} (max ${roadmapSurvey.maxAttempts}). Proceeding to start learning.`,
-                    { duration: 5000 }
-                );
-            } else if (roadmapSurvey.blockedReason === 'CooldownActive' && roadmapSurvey.cooldownEndsAt) {
-                const endsAt = new Date(roadmapSurvey.cooldownEndsAt);
-                const diffMs = endsAt.getTime() - Date.now();
-                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                showWarning(
-                    `You need to wait ${diffDays} more day${diffDays !== 1 ? 's' : ''} before retaking this survey (available ${endsAt.toLocaleDateString()}). Proceeding to start learning.`,
-                    { duration: 6000 }
-                );
             }
         } catch {
             // fail-safe: proceed without survey check
         } finally {
             setIsCheckingSurvey(false);
+        }
+
+        const skipBehaviorSurveyPrompt = searchParams.get('skipBehaviorSurveyPrompt') === '1';
+        if (!skipBehaviorSurveyPrompt) {
+            const shouldRetakeBehaviorSurvey = await askRetakeBehaviorSurvey();
+
+            if (shouldRetakeBehaviorSurvey) {
+                const canContinue = await handleBehaviorSurveyRetake();
+                if (!canContinue) {
+                    return;
+                }
+            }
+        }
+
+        const canContinueOnStartRoadmapSurvey = await handleOnStartRoadmapSurvey();
+        if (!canContinueOnStartRoadmapSurvey) {
+            return;
         }
 
         await startLearning(Number(roadmap.id));
@@ -264,6 +381,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const Icon = LucideIcons[roadmap.icon as keyof typeof LucideIcons] as React.ComponentType<{ className?: string }> || LucideIcons.Map;
 
     return (
+        <>
         <div className="min-h-screen">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 pt-4 sm:px-6 lg:px-8">
                 <button
@@ -409,7 +527,7 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                         </button>
                         <button
                             onClick={handleStartLearning}
-                            disabled={isCheckingLimit || isCheckingSurvey || isLoading}
+                            disabled={isCheckingLimit || isCheckingSurvey || isLoading || isRetakeModalOpen}
                             className="flex-1 rounded-2xl bg-[#00bae2] px-6 py-3 font-semibold text-white shadow-lg shadow-[#00bae2]/20 transition-colors hover:bg-[#00a8d0] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isCheckingLimit || isCheckingSurvey || isLoading
@@ -426,5 +544,61 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                 </div>
             </div>
         </div>
+        {isMounted && isRetakeModalOpen && createPortal(
+            <div
+                className="fixed inset-0 z-[120] flex items-center justify-center"
+                onClick={(e) => {
+                    e.stopPropagation();
+                }}
+            >
+                <div
+                    className="absolute inset-0 bg-neutral-900/45 backdrop-blur-sm"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        resolveRetakeBehaviorSurvey(false);
+                    }}
+                />
+
+                <div
+                    className="relative z-10 mx-4 w-full max-w-md overflow-hidden rounded-3xl border border-cyan-100 bg-white shadow-2xl shadow-cyan-900/20"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                    }}
+                >
+                    <div className="bg-gradient-to-r from-[#00bae2]/15 via-[#00d4ff]/10 to-white p-6 pb-4">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#00bae2] shadow-sm">
+                            <LucideIcons.Sparkles className="h-6 w-6" />
+                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900">Retake Behavior Survey?</h3>
+                        <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                            We can quickly recalibrate your learning style before starting this roadmap.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-6 pt-4">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                resolveRetakeBehaviorSurvey(false);
+                            }}
+                            className="flex-1 rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+                        >
+                            Skip for now
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                resolveRetakeBehaviorSurvey(true);
+                            }}
+                            className="flex-1 rounded-xl bg-[#00bae2] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#02a6cb]"
+                        >
+                            Retake now
+                        </button>
+                    </div>
+                </div>
+            </div>,
+            document.body
+        )}
+        </>
     );
 }

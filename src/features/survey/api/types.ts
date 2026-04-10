@@ -94,6 +94,7 @@ export interface TakeSurveyResult {
  */
 export const SurveyTriggerType = {
   ON_REGISTER: 'ON_REGISTER',
+  ON_RETENTION_CHECK: 'ON_RETENTION_CHECK',
   ON_START_ROADMAP: 'ON_START_ROADMAP',
   ON_COMPLETE_MODULE: 'ON_COMPLETE_MODULE',
 } as const;
