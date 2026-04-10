@@ -66,7 +66,8 @@ function isQuestionAnswered(question: QuizAttemptQuestionDto, answer: QuizAnswer
     return answer.textValue.trim().length > 0;
   }
 
-  return answer.optionId != null;
+  // SingleChoice: optionId must be a positive number (API returns 0 or null for "not selected")
+  return answer.optionId != null && answer.optionId > 0;
 }
 
 export function useQuizAttemptFlow({
@@ -129,7 +130,8 @@ export function useQuizAttemptFlow({
 
     const initialAnswers = questionsData.questions.reduce<Record<number, QuizAnswerValue>>((acc, question) => {
       acc[question.questionId] = {
-        optionId: question.selectedOptionId ?? null,
+        // API returns 0 to mean "not selected", treat as null for consistency
+        optionId: question.selectedOptionId && question.selectedOptionId > 0 ? question.selectedOptionId : null,
         optionIds: question.selectedOptionIds ?? [],
         textValue: question.selectedTextValue ?? '',
       };

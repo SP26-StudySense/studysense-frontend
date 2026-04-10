@@ -321,7 +321,8 @@ export function QuizAttemptPage({
       return currentAnswer.textValue.trim().length > 0;
     }
 
-    return currentAnswer.optionId != null;
+    // SingleChoice: optionId must be a positive number (API returns 0 or null for "not selected")
+    return currentAnswer.optionId != null && currentAnswer.optionId > 0;
   };
 
   const handleQuestionJump = (index: number) => {
@@ -539,7 +540,7 @@ export function QuizAttemptPage({
                   ? (currentQuestionAnswer?.optionIds.length ?? 0) > 0
                   : question.type === 'ShortAnswer'
                     ? (currentQuestionAnswer?.textValue.trim().length ?? 0) > 0
-                    : currentQuestionAnswer?.optionId != null;
+                    : (currentQuestionAnswer?.optionId ?? 0) > 0; // SingleChoice: must be positive number
 
                 return (
                   <button
