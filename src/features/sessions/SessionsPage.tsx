@@ -144,6 +144,8 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
     const displayTasks: SessionTask[] = selectedTasks.length > 0
         ? convertToSessionTasks(selectedTasks)
         : [];
+    const completedTaskCount = displayTasks.filter((task) => task.isCompleted).length;
+    const activeTask = displayTasks.find((task) => task.isActive);
 
     const canInteractTasks = sessionStatus !== SessionStatus.NOT_STARTED;
 
@@ -222,15 +224,28 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
 
     return (
         <>
-            <div className="max-w-[1600px] mx-auto">
+            <div className="relative max-w-[1600px] mx-auto">
+                <div className="pointer-events-none absolute inset-x-0 -top-8 h-44 rounded-[2rem] bg-gradient-to-r from-emerald-100/70 via-cyan-100/60 to-amber-100/60 blur-2xl" />
                 {/* Show selected node title if available */}
                 {selectedNode && (
-                    <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
-                        <p className="text-sm text-emerald-600 font-medium">Currently studying:</p>
-                        <h2 className="text-lg font-bold text-neutral-900">{selectedNode.title}</h2>
+                    <div className="relative mb-6 overflow-hidden rounded-3xl border border-emerald-200/70 bg-white/80 p-5 shadow-lg shadow-emerald-900/10 backdrop-blur-xl">
+                        <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-emerald-400 to-cyan-400" />
+                        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Current Module</p>
+                        <h2 className="mt-1 text-xl font-bold text-neutral-900">{selectedNode.title}</h2>
                         {selectedNode.planTitle && (
                             <p className="text-sm text-neutral-500">{selectedNode.planTitle}</p>
                         )}
+
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                {completedTaskCount}/{displayTasks.length} tasks done
+                            </span>
+                            {activeTask && (
+                                <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+                                    Active: {activeTask.title}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 )}
 
