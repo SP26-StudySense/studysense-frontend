@@ -131,6 +131,7 @@ export const endpoints = {
   // AI Task Items
   ai: {
     createTaskItems: '/ai/create-task-items',
+    moduleBehaviorInsight: (studyPlanId: string) => `/ai/module-behavior-insight/${studyPlanId}`,
   },
 
   // Dashboard

@@ -263,7 +263,7 @@ export function TimerCard({ className }: TimerCardProps) {
 
     return (
         <div className={cn(
-            "relative overflow-hidden flex flex-col items-center justify-center rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-12 shadow-xl shadow-neutral-900/5",
+            "relative overflow-hidden flex flex-col items-center justify-center rounded-3xl bg-white/70 backdrop-blur-xl border border-neutral-200/60 p-8 shadow-xl shadow-neutral-900/5",
             className
         )}>
             {/* Decorative gradient */}
@@ -271,7 +271,7 @@ export function TimerCard({ className }: TimerCardProps) {
             <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-gradient-to-tr from-[#fec5fb]/20 to-[#00bae2]/10 blur-2xl" />
 
             {/* Timer Display */}
-            <div className="relative text-8xl font-bold tracking-tighter text-neutral-900 font-mono bg-gradient-to-r from-neutral-900 to-neutral-600 bg-clip-text">
+            <div className="relative text-6xl font-bold tracking-tighter text-neutral-900 font-mono bg-gradient-to-r from-neutral-900 to-neutral-600 bg-clip-text">
                 {formatTime(elapsedSeconds)}
             </div>
 
@@ -298,14 +298,14 @@ export function TimerCard({ className }: TimerCardProps) {
             )}
 
             {/* Controls */}
-            <div className="relative mt-8 flex items-center gap-3">
+            <div className="relative mt-6 flex items-center gap-3">
                 {!hasStarted ? (
                     <button
                         onClick={handleStart}
                         disabled={isAnyPending || !hasTasks}
-                        className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Play className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" />
+                        <Play className="h-4 w-4 transition-transform group-hover:scale-110" fill="currentColor" />
                         {startMutation.isPending ? 'Starting...' : 'Start Session'}
                     </button>
                 ) : (
@@ -314,24 +314,24 @@ export function TimerCard({ className }: TimerCardProps) {
                             <button
                                 onClick={handlePause}
                                 disabled={isAnyPending}
-                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50"
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50"
                             >
-                                <Pause className="h-5 w-5" fill="currentColor" />
+                                <Pause className="h-4 w-4" fill="currentColor" />
                                 {pauseMutation.isPending ? 'Pausing...' : 'Pause'}
                             </button>
                         ) : (
                             <button
                                 onClick={handleResume}
                                 disabled={isAnyPending}
-                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-50"
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-emerald-600/30 hover:shadow-2xl hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-300 disabled:opacity-50"
                             >
-                                <Play className="h-5 w-5" fill="currentColor" />
+                                <Play className="h-4 w-4" fill="currentColor" />
                                 {resumeMutation.isPending ? 'Resuming...' : 'Resume'}
                             </button>
                         )}
                         <button
                             onClick={handleEndSession}
-                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/40 hover:scale-105 transition-all duration-300"
+                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-red-500/30 hover:shadow-2xl hover:shadow-red-500/40 hover:scale-105 transition-all duration-300"
                         >
                             <Square className="h-4 w-4" fill="currentColor" />
                             End Session

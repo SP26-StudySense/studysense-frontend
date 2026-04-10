@@ -6,6 +6,12 @@ import { endpoints } from '@/shared/api/endpoints';
 import { StudyPlanResponse, StudyPlanItem } from './response-types';
 import { StudyPlanDto, TaskItemDto } from './types';
 
+export interface ModuleBehaviorInsightResponse {
+  success: boolean;
+  message: string;
+  insight?: string | null;
+}
+
 /**
  * Hook to fetch user's study plans from /study-plans/user
  * Note: API client auto-adds /api/ prefix and auto-unwraps { data: ... } wrapper
@@ -84,6 +90,28 @@ export function useTasksByPlan(studyPlanId: string | undefined) {
     enabled: !!studyPlanId,
     staleTime: 30 * 1000, // 30 seconds - reduced from 5 minutes to ensure fresh data
     retry: 3,
+  });
+}
+
+/**
+ * Hook to fetch AI behavior insight for a study plan
+ * GET /ai/module-behavior-insight/{studyPlanId}
+ */
+export function useModuleBehaviorInsight(
+  studyPlanId: string | undefined,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: ['ai', 'moduleBehaviorInsight', studyPlanId] as const,
+    queryFn: async () => {
+      if (!studyPlanId) throw new Error('Study plan ID is required');
+      const data = await get<ModuleBehaviorInsightResponse>(
+        endpoints.ai.moduleBehaviorInsight(studyPlanId)
+      );
+      return data;
+    },
+    enabled: options?.enabled !== false && !!studyPlanId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
