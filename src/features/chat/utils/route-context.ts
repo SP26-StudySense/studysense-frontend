@@ -13,7 +13,9 @@ function parseNumber(segment?: string): number | null {
 }
 
 export function resolveChatRouteContext(pathname: string): ChatRouteContext {
-  const studyPlanMatch = pathname.match(/^\/(study-plans|my-roadmap|roadmaps)\/(\d+)/);
+  const studyPlanMatch = pathname.match(
+    /^\/(dashboard|study-plans|my-roadmap|sessions)\/(\d+)(?:\/|$)/
+  );
   if (studyPlanMatch) {
     return {
       studyPlanId: studyPlanMatch[2],

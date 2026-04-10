@@ -8,16 +8,32 @@ import type { ChatConversationDto, ChatHistoryMessageDto } from './types';
 
 export function useChatConversations(roadmapId?: number | null, userId?: string) {
   const resolvedRoadmapId = roadmapId ?? undefined;
+  const hasRoadmapScope =
+    typeof resolvedRoadmapId === 'number' &&
+    Number.isFinite(resolvedRoadmapId) &&
+    resolvedRoadmapId > 0;
 
   return useQuery({
     queryKey:
-      roadmapId != null
-        ? queryKeys.chat.conversationsByRoadmap(String(roadmapId))
-        : queryKeys.chat.conversations(),
-    queryFn: () =>
-      get<ChatConversationDto[]>(endpoints.chat.conversations(resolvedRoadmapId), {
-        params: userId ? { userId } : undefined,
-      }),
+      hasRoadmapScope
+        ? queryKeys.chat.conversationsByRoadmap(String(resolvedRoadmapId))
+        : ['chat', 'conversations', 'unresolved'],
+    queryFn: () => {
+      const params: { userId?: string; roadmapId?: number } = {};
+
+      if (userId) {
+        params.userId = userId;
+      }
+
+      if (hasRoadmapScope) {
+        params.roadmapId = resolvedRoadmapId;
+      }
+
+      return get<ChatConversationDto[]>(endpoints.chat.conversations, {
+        params,
+      });
+    },
+    enabled: hasRoadmapScope,
     staleTime: 30 * 1000,
   });
 }
