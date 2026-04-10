@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Sparkles, Star, ArrowRight, Map } from 'lucide-react';
+import { CheckCircle2, Clock, Sparkles, Star } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useSessionStore } from '@/store/session.store';
 import { useEndSession } from '../api/mutations';
@@ -29,18 +29,24 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
     const completeSession = useSessionStore((state) => state.completeSession);
     const [hoveredStar, setHoveredStar] = useState(0);
-    const [notes, setNotes] = useState('');
+    const [autoContinueSeconds, setAutoContinueSeconds] = useState(10);
+    const hasAutoSubmittedRef = useRef(false);
+    const submitSessionRef = useRef<() => void>(() => {
+        // no-op until initialized in render
+    });
 
     const endMutation = useEndSession();
-
-    if (!isOpen || !summaryData) return null;
+    const canRender = isOpen && !!summaryData;
 
     const handleStarClick = (rating: number) => {
+        if (!summaryData) return;
         setSummaryData({ ...summaryData, rating });
     };
 
-    const handleSaveAndContinue = () => {
+    submitSessionRef.current = () => {
+        if (!summaryData) return;
         if (!sessionId) return;
+        if (endMutation.isPending) return;
 
         const tasksPayload = selectedTasks
             .map((task) => {
@@ -64,7 +70,6 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                 request: {
                     endedReason: SessionEndedReason.COMPLETED,
                     selfRating: summaryData.rating || undefined,
-                    notes: notes || undefined,
                     actualDurationSeconds: elapsedSeconds,
                     tasks: tasksPayload,
                 },
@@ -86,6 +91,41 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
             }
         );
     };
+
+    const handleSaveAndContinue = () => {
+        submitSessionRef.current();
+    };
+
+    useEffect(() => {
+        if (!canRender) {
+            hasAutoSubmittedRef.current = false;
+            return;
+        }
+
+        setAutoContinueSeconds(10);
+        hasAutoSubmittedRef.current = false;
+
+        const intervalId = window.setInterval(() => {
+            setAutoContinueSeconds((prev) => {
+                if (prev <= 1) {
+                    window.clearInterval(intervalId);
+
+                    if (!hasAutoSubmittedRef.current) {
+                        hasAutoSubmittedRef.current = true;
+                        submitSessionRef.current();
+                    }
+
+                    return 0;
+                }
+
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => window.clearInterval(intervalId);
+    }, [canRender]);
+
+    if (!canRender || !summaryData) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -173,35 +213,11 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                     </div>
                 </div>
 
-                {/* Notes Section */}
-                <div className="mx-8 mb-6">
-                    <textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Add notes about this session (optional)..."
-                        className="w-full p-4 rounded-2xl bg-white/80 border border-neutral-100 shadow-sm text-sm text-neutral-700 placeholder:text-neutral-400 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
-                        rows={3}
-                    />
-                </div>
-
-                {/* Suggested Next Step */}
-                <div className="mx-8 mb-6 p-5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="h-4 w-4 text-emerald-600" />
-                        <h3 className="font-semibold text-neutral-900">Suggested Next Step</h3>
-                    </div>
-                    <p className="text-sm text-neutral-600 mb-4">
-                        Based on your progress, we recommend continuing with the next topic in your roadmap tomorrow. Consistency is key!
-                    </p>
-                    <button className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-neutral-200 bg-white/80 text-sm font-medium text-neutral-700 hover:bg-white transition-all">
-                        <Map className="h-4 w-4" />
-                        View Roadmap
-                        <ArrowRight className="h-4 w-4" />
-                    </button>
-                </div>
-
                 {/* Save Button */}
                 <div className="px-8 pb-8">
+                    <p className="mb-3 text-center text-xs text-neutral-500">
+                        Auto continue in {autoContinueSeconds}s
+                    </p>
                     <button
                         onClick={handleSaveAndContinue}
                         disabled={endMutation.isPending}
