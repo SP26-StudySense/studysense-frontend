@@ -33,6 +33,12 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
         router.push(dashboardPath);
     }, [activeStudyPlanId, resetSessionFlow, router]);
 
+    const handleBackToStudyPlan = useCallback(() => {
+        resetSessionFlow();
+        const studyPlanPath = activeStudyPlanId ? `/study-plans/${activeStudyPlanId}` : '/study-plans';
+        router.push(studyPlanPath);
+    }, [activeStudyPlanId, resetSessionFlow, router]);
+
     const handleViewRoadmap = () => {
         resetSessionFlow();
         router.push('/roadmaps');
