@@ -24,6 +24,7 @@ import { AiTaskPreviewPanel, AiPreviewTask } from './AiTaskPreviewPanel';
 
 export interface ModuleTask {
     id: string;
+    isGenerateByAI?: boolean;
     title: string;
     description?: string;
     estimatedMinutes: number;
@@ -401,6 +402,7 @@ export function ModuleTasksPanel({
         if (viewFilter === 'all-tasks') {
             return allTasks.map((task: TaskItemDto): ModuleTask => ({
                 id: String(task.id),
+                isGenerateByAI: task.isGenerateByAI,
                 title: task.title,
                 description: task.description,
                 estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
@@ -423,6 +425,7 @@ export function ModuleTasksPanel({
                 })
                 .map((task: TaskItemDto): ModuleTask => ({
                     id: String(task.id),
+                    isGenerateByAI: task.isGenerateByAI,
                     title: task.title,
                     description: task.description,
                     estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
@@ -583,6 +586,9 @@ export function ModuleTasksPanel({
     // Delete Task
     const handleDeleteClick = (task: ModuleTask, e: React.MouseEvent) => {
         e.stopPropagation();
+        if (task.isGenerateByAI) {
+            return;
+        }
         setDeletingTask(task);
         setIsDeleteDialogOpen(true);
     };
@@ -600,9 +606,17 @@ export function ModuleTasksPanel({
                     return;
                 }
 
+                const updatePayload: TaskItemInput = editingTask.isGenerateByAI
+                    ? {
+                        ...data,
+                        title: editingTask.title,
+                        description: editingTask.description,
+                    }
+                    : data;
+
                 await updateTaskMutation.mutateAsync({
                     taskId: taskId,
-                    task: data,
+                    task: updatePayload,
                 });
             } else {
                 await createTaskMutation.mutateAsync(data);
@@ -617,6 +631,11 @@ export function ModuleTasksPanel({
     // Confirm Delete
     const handleConfirmDelete = async () => {
         if (!deletingTask) return;
+        if (deletingTask.isGenerateByAI) {
+            setIsDeleteDialogOpen(false);
+            setDeletingTask(null);
+            return;
+        }
 
         // Extract numeric task ID - handle both string "51" and potential "51:1" formats
         const taskIdStr = deletingTask.id.split(':')[0];
@@ -1267,7 +1286,13 @@ export function ModuleTasksPanel({
                                                                                     handleDeleteClick(task, e);
                                                                                     setActiveTaskMenu(null);
                                                                                 }}
-                                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                                                className={cn(
+                                                                                    "w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors",
+                                                                                    task.isGenerateByAI
+                                                                                        ? "text-neutral-400 cursor-not-allowed"
+                                                                                        : "text-red-600 hover:bg-red-50"
+                                                                                )}
+                                                                                disabled={task.isGenerateByAI}
                                                                             >
                                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                                                 Delete
@@ -1355,7 +1380,9 @@ export function ModuleTasksPanel({
                     description: editingTask.description,
                     estimatedMinutes: editingTask.estimatedMinutes,
                     scheduledDate: editingTask.scheduledDate || new Date().toISOString(),
+                    isGenerateByAI: editingTask.isGenerateByAI,
                 } : undefined}
+                lockTitleAndDescription={!!editingTask?.isGenerateByAI}
                 isLoading={isFormLoading}
             />
 

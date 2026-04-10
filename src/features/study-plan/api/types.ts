@@ -79,6 +79,7 @@ export interface StudyPlanSummaryDto {
 export interface TaskItemDto {
   id: number;
   studyPlanModuleId: number;
+  isGenerateByAI: boolean;
   title: string;
   description?: string;
   status?: TaskStatus;

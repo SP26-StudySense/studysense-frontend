@@ -30,8 +30,10 @@ interface TaskFormModalProps {
         description?: string;
         estimatedMinutes: number;
         scheduledDate: string;
+        isGenerateByAI?: boolean;
     };
     mode: 'create' | 'edit';
+    lockTitleAndDescription?: boolean;
     isLoading?: boolean;
 }
 
@@ -42,6 +44,7 @@ export function TaskFormModal({
     moduleId,
     initialData,
     mode,
+    lockTitleAndDescription = false,
     isLoading = false,
 }: TaskFormModalProps) {
     const [formData, setFormData] = useState<TaskFormData>({
@@ -161,8 +164,12 @@ export function TaskFormModal({
                                 errors.title ? "border-red-300" : "border-neutral-200"
                             )}
                             placeholder="Enter task title..."
-                            disabled={isLoading}
+                            disabled={isLoading || lockTitleAndDescription}
+                            readOnly={lockTitleAndDescription}
                         />
+                        {lockTitleAndDescription && mode === 'edit' && (
+                            <p className="mt-1 text-xs text-neutral-500">AI-generated task title cannot be edited.</p>
+                        )}
                         {errors.title && (
                             <p className="mt-1 text-xs text-red-500">{errors.title}</p>
                         )}
@@ -179,8 +186,12 @@ export function TaskFormModal({
                             rows={3}
                             className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-white/80 text-neutral-900 placeholder:text-neutral-400 transition-all focus:outline-none focus:ring-2 focus:ring-[#00bae2]/30 focus:border-[#00bae2] resize-none"
                             placeholder="Add a description (optional)..."
-                            disabled={isLoading}
+                            disabled={isLoading || lockTitleAndDescription}
+                            readOnly={lockTitleAndDescription}
                         />
+                        {lockTitleAndDescription && mode === 'edit' && (
+                            <p className="mt-1 text-xs text-neutral-500">AI-generated task description cannot be edited.</p>
+                        )}
                     </div>
 
                     {/* Duration and Date Row */}
