@@ -125,6 +125,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                 .filter((task: TaskItemDto) => task.studyPlanModuleId === module.id)
                 .map((task: TaskItemDto): ModuleTask => ({
                     id: String(task.id),
+                    isGenerateByAI: task.isGenerateByAI,
                     title: task.title,
                     description: task.description,
                     estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),

@@ -71,10 +71,6 @@ export function AiTaskPreviewPanel({
         setDraftTasks((prev) => prev.map((task, i) => (i === index ? { ...task, ...patch } : task)));
     };
 
-    const removeTask = (index: number) => {
-        setDraftTasks((prev) => prev.filter((_, i) => i !== index));
-    };
-
     const formatDeadline = (value?: string): string => formatLocalDate(value);
 
     if (!isVisible || !mounted) {
@@ -103,29 +99,27 @@ export function AiTaskPreviewPanel({
                         <div key={`${task.title}-${index}`} className="rounded-xl border border-violet-100 bg-violet-50/30 p-4">
                             <div className="flex items-start justify-between gap-3 mb-3">
                                 <p className="text-xs font-semibold text-violet-700">Task {index + 1}</p>
-                                <button
-                                    onClick={() => removeTask(index)}
-                                    className="text-xs font-medium text-rose-600 hover:text-rose-700"
-                                >
-                                    Remove
-                                </button>
                             </div>
 
                             <div className="space-y-3">
                                 <input
                                     value={task.title}
-                                    onChange={(e) => updateTask(index, { title: e.target.value })}
+                                    readOnly
                                     placeholder="Task title"
-                                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 focus:outline-none"
                                 />
 
                                 <textarea
                                     value={task.description ?? ''}
-                                    onChange={(e) => updateTask(index, { description: e.target.value || undefined })}
+                                    readOnly
                                     placeholder="Task description"
                                     rows={4}
-                                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
+                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 focus:outline-none resize-none"
                                 />
+
+                                <p className="text-[11px] text-neutral-500">
+                                    Title and description are locked for AI output.
+                                </p>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <label className="text-xs text-neutral-600">
