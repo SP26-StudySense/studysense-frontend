@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sparkles, Home, Map } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/shared/lib/utils';
@@ -22,19 +23,49 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
     const resetSessionFlow = useSessionStore((state) => state.resetSessionFlow);
     const summaryData = useSessionStore((state) => state.summaryData);
     const activeStudyPlanId = useActiveStudyPlanId();
+    const [autoRedirectSeconds, setAutoRedirectSeconds] = useState(10);
+    const hasAutoRedirectedRef = useRef(false);
+    const canRender = isOpen;
 
-    if (!isOpen) return null;
-
-    const handleBackToDashboard = () => {
+    const handleBackToDashboard = useCallback(() => {
         resetSessionFlow();
         const dashboardPath = activeStudyPlanId ? `/dashboard/${activeStudyPlanId}` : '/dashboard';
         router.push(dashboardPath);
-    };
+    }, [activeStudyPlanId, resetSessionFlow, router]);
 
     const handleViewRoadmap = () => {
         resetSessionFlow();
         router.push('/roadmaps');
     };
+
+    useEffect(() => {
+        if (!canRender) {
+            hasAutoRedirectedRef.current = false;
+            return;
+        }
+
+        setAutoRedirectSeconds(10);
+        hasAutoRedirectedRef.current = false;
+
+        const intervalId = window.setInterval(() => {
+            setAutoRedirectSeconds((prev) => Math.max(prev - 1, 0));
+        }, 1000);
+
+        return () => window.clearInterval(intervalId);
+    }, [canRender]);
+
+    useEffect(() => {
+        if (!canRender) {
+            return;
+        }
+
+        if (autoRedirectSeconds === 0 && !hasAutoRedirectedRef.current) {
+            hasAutoRedirectedRef.current = true;
+            handleBackToDashboard();
+        }
+    }, [autoRedirectSeconds, canRender, handleBackToDashboard]);
+
+    if (!canRender) return null;
 
     return (
         <div className={cn(
@@ -52,6 +83,9 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
                 <h1 className="text-3xl font-bold text-neutral-900 mb-2">Great work!</h1>
                 <p className="text-neutral-500 mb-4">
                     Your session has been saved. Keep up the momentum!
+                </p>
+                <p className="text-xs text-neutral-500 mb-6">
+                    Redirecting to dashboard in {autoRedirectSeconds}s
                 </p>
 
                 {/* Real stats from API */}

@@ -289,6 +289,7 @@ export const useSessionStore = create<SessionState>()(
         // Actual XP/stats come from the API response in completeSession.
         const { elapsedSeconds, selectedTasks } = get();
         const completedTasks = selectedTasks.filter((t) => t.isCompleted).length;
+        const provisionalXp = completedTasks * 25;
 
         set({
           timerRunning: false,
@@ -297,7 +298,7 @@ export const useSessionStore = create<SessionState>()(
             timeStudiedSeconds: elapsedSeconds,
             tasksCompleted: completedTasks,
             totalTasks: selectedTasks.length,
-            xpEarned: 0, // Will be populated from API
+            xpEarned: provisionalXp,
             rating: 0,
             notes: '',
           },
