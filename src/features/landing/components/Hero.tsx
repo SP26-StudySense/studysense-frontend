@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { ArrowRight, Search, Atom, CheckCircle2, Circle, BriefcaseBusiness, Palette, Stethoscope } from 'lucide-react';
+import { ArrowRight, Search, Map, CheckCircle2, Circle, CalendarDays, TrendingUp } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin';
 import { useTransitionRouter } from '@/shared/context/TransitionContext';
@@ -191,73 +191,91 @@ export const Hero = () => {
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-tr from-[#fec5fb]/30 to-[#00bae2]/30 blur-[80px]"></div>
 
                 <div className="relative w-full max-w-sm">
-                    {/* Card 1: Skill Node */}
+                    {/* Card 1: Roadmap Progress */}
                     <div
                         ref={card1Ref}
                         className="glass-panel mb-6 transform rounded-2xl border border-neutral-100 p-5 shadow-xl transition-all duration-500 -rotate-2 hover:rotate-0 hover:shadow-2xl hover-glow cursor-pointer"
                     >
                         <div className="mb-4 flex items-center gap-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 transition-transform duration-300 group-hover:scale-110">
-                                <Atom width="22" />
+                                <Map width="22" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-semibold text-neutral-900">Public Speaking</h3>
-                                <p className="text-xs text-neutral-500">Communication Path • Module 4</p>
+                                <h3 className="text-sm font-semibold text-neutral-900">Roadmap Progress</h3>
+                                <p className="text-xs text-neutral-500">Communication Path • Step 4/6</p>
                             </div>
                             <div className="ml-auto">
                                 <div
                                     className="radial-progress text-[10px] font-bold text-[#00bae2]"
-                                    style={{ '--value': 75, '--size': '2rem' } as any}
+                                    style={{ '--value': 68, '--size': '2rem' } as any}
                                 >
-                                    75%
+                                    68%
                                 </div>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-3 rounded border border-neutral-100 bg-neutral-50 p-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-100">
+                        <div className="space-y-2.5">
+                            <div className="flex items-center gap-3 rounded border border-emerald-100 bg-emerald-50/70 p-2 text-xs text-neutral-600 transition-colors hover:bg-emerald-50">
                                 <CheckCircle2 className="text-emerald-500" />
-                                <span>Audience analysis basics</span>
+                                <span>Foundation: Communication Basics</span>
+                                <span className="ml-auto font-semibold text-emerald-700">Done</span>
+                            </div>
+                            <div className="flex items-center gap-3 rounded border border-sky-100 bg-sky-50/70 p-2 text-xs text-neutral-600 transition-colors hover:bg-sky-50">
+                                <TrendingUp className="h-4 w-4 text-sky-600" />
+                                <span>Practice: Story Structure & Delivery</span>
+                                <span className="ml-auto font-semibold text-sky-700">In Progress</span>
                             </div>
                             <div className="flex items-center gap-3 rounded border border-neutral-100 bg-neutral-50 p-2 text-xs text-neutral-600 transition-colors hover:bg-neutral-100">
                                 <Circle className="text-neutral-300" />
-                                <span>Story structure and delivery</span>
+                                <span>Milestone: Live Presentation</span>
+                                <span className="ml-auto font-semibold text-neutral-500">Locked</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Card 2: Multi-field Snapshot */}
+                    {/* Card 2: Weekly Study Plan */}
                     <div
                         ref={card2Ref}
                         className="relative z-10 transform rounded-2xl border border-neutral-200 bg-white p-5 text-xs text-neutral-700 shadow-2xl transition-all duration-500 rotate-3 hover:rotate-0 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.2)] cursor-pointer"
                     >
                         <div className="mb-4 flex items-center justify-between">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Active Learning Tracks</p>
-                            <span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-medium text-neutral-600">This Week</span>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Weekly Plan</p>
+                            <span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-medium text-neutral-600">7-Day Sprint</span>
                         </div>
 
-                        <div className="space-y-2.5 text-[11px]">
-                            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50/70 px-2.5 py-2">
-                                <BriefcaseBusiness className="h-4 w-4 text-emerald-600" />
-                                <span className="font-medium text-neutral-700">Business Strategy</span>
-                                <span className="ml-auto text-emerald-700">31%</span>
+                        <div className="space-y-2 text-[11px]">
+                            <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-2.5">
+                                <div className="mb-2 flex items-center gap-2 text-neutral-600">
+                                    <CalendarDays className="h-4 w-4 text-[#00bae2]" />
+                                    <span className="font-medium">Today: 2 focused sessions</span>
+                                </div>
+                                <div className="flex gap-1.5">
+                                    <span className="h-2 w-6 rounded-full bg-emerald-400"></span>
+                                    <span className="h-2 w-6 rounded-full bg-emerald-400"></span>
+                                    <span className="h-2 w-6 rounded-full bg-sky-300"></span>
+                                    <span className="h-2 w-6 rounded-full bg-neutral-200"></span>
+                                    <span className="h-2 w-6 rounded-full bg-neutral-200"></span>
+                                </div>
                             </div>
 
-                            <div className="flex items-center gap-2 rounded-lg border border-cyan-100 bg-cyan-50/70 px-2.5 py-2">
-                                <Palette className="h-4 w-4 text-cyan-600" />
-                                <span className="font-medium text-neutral-700">Design Thinking</span>
-                                <span className="ml-auto text-cyan-700">52%</span>
-                            </div>
-
-                            <div className="flex items-center gap-2 rounded-lg border border-violet-100 bg-violet-50/70 px-2.5 py-2">
-                                <Stethoscope className="h-4 w-4 text-violet-600" />
-                                <span className="font-medium text-neutral-700">Healthcare Prep</span>
-                                <span className="ml-auto text-violet-700">44%</span>
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="rounded-md border border-emerald-100 bg-emerald-50/70 p-2 text-center">
+                                    <p className="text-[10px] text-neutral-500">Completed</p>
+                                    <p className="text-sm font-semibold text-emerald-700">4</p>
+                                </div>
+                                <div className="rounded-md border border-sky-100 bg-sky-50/70 p-2 text-center">
+                                    <p className="text-[10px] text-neutral-500">In Progress</p>
+                                    <p className="text-sm font-semibold text-sky-700">2</p>
+                                </div>
+                                <div className="rounded-md border border-neutral-200 bg-neutral-50 p-2 text-center">
+                                    <p className="text-[10px] text-neutral-500">Upcoming</p>
+                                    <p className="text-sm font-semibold text-neutral-700">1</p>
+                                </div>
                             </div>
                         </div>
 
                         <div className="mt-4 rounded-lg border border-neutral-100 bg-neutral-50 p-2.5">
-                            <p className="text-[10px] text-neutral-500">Top milestone today</p>
-                            <p className="mt-1 text-xs font-semibold text-neutral-800">12 learners completed Presentation Fundamentals</p>
+                            <p className="text-[10px] text-neutral-500">Next milestone</p>
+                            <p className="mt-1 text-xs font-semibold text-neutral-800">Complete Story Structure Quiz before Friday</p>
                         </div>
                     </div>
                 </div>
