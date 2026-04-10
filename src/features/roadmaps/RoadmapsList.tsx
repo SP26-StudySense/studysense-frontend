@@ -18,6 +18,7 @@ function mapApiToTemplate(item: RoadmapListItemDTO, nodeCount?: number): Roadmap
     return {
         id: String(item.id),
         subjectId: item.subjectId,
+        subjectName: item.subjectName ?? undefined,
         title: item.title,
         description: item.description || 'No description available',
         difficulty: 'intermediate', // Default, could be derived from nodes later
@@ -37,6 +38,7 @@ function mapStudyPlanToLearningRoadmap(
         id: String(item.roadmapId), // Roadmap ID for display
         studyPlanId: String(item.id), // Study Plan ID for navigation
         templateId: String(item.roadmapId),
+        subjectName: undefined,
         title: item.roadmapTitle,
         description: item.roadmapDescription || 'No description available',
         difficulty: 'intermediate',
