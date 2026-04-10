@@ -263,7 +263,9 @@ export function TimerCard({ className }: TimerCardProps) {
 
     return (
         <div className={cn(
+
             "relative overflow-hidden flex flex-col items-center justify-center rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-white/90 via-emerald-50/70 to-cyan-50/70 p-10 shadow-2xl shadow-emerald-900/10 backdrop-blur-xl",
+
             className
         )}>
             {/* Decorative gradient */}
@@ -272,7 +274,9 @@ export function TimerCard({ className }: TimerCardProps) {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.75),transparent_45%)]" />
 
             {/* Timer Display */}
+
             <div className="relative mb-1 rounded-2xl border border-white/70 bg-white/60 px-6 py-3 text-7xl font-bold tracking-tighter text-neutral-900 font-mono shadow-lg shadow-emerald-900/10 sm:text-8xl">
+
                 {formatTime(elapsedSeconds)}
             </div>
 
@@ -299,14 +303,16 @@ export function TimerCard({ className }: TimerCardProps) {
             )}
 
             {/* Controls */}
-            <div className="relative mt-8 flex items-center gap-3">
+            <div className="relative mt-6 flex items-center gap-3">
                 {!hasStarted ? (
                     <button
                         onClick={handleStart}
                         disabled={isAnyPending || !hasTasks}
+
                         className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+
                     >
-                        <Play className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" />
+                        <Play className="h-4 w-4 transition-transform group-hover:scale-110" fill="currentColor" />
                         {startMutation.isPending ? 'Starting...' : 'Start Session'}
                     </button>
                 ) : (
@@ -315,24 +321,30 @@ export function TimerCard({ className }: TimerCardProps) {
                             <button
                                 onClick={handlePause}
                                 disabled={isAnyPending}
+
                                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/40 disabled:opacity-50"
+
                             >
-                                <Pause className="h-5 w-5" fill="currentColor" />
+                                <Pause className="h-4 w-4" fill="currentColor" />
                                 {pauseMutation.isPending ? 'Pausing...' : 'Pause'}
                             </button>
                         ) : (
                             <button
                                 onClick={handleResume}
                                 disabled={isAnyPending}
+
                                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/40 disabled:opacity-50"
+
                             >
-                                <Play className="h-5 w-5" fill="currentColor" />
+                                <Play className="h-4 w-4" fill="currentColor" />
                                 {resumeMutation.isPending ? 'Resuming...' : 'Resume'}
                             </button>
                         )}
                         <button
                             onClick={handleEndSession}
+
                             className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-rose-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-rose-500/40"
+
                         >
                             <Square className="h-4 w-4" fill="currentColor" />
                             End Session

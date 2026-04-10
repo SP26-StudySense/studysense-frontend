@@ -116,7 +116,7 @@ export function AboutPage() {
             </section>
 
             {/* Stats */}
-            <section>
+            {/* <section>
                 <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
                     {stats.map((stat) => (
                         <div
@@ -133,7 +133,7 @@ export function AboutPage() {
                         </div>
                     ))}
                 </div>
-            </section>
+            </section> */}
 
             {/* Mission */}
             <section className="relative overflow-hidden rounded-3xl border border-neutral-200/60 bg-white/60 p-10 backdrop-blur-sm shadow-sm">
@@ -185,7 +185,7 @@ export function AboutPage() {
                     <h2 className="text-3xl font-bold tracking-tight text-neutral-900">Meet the Team</h2>
                     <p className="text-neutral-500">The people behind StudySense</p>
                 </div>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
                     {team.map((member) => (
                         <div
                             key={member.name}

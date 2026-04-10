@@ -11,7 +11,7 @@ interface PlanGenerationPageProps {
   roadmapId: number;
 }
 
-const TIMEOUT_DURATION = 30000; // 30 seconds
+const TIMEOUT_DURATION = 180000; // 3 minutes
 
 export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
   const router = useRouter();

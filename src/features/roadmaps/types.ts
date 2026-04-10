@@ -4,6 +4,7 @@ export type RoadmapCategory = 'frontend' | 'backend' | 'devops' | 'ai-data' | 'm
 export interface RoadmapTemplate {
     id: string;
     subjectId: number;
+    subjectName?: string;
     title: string;
     description: string;
     difficulty: RoadmapDifficulty;
@@ -17,6 +18,7 @@ export interface UserLearningRoadmap {
     id: string;
     studyPlanId: string; // ID of the study plan for navigation
     templateId: string;
+    subjectName?: string;
     title: string;
     description: string;
     difficulty: RoadmapDifficulty;

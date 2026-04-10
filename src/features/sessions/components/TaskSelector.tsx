@@ -54,7 +54,7 @@ export function TaskSelector({
             </p>
 
             {/* Task List */}
-            <div className="space-y-3 md:max-h-[460px] md:overflow-y-auto md:pr-1 lg:max-h-none lg:flex-1 lg:min-h-0">
+            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
                 {tasks.map(task => (
                     <div
                         key={task.id}

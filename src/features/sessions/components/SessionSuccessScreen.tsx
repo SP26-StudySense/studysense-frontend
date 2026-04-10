@@ -111,11 +111,11 @@ export function SessionSuccessScreen({ isOpen, className }: SessionSuccessScreen
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={handleBackToDashboard}
+                        onClick={handleBackToStudyPlan}
                         className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-[1.02] transition-all"
                     >
                         <Home className="h-5 w-5" />
-                        Back to Dashboard
+                        Back to Study Plan
                     </button>
                     <button
                         onClick={handleViewRoadmap}
