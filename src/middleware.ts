@@ -289,7 +289,6 @@ export async function middleware(request: NextRequest) {
     if (
         pathname === '/api/proxy/ai/create-road-map' ||
         pathname === '/api/proxy/ai/create-road-map/' ||
-        pathname === '/api/proxy/quiz-attempts' ||
         /^\/api\/proxy\/quiz-attempts\/\d+\/submit/.test(pathname) // Match /api/proxy/quiz-attempts/{id}/submit
     ) {
         return NextResponse.next();
