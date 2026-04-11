@@ -283,11 +283,14 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const isAuthPath = isAuthRoute(pathname);
 
-    // Let the long-running AI generation endpoint use a Node route handler.
+    // Let the long-running endpoints use Node route handlers.
     // This avoids Vercel middleware invocation timeout for heavy requests.
+    // Edge Runtime has ~30s timeout limit, Node.js route handlers can exceed this.
     if (
         pathname === '/api/proxy/ai/create-road-map' ||
-        pathname === '/api/proxy/ai/create-road-map/'
+        pathname === '/api/proxy/ai/create-road-map/' ||
+        pathname === '/api/proxy/quiz-attempts' ||
+        /^\/api\/proxy\/quiz-attempts\/\d+\/submit/.test(pathname) // Match /api/proxy/quiz-attempts/{id}/submit
     ) {
         return NextResponse.next();
     }
