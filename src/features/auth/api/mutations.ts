@@ -38,6 +38,7 @@ import {
   deactivateStoredPushToken,
   syncOneSignalSubscriptionToBackend,
 } from '@/features/notification';
+import { recordDailyLoginIfNeeded } from '@/features/gamification/record-daily-login';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
@@ -167,6 +168,9 @@ export function useLogin() {
 
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
+
+      // Trigger streak check-in immediately after login.
+      void recordDailyLoginIfNeeded(response.user.id);
 
       // Show success toast
       toast.success('Login successful!', {
@@ -436,6 +440,9 @@ export function useGoogleLogin() {
 
         // Update user cache with NORMALIZED data
         queryClient.setQueryData(queryKeys.auth.me(), normalizedUser);
+
+        // Trigger streak check-in immediately after login.
+        void recordDailyLoginIfNeeded(normalizedUser.id);
 
         // Show success toast
         toast.success('Login successful!', {

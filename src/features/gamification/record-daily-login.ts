@@ -1,5 +1,6 @@
 import { post } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
+import { ApiException } from '@/shared/api/errors';
 import { toast } from '@/shared/lib';
 import {
   getStreakMissNoticeKey,
@@ -189,6 +190,14 @@ export async function recordDailyLoginIfNeeded(userId?: string): Promise<void> {
       });
     }
   } catch (error) {
+    if (error instanceof ApiException) {
+      debugStreakLog('recordDailyLoginIfNeeded:api-exception', {
+        status: error.status,
+        code: error.code,
+        message: error.message,
+        firstError: error.getFirstError(),
+      });
+    }
     debugStreakLog('recordDailyLoginIfNeeded:error', error);
     // Non-blocking feature. Ignore errors to avoid affecting login flow.
   } finally {
