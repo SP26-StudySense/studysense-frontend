@@ -1016,7 +1016,7 @@ export function ModuleTasksPanel({
 
                             {/* Right Side: Task Management Actions */}
                             {/* Điều kiện: Chỉ hiện khi module đã có task (user đã gen task trước đó) */}
-                            {!isModuleCompleted && module.tasks && module.tasks.length > 0 && (
+                            {!isModuleCompleted && module.tasks && (
                                 <div className="flex flex-wrap items-center gap-3 ml-auto">
                                     <button
                                         onClick={handleAddTask}
