@@ -35,7 +35,8 @@ export function useSubmitQuizAttempt() {
 		mutationFn: ({ id, payload }: { id: number; payload: SubmitQuizAttemptRequest }) =>
 			post<SubmitQuizAttemptResponse, SubmitQuizAttemptRequest>(
 				endpoints.quizAttempts.submit(String(id)),
-				payload
+				payload,
+				{ timeout: 120000 }
 			),
 	});
 }
