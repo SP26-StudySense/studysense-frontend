@@ -1379,6 +1379,33 @@ function ConnectorPanel({
     );
   };
 
+  const getEdgeTypeDisplay = (
+    edgeType: EdgeType,
+    fromKey: string | null,
+    toKey: string | null
+  ) => {
+    if (selectedKey && edgeType === "Next") {
+      if (toKey === selectedKey) {
+        return {
+          label: "Previous",
+          className: "bg-violet-100 text-violet-700",
+        };
+      }
+
+      if (fromKey === selectedKey) {
+        return {
+          label: "Next",
+          className: EDGE_TYPE_STYLES.Next,
+        };
+      }
+    }
+
+    return {
+      label: edgeType,
+      className: EDGE_TYPE_STYLES[edgeType] ?? "bg-neutral-100 text-neutral-600",
+    };
+  };
+
   const handleSubmit = () => {
     if (!form.fromKey || !form.toKey || form.fromKey === form.toKey) return;
     // Resolve from key back to numeric id or string clientId
@@ -1510,6 +1537,7 @@ function ConnectorPanel({
             const edgeId = edge.id ?? edge.clientId!;
             const fromKey = resolveEdgeEndKey("from", edge);
             const toKey = resolveEdgeEndKey("to", edge);
+            const edgeTypeDisplay = getEdgeTypeDisplay(edge.edgeType, fromKey, toKey);
 
             return (
               <div
@@ -1527,12 +1555,9 @@ function ConnectorPanel({
                     </span>
                   </div>
                   <span
-                    className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      EDGE_TYPE_STYLES[edge.edgeType] ??
-                      "bg-neutral-100 text-neutral-600"
-                    }`}
+                    className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${edgeTypeDisplay.className}`}
                   >
-                    {edge.edgeType}
+                    {edgeTypeDisplay.label}
                   </span>
                 </div>
                 <button
