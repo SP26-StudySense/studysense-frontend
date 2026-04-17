@@ -126,16 +126,27 @@ export const Footer = () => {
                             <div className="space-y-2">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-600">Project</h4>
                                 <ul className="space-y-1 text-sm text-neutral-700">
-                                    <li><Link href="#" className="hover:text-neutral-900">About Us</Link></li>
+                                    <li><Link href="/about" className="hover:text-neutral-900">About Us</Link></li>
                                     <li><Link href="#" className="hover:text-neutral-900">GitHub</Link></li>
+                                </ul>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-600">Legal</h4>
+                                <ul className="space-y-1 text-sm text-neutral-700">
+                                    <li><Link href="/privacy-policy" className="hover:text-neutral-900">Privacy Policy</Link></li>
+                                    <li><Link href="/terms" className="hover:text-neutral-900">Terms of Service</Link></li>
                                 </ul>
                             </div>
                         </div>
                     </div>
 
                     {/* Bottom bar */}
-                    <div className="mt-6 flex items-center justify-between border-t border-neutral-900/10 pt-4 text-xs text-neutral-600">
-                        <p>© 2026 StudySense</p>
+                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-900/10 pt-4 text-xs text-neutral-600">
+                        <div className="flex items-center gap-4">
+                            <p>© 2026 StudySense</p>
+                            <Link href="/privacy-policy" className="hover:text-neutral-900 transition-colors">Privacy Policy</Link>
+                            <Link href="/terms" className="hover:text-neutral-900 transition-colors">Terms of Service</Link>
+                        </div>
                         <div className="flex gap-3">
                             <Link href="#" className="hover:text-neutral-900"><Twitter size={16} /></Link>
                             <Link href="#" className="hover:text-neutral-900"><Github size={16} /></Link>
