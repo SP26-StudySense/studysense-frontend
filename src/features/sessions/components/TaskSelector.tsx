@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CheckCircle2, Clock, PlayCircle, Check } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 
@@ -8,6 +9,8 @@ export interface SessionTask {
     title: string;
     category: string;
     subcategory: string;
+    description?: string;
+    expectedOutput?: string;
     duration: number; // minutes
     isActive: boolean;
     isCompleted: boolean;
@@ -29,6 +32,19 @@ export function TaskSelector({
     className,
 }: TaskSelectorProps) {
     const completedCount = tasks.filter((task) => task.isCompleted).length;
+    const [flippedTaskIds, setFlippedTaskIds] = useState<Set<string>>(new Set());
+
+    const toggleTaskFlip = (taskId: string) => {
+        setFlippedTaskIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(taskId)) {
+                next.delete(taskId);
+            } else {
+                next.add(taskId);
+            }
+            return next;
+        });
+    };
 
     return (
         <div className={cn(
@@ -54,84 +70,132 @@ export function TaskSelector({
             </p>
 
             {/* Task List */}
-            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-                {tasks.map(task => (
+            <div className="space-y-3 pr-1">
+                {tasks.map(task => {
+                    const isFlipped = flippedTaskIds.has(task.id);
+
+                    return (
                     <div
                         key={task.id}
                         onClick={() => {
                             if (canInteract && !task.isCompleted) {
                                 onSetActiveTask?.(task.id);
                             }
+                            toggleTaskFlip(task.id);
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                if (canInteract && !task.isCompleted) {
+                                    onSetActiveTask?.(task.id);
+                                }
+                                toggleTaskFlip(task.id);
+                            }
                         }}
                         className={cn(
-                            "group flex w-full items-center gap-4 rounded-2xl p-4 text-left transition-all duration-300",
-                            canInteract && !task.isCompleted && 'cursor-pointer',
-                            !canInteract && 'cursor-not-allowed opacity-75',
-                            task.isCompleted
-                                ? "border border-emerald-200 bg-emerald-50/80"
-                                : task.isActive
-                                ? "border-2 border-cyan-300 bg-gradient-to-r from-cyan-50 to-emerald-50 shadow-lg shadow-cyan-500/10"
-                                : "border border-neutral-100 bg-white/60 hover:border-neutral-200 hover:bg-white/90 hover:shadow-md"
+                            "group relative w-full rounded-2xl text-left transition-all duration-300 [perspective:1200px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300",
+                            !canInteract && 'opacity-75'
                         )}
                     >
-                        {/* Active marker */}
-                        <div className={cn(
-                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-300",
-                            task.isCompleted
-                                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
-                                : task.isActive
-                                    ? "bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-lg shadow-cyan-500/30"
-                                    : "border-2 border-neutral-300"
-                        )}>
-                            {task.isCompleted ? (
-                                <Check className="h-3.5 w-3.5" />
-                            ) : task.isActive ? (
-                                <PlayCircle className="h-3.5 w-3.5" />
-                            ) : null}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                            <h4 className={cn(
-                                "font-semibold transition-colors line-clamp-1",
-                                task.isActive || task.isCompleted ? "text-neutral-900" : "text-neutral-700 group-hover:text-neutral-900"
-                            )}>
-                                {task.title}
-                            </h4>
-                            <p className="mt-0.5 text-xs text-neutral-500 line-clamp-1">
-                                {task.category} {task.subcategory ? `• ${task.subcategory}` : ''}
-                            </p>
-                            <p className="mt-1 text-xs font-medium text-neutral-500">
-                                {task.isCompleted ? 'Completed' : task.isActive ? 'In progress' : canInteract ? 'Pending' : 'Locked'}
-                            </p>
-                        </div>
-
-                        {/* Duration */}
-                        <div className="flex items-center gap-2">
+                        <div
+                            className={cn(
+                                "relative h-[180px] transition-transform duration-500 [transform-style:preserve-3d]",
+                                isFlipped && "[transform:rotateY(180deg)]"
+                            )}
+                        >
                             <div className={cn(
-                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
-                                task.isActive
-                                    ? "bg-cyan-100 text-cyan-700"
-                                    : "bg-neutral-100 text-neutral-500"
+                                "absolute inset-0 flex w-full items-center gap-3.5 rounded-2xl border p-3.5 [backface-visibility:hidden]",
+                                task.isCompleted
+                                    ? "border-emerald-200 bg-emerald-50/80"
+                                    : task.isActive
+                                        ? "border-2 border-cyan-300 bg-gradient-to-r from-cyan-50 to-emerald-50 shadow-lg shadow-cyan-500/10"
+                                        : "border-neutral-100 bg-white/60 hover:border-neutral-200 hover:bg-white/90 hover:shadow-md"
                             )}>
-                                <Clock className="h-3.5 w-3.5" />
-                                {task.duration}m
+                                <div className={cn(
+                                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-300",
+                                    task.isCompleted
+                                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                                        : task.isActive
+                                            ? "bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-lg shadow-cyan-500/30"
+                                            : "border-2 border-neutral-300"
+                                )}>
+                                    {task.isCompleted ? (
+                                        <Check className="h-4 w-4" />
+                                    ) : task.isActive ? (
+                                        <PlayCircle className="h-4 w-4" />
+                                    ) : null}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <h4 className={cn(
+                                        "text-[15px] font-semibold leading-snug transition-colors line-clamp-2",
+                                        task.isActive || task.isCompleted ? "text-neutral-900" : "text-neutral-700 group-hover:text-neutral-900"
+                                    )}>
+                                        {task.title}
+                                    </h4>
+                                    <p className="mt-1 text-sm text-neutral-500 line-clamp-1">
+                                        {task.category} {task.subcategory ? `• ${task.subcategory}` : ''}
+                                    </p>
+                                    <p className="mt-1 text-sm font-medium text-neutral-500">
+                                        {task.isCompleted ? 'Completed' : task.isActive ? 'In progress' : canInteract ? 'Pending' : 'Locked'}
+                                    </p>
+                                    <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-cyan-700">
+                                        Click to view description and output
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className={cn(
+                                        "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+                                        task.isActive
+                                            ? "bg-cyan-100 text-cyan-700"
+                                            : "bg-neutral-100 text-neutral-500"
+                                    )}>
+                                        <Clock className="h-4 w-4" />
+                                        {task.duration}m
+                                    </div>
+
+                                    {canInteract && task.isActive && !task.isCompleted && (
+                                        <button
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onCompleteTask?.(task.id);
+                                            }}
+                                            className="rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-1.5 text-sm font-semibold text-white transition-all hover:opacity-95"
+                                        >
+                                            Done
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
-                            {canInteract && task.isActive && !task.isCompleted && (
-                                <button
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        onCompleteTask?.(task.id);
-                                    }}
-                                    className="rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:opacity-95"
-                                >
-                                    Done
-                                </button>
-                            )}
+                            <div className="absolute inset-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-cyan-50 p-3.5 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                                <div className="flex h-full flex-col">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 line-clamp-1">
+                                        {task.title}
+                                    </p>
+                                    <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Description</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-neutral-700 whitespace-pre-line">
+                                                {task.description?.trim() || 'No description.'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Output</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-neutral-700 whitespace-pre-line">
+                                                {task.expectedOutput?.trim() || 'No expected output.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

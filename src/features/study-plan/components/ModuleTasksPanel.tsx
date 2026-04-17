@@ -27,6 +27,7 @@ export interface ModuleTask {
     isGenerateByAI?: boolean;
     title: string;
     description?: string;
+    expectedOutput?: string;
     estimatedMinutes: number;
     isCompleted: boolean;
     scheduledDate?: string;
@@ -249,6 +250,8 @@ export function ModuleTasksPanel({
         const candidate = rawTask as Record<string, unknown>;
         const titleValue = candidate.title ?? candidate.name ?? candidate.taskTitle;
         const descriptionValue = candidate.description ?? candidate.details;
+        const expectedOutputValue =
+            candidate.expectedOutput;
         const durationValue =
             candidate.estimatedMinutes ??
             candidate.estimatedDurationMinutes ??
@@ -269,6 +272,7 @@ export function ModuleTasksPanel({
         return {
             title,
             description: typeof descriptionValue === 'string' ? descriptionValue : undefined,
+            expectedOutput: typeof expectedOutputValue === 'string' ? expectedOutputValue : undefined,
             estimatedMinutes: parseDurationToMinutes(durationValue),
             scheduledDate: typeof deadlineValue === 'string' ? deadlineValue : undefined,
         };
@@ -405,6 +409,7 @@ export function ModuleTasksPanel({
                 isGenerateByAI: task.isGenerateByAI,
                 title: task.title,
                 description: task.description,
+                expectedOutput: task.expectedOutput,
                 estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
                 isCompleted: task.status === TaskStatus.Completed,
                 scheduledDate: task.scheduledDate,
@@ -428,6 +433,7 @@ export function ModuleTasksPanel({
                     isGenerateByAI: task.isGenerateByAI,
                     title: task.title,
                     description: task.description,
+                    expectedOutput: task.expectedOutput,
                     estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
                     isCompleted: task.status === TaskStatus.Completed,
                     scheduledDate: task.scheduledDate,
@@ -560,6 +566,7 @@ export function ModuleTasksPanel({
                 id: task.id,
                 title: task.title,
                 description: task.description,
+                expectedOutput: task.expectedOutput,
                 estimatedMinutes: task.estimatedMinutes,
                 isCompleted: task.isCompleted,
             }));
@@ -611,8 +618,12 @@ export function ModuleTasksPanel({
                         ...data,
                         title: editingTask.title,
                         description: editingTask.description,
+                        expectedOutput: editingTask.expectedOutput,
                     }
-                    : data;
+                    : {
+                        ...data,
+                        expectedOutput: editingTask.expectedOutput,
+                    };
 
                 await updateTaskMutation.mutateAsync({
                     taskId: taskId,
@@ -726,6 +737,7 @@ export function ModuleTasksPanel({
                     studyPlanModuleId: Number(module.id),
                     title: t.title.trim(),
                     description: t.description,
+                    expectedOutput: t.expectedOutput,
                     status: TaskStatus.Pending,
                     estimatedDurationSeconds: (t.estimatedMinutes || 30) * 60,
                     scheduledDate: t.scheduledDate || localDateInputToUtcIso(todayLocalDate)
@@ -1312,6 +1324,9 @@ export function ModuleTasksPanel({
                                                         </p>
                                                         <p className="text-xs text-neutral-600 leading-relaxed">
                                                             <span className="font-semibold text-neutral-700">Description:</span> {task.description?.trim() || 'No description.'}
+                                                        </p>
+                                                        <p className="text-xs text-neutral-600 leading-relaxed whitespace-pre-line">
+                                                            <span className="font-semibold text-neutral-700">Expected output:</span> {task.expectedOutput?.trim() || 'No expected output.'}
                                                         </p>
                                                     </div>
                                                 )}

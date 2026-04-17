@@ -22,7 +22,9 @@ const convertToSessionTasks = (tasks: SelectedTask[]): SessionTask[] => {
         id: task.id,
         title: task.title,
         category: 'Study Plan',
-        subcategory: task.description || '',
+        subcategory: '',
+        description: task.description,
+        expectedOutput: task.expectedOutput,
         duration: task.estimatedMinutes,
         isActive: Boolean(task.isActive),
         isCompleted: task.isCompleted,
@@ -245,25 +247,26 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[calc(100vh-10rem)] lg:min-h-0">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Column - Timer & Tasks */}
-                    <div className="lg:col-span-8 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
-                        <TimerCard className="lg:flex-[0.85]" />
+                    <div className="lg:col-span-8 space-y-6">
+                        <TimerCard />
                         {displayTasks.length > 0 && (
                             <TaskSelector
                                 tasks={displayTasks}
                                 canInteract={canInteractTasks}
                                 onSetActiveTask={handleSetActiveTask}
                                 onCompleteTask={handleCompleteTask}
-                                className="lg:flex-[1.4] lg:min-h-0"
                             />
                         )}
                     </div>
 
                     {/* Right Column - Content & Tips */}
-                    <div className="lg:col-span-4 space-y-6 lg:h-full lg:min-h-0 lg:flex lg:flex-col">
-                        <SessionContent className="lg:flex-1 lg:min-h-0" />
-                        <FocusTips />
+                    <div className="lg:col-span-4 lg:self-start">
+                        <div className="space-y-6 lg:sticky lg:top-24">
+                            <SessionContent />
+                            <FocusTips />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -128,6 +128,7 @@ export function StudyPlanDetailPage({ planId }: StudyPlanDetailPageProps) {
                     isGenerateByAI: task.isGenerateByAI,
                     title: task.title,
                     description: task.description,
+                    expectedOutput: task.expectedOutput,
                     estimatedMinutes: Math.round(task.estimatedDurationSeconds / 60),
                     isCompleted: isTaskCompleted(task.status),
                     scheduledDate: task.scheduledDate,
