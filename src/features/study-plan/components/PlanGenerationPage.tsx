@@ -157,7 +157,7 @@ export function PlanGenerationPage({ roadmapId }: PlanGenerationPageProps) {
 
           {/* Main Message */}
           <h1 className="text-2xl font-bold text-neutral-900 mb-6">
-            Generating Roadmap
+            Generating Study Plan
           </h1>
  
           {/* Status List */}
