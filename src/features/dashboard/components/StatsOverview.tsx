@@ -3,6 +3,7 @@
 import { Calendar, Flame, Sparkles, Target } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useDashboardOverview } from "../api/queries";
+import { useSessionStatistics } from "@/features/sessions/api/queries";
 
 interface StatsOverviewProps {
     studyPlanId?: string;
@@ -10,8 +11,18 @@ interface StatsOverviewProps {
 
 export const StatsOverview = ({ studyPlanId }: StatsOverviewProps) => {
     const { data } = useDashboardOverview(studyPlanId);
+    const parsedPlanId = studyPlanId ? Number(studyPlanId) : undefined;
+    const planId =
+        typeof parsedPlanId === 'number' && Number.isFinite(parsedPlanId) && parsedPlanId > 0
+            ? parsedPlanId
+            : undefined;
+    const { data: sessionStats } = useSessionStatistics({
+        period: 'all',
+        planId,
+    });
     const focus = data?.todaysFocus;
     const progress = Math.max(0, Math.min(100, Number(data?.progressPercentage ?? 0)));
+    const totalXp = sessionStats?.totalXpEarned ?? data?.totalXpEarned ?? 0;
 
     return (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -66,7 +77,7 @@ export const StatsOverview = ({ studyPlanId }: StatsOverviewProps) => {
                     </div>
                 </div>
                 <div className="mt-4">
-                    <h3 className="text-2xl font-bold text-neutral-900">{data?.totalXpEarned ?? 0}</h3>
+                    <h3 className="text-2xl font-bold text-neutral-900">{totalXp}</h3>
                     <p className="mt-1 text-xs font-medium text-neutral-500">Total XP earned</p>
                 </div>
             </div>
