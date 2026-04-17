@@ -9,6 +9,7 @@ export interface SelectedTask {
   id: string;
   title: string;
   description?: string;
+  expectedOutput?: string;
   estimatedMinutes: number;
   isCompleted: boolean;
   isActive?: boolean;

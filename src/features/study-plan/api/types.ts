@@ -82,6 +82,7 @@ export interface TaskItemDto {
   isGenerateByAI: boolean;
   title: string;
   description?: string;
+  expectedOutput?: string;
   status?: TaskStatus;
   estimatedDurationSeconds: number;
   scheduledDate: string;
@@ -98,6 +99,7 @@ export interface TaskItemInput {
   studyPlanModuleId: number;
   title: string;
   description?: string;
+  expectedOutput?: string;
   status?: TaskStatus;
   estimatedDurationSeconds: number;
   scheduledDate: string;

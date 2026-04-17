@@ -69,12 +69,12 @@ export function AnalystSidebar() {
       <div className="flex h-20 shrink-0 items-center px-6">
         <Link
           href="/analyst-dashboard"
-          className="group flex items-center gap-2 cursor-pointer"
+          className="group flex items-center gap-3"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-[#00bae2] transition-transform duration-300 group-hover:scale-105">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-white transition-transform duration-300 group-hover:scale-105">
             <GitFork className="h-[18px] w-[18px]" strokeWidth={2.5} />
           </div>
-          <span className="text-lg font-semibold tracking-tight text-neutral-900">
+          <span className="text-xl font-semibold tracking-tight text-neutral-900">
             Study<span className="text-neutral-500">Sense</span>
           </span>
         </Link>

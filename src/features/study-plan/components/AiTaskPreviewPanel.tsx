@@ -13,6 +13,7 @@ import {
 export interface AiPreviewTask {
     title: string;
     description?: string;
+    expectedOutput?: string;
     estimatedMinutes?: number;
     scheduledDate?: string;
 }
@@ -102,23 +103,46 @@ export function AiTaskPreviewPanel({
                             </div>
 
                             <div className="space-y-3">
-                                <input
-                                    value={task.title}
-                                    readOnly
-                                    placeholder="Task title"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 focus:outline-none"
-                                />
+                                <div className="space-y-1.5">
+                                    <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+                                        Title
+                                    </span>
+                                    <input
+                                        value={task.title}
+                                        readOnly
+                                        placeholder="Task title"
+                                        className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 focus:outline-none"
+                                    />
+                                </div>
 
-                                <textarea
-                                    value={task.description ?? ''}
-                                    readOnly
-                                    placeholder="Task description"
-                                    rows={4}
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 focus:outline-none resize-none"
-                                />
+                                <div className="space-y-1.5">
+                                    <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                                        Description
+                                    </span>
+                                    <textarea
+                                        value={task.description ?? ''}
+                                        readOnly
+                                        placeholder="Task description"
+                                        rows={4}
+                                        className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 focus:outline-none resize-none"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                                        Output
+                                    </span>
+                                    <textarea
+                                        value={task.expectedOutput ?? ''}
+                                        readOnly
+                                        placeholder="Expected output"
+                                        rows={4}
+                                        className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 focus:outline-none resize-none"
+                                    />
+                                </div>
 
                                 <p className="text-[11px] text-neutral-500">
-                                    Title and description are locked for AI output.
+                                    Title, description, and expected output are locked for AI output.
                                 </p>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
