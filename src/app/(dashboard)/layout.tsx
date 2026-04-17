@@ -9,7 +9,6 @@ import { ChatProvider, ChatPopup, ChatToggleButton } from '@/features/chat';
 import { NotificationBell } from '@/features/notification';
 import { SessionTimerBadge } from '@/features/sessions/components/SessionTimerBadge';
 import { StreakBadge } from '@/features/gamification/StreakBadge';
-import { Search } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -34,11 +33,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
   const showChatbot = pathname.startsWith('/sessions') && !pathname.endsWith('/history');
+  const rootOverflowClass = pathname.startsWith('/sessions') ? 'overflow-x-hidden' : 'overflow-hidden';
 
   return (
     <AuthGuard>
       <ChatProvider>
-        <div className="min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] font-sans text-neutral-900 selection:bg-[#00bae2] selection:text-white relative overflow-hidden">
+        <div className={`min-h-screen bg-gradient-to-b from-[#f0fffe] via-[#faf5fc] to-[#f0fffe] font-sans text-neutral-900 selection:bg-[#00bae2] selection:text-white relative ${rootOverflowClass}`}>
           {/* Premium Background Effects */}
           <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
             {/* Gradient Blobs */}
