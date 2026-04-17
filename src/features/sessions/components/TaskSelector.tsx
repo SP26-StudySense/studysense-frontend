@@ -81,7 +81,6 @@ export function TaskSelector({
                             if (canInteract && !task.isCompleted) {
                                 onSetActiveTask?.(task.id);
                             }
-                            toggleTaskFlip(task.id);
                         }}
                         role="button"
                         tabIndex={0}
@@ -91,7 +90,6 @@ export function TaskSelector({
                                 if (canInteract && !task.isCompleted) {
                                     onSetActiveTask?.(task.id);
                                 }
-                                toggleTaskFlip(task.id);
                             }
                         }}
                         className={cn(
@@ -141,9 +139,17 @@ export function TaskSelector({
                                     <p className="mt-1 text-sm font-medium text-neutral-500">
                                         {task.isCompleted ? 'Completed' : task.isActive ? 'In progress' : canInteract ? 'Pending' : 'Locked'}
                                     </p>
-                                    <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-cyan-700">
+                                    <button
+                                        type="button"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            toggleTaskFlip(task.id);
+                                        }}
+                                        className="mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-cyan-700 underline-offset-2 transition-colors hover:text-cyan-800 hover:underline focus:outline-none focus:ring-2 focus:ring-cyan-300 rounded-sm"
+                                        aria-expanded={isFlipped}
+                                    >
                                         Click to view description and output
-                                    </p>
+                                    </button>
                                 </div>
 
                                 <div className="flex items-center gap-2">
@@ -173,9 +179,21 @@ export function TaskSelector({
 
                             <div className="absolute inset-0 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-cyan-50 p-3.5 [backface-visibility:hidden] [transform:rotateY(180deg)]">
                                 <div className="flex h-full flex-col">
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 line-clamp-1">
-                                        {task.title}
-                                    </p>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 line-clamp-1">
+                                            {task.title}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                toggleTaskFlip(task.id);
+                                            }}
+                                            className="rounded-md border border-violet-200 bg-white/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-violet-700 transition-colors hover:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                                        >
+                                            Back to task
+                                        </button>
+                                    </div>
                                     <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
                                         <div>
                                             <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Description</p>
