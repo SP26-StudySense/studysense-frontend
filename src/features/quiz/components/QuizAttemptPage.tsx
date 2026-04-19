@@ -286,26 +286,49 @@ export function QuizAttemptPage({
     return formatDateTimeHmDdMmYyyyInUserTimeZone(value, { fallback: '-' });
   };
 
-  const getReviewAnswerDisplay = (question: SubmitQuizAttemptResponse['questions'][number], type: 'selected' | 'correct') => {
+  const getReviewAnswerItems = (
+    question: SubmitQuizAttemptResponse['questions'][number],
+    type: 'selected' | 'correct'
+  ): string[] => {
     if (question.type === 'ShortAnswer') {
       const textValue = type === 'selected' ? question.selectedTextValue : question.correctTextValue;
-      return textValue || 'No answer';
+      return textValue ? [textValue] : ['No answer'];
     }
 
     if (question.type === 'MultipleChoice') {
-      const optionText = type === 'selected' ? question.selectedOptionText : question.correctOptionText;
-      if (optionText) {
-        return optionText;
+      const optionTexts = type === 'selected' ? question.selectedOptionTexts : question.correctOptionTexts;
+      if (Array.isArray(optionTexts) && optionTexts.length > 0) {
+        return optionTexts;
+      }
+
+      const legacyOptionText = type === 'selected' ? question.selectedOptionText : question.correctOptionText;
+      if (legacyOptionText) {
+        return [legacyOptionText];
       }
 
       const ids = type === 'selected' ? question.selectedOptionIds : question.correctOptionIds;
       if (ids.length > 0) {
-        return ids.join(', ');
+        return ids.map((id) => `Option #${id}`);
       }
     }
 
     const fallback = type === 'selected' ? question.selectedOptionText : question.correctOptionText;
-    return fallback || 'No answer';
+    return fallback ? [fallback] : ['No answer'];
+  };
+
+  const renderAnswerChips = (items: string[]) => {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span
+            key={item}
+            className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700 shadow-sm"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    );
   };
 
   const getCurrentQuestionAnsweredState = () => {
@@ -349,7 +372,7 @@ export function QuizAttemptPage({
             <LoadingSpinner size="lg" />
           </div>
           <h1 className="text-xl font-bold text-neutral-900 mb-2">{loadingTitle || 'Preparing your quiz'}</h1>
-          <p className="text-sm text-neutral-500">{loadingDescription || 'Generating questions for this module...'}</p>
+          <p className="text-sm text-neutral-500">{loadingDescription || 'Creating questions for this module...'}</p>
         </div>
       </div>
     );
@@ -449,14 +472,16 @@ export function QuizAttemptPage({
                     <p className="text-xs text-neutral-500 mb-1">Question {index + 1}</p>
                     <p className="font-medium text-neutral-900">{question.prompt}</p>
                     <p className="text-xs text-neutral-500 mt-1">Type: {question.type}</p>
-                    <p className="text-sm text-neutral-600 mt-2">
-                      Your answer: <span className="font-medium">{getReviewAnswerDisplay(question, 'selected')}</span>
-                    </p>
-                    {!question.isCorrect && (
-                      <p className="text-sm text-neutral-700 mt-1">
-                        Correct answer: <span className="font-semibold">{getReviewAnswerDisplay(question, 'correct')}</span>
+                    <div className="mt-2 space-y-1.5">
+                      <p className="text-sm text-neutral-600">
+                        Your answer:
                       </p>
-                    )}
+                      {renderAnswerChips(getReviewAnswerItems(question, 'selected'))}
+                      <p className="text-sm text-neutral-700">
+                        Correct answer:
+                      </p>
+                      {renderAnswerChips(getReviewAnswerItems(question, 'correct'))}
+                    </div>
                   </div>
                 </div>
               </div>
