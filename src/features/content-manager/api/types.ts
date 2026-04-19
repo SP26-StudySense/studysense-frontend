@@ -462,8 +462,7 @@ export interface UpdateQuizRequest {
 export enum QuizQuestionType {
   SingleChoice = 0,
   MultipleChoice = 1,
-  Scale = 2,
-  ShortAnswer = 3,
+  ShortAnswer = 2,
 }
 
 export interface CreateQuizQuestionOptionInputDto {

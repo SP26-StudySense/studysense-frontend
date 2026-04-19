@@ -68,10 +68,10 @@ export function ContentManagerSidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-72 flex-col border-r border-neutral-200/60 bg-white/80 backdrop-blur-xl">
-      {/* Logo - Matching StudySense branding */}
+      {/* Logo */}
       <div className="flex h-20 shrink-0 items-center px-6">
         <Link href="/content-dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-[#c1ff72] shadow-lg shadow-neutral-900/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-lg shadow-neutral-900/10">
             <GitFork className="h-[22px] w-[22px]" strokeWidth={2.5} />
           </div>
           <span className="text-xl font-bold tracking-tight text-neutral-900">
