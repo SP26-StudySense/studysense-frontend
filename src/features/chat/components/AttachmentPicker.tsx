@@ -41,6 +41,11 @@ export function AttachmentPicker({
     const selectedCount = selectedIds.length;
 
     const handleSelectModule = (module: AvailableModule) => {
+        const normalizedStatus = (module.status ?? 'not_started').toString().toLowerCase();
+        if (normalizedStatus === 'locked') {
+            return;
+        }
+
         const attachment: ChatAttachment = {
             id: `module_${module.id}`,
             type: 'module',
@@ -142,15 +147,20 @@ export function AttachmentPicker({
                                 const isSelected = selectedIds.includes(`module_${module.id}`);
                                 const normalizedStatus = (module.status ?? 'not_started').toString().toLowerCase();
                                 const displayStatus = normalizedStatus.replace('_', ' ');
+                                const isLocked = normalizedStatus === 'locked';
                                 return (
                                     <button
                                         key={module.id}
                                         onClick={() => handleSelectModule(module)}
+                                        disabled={isLocked}
                                         className={cn(
                                             "w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all shadow-sm",
                                             isSelected
                                                 ? "bg-violet-50 border border-violet-300"
-                                                : "bg-white border border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50"
+                                                : "bg-white border border-neutral-100",
+                                            isLocked
+                                                ? "cursor-not-allowed opacity-60"
+                                                : "hover:border-neutral-200 hover:bg-neutral-50"
                                         )}
                                     >
                                         <div className="h-8 w-8 shrink-0 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center">
@@ -215,12 +225,6 @@ export function AttachmentPicker({
                                             <ListTodo className="h-4 w-4" />
                                         </div>
 
-                                        {/* Status indicator */}
-                                        <div className={cn(
-                                            "w-2.5 h-2.5 rounded-full",
-                                            task.isCompleted ? "bg-emerald-500" : "bg-amber-500"
-                                        )} />
-
                                         {/* Content */}
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium text-neutral-800 truncate">
@@ -230,13 +234,6 @@ export function AttachmentPicker({
                                                 {task.moduleTitle ?? 'No module'}
                                             </p>
                                         </div>
-
-                                        <span className={cn(
-                                            "rounded-md px-2 py-1 text-[11px] font-medium",
-                                            task.isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                        )}>
-                                            {task.isCompleted ? 'Completed' : 'In progress'}
-                                        </span>
 
                                         {/* Checkbox */}
                                         <div className={cn(

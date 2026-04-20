@@ -109,6 +109,12 @@ export const queryKeys = {
     overview: (studyPlanId: string) => ['dashboard', 'overview', studyPlanId] as const,
   },
 
+  // Learning Targets
+  learningTargets: {
+    all: ['learningTargets'] as const,
+    byRoadmap: (roadmapId: string) => ['learningTargets', 'roadmap', roadmapId] as const,
+  },
+
   // Notifications
   notifications: {
     all: ['notifications'] as const,

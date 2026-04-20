@@ -136,6 +136,11 @@ export const endpoints = {
     overview: (studyPlanId: string) => `/dashboard/${studyPlanId}`,
   },
 
+  // Learning targets
+  learningTargets: {
+    byRoadmap: (roadmapId: string) => `/learning-targets/${roadmapId}`,
+  },
+
   // User gamification
   userGamifications: {
     recordDailyLogin: '/gamification/record-login',
