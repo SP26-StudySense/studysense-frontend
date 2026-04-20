@@ -144,10 +144,12 @@ export interface SubmittedQuizQuestionResultDto {
 	type: QuizQuestionType;
 	selectedOptionId: number | null;
 	selectedOptionIds: number[];
+	selectedOptionTexts?: string[];
 	selectedTextValue: string | null;
 	selectedOptionText: string | null;
 	correctOptionId: number | null;
 	correctOptionIds: number[];
+	correctOptionTexts?: string[];
 	correctTextValue: string | null;
 	correctOptionText: string | null;
 	isCorrect: boolean;

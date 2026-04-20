@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { ContentManagerLoading } from "../components";
+import { ConfirmationModal } from "@/shared/ui";
 import {
   useCreateAiQuizQuestions,
   useCreateQuizQuestion,
@@ -87,13 +88,6 @@ const newQuestion = (orderNo: number): QuestionDraft => ({
 });
 
 const parseQuestionType = (value: QuizQuestionType | string): QuizQuestionType => {
-  if (typeof value === "number") {
-    if (value === QuizQuestionTypeEnum.Scale) {
-      // Scale is no longer supported in this page. Map old data to ShortAnswer.
-      return QuizQuestionTypeEnum.ShortAnswer;
-    }
-    return value;
-  }
   const normalized = String(value).toLowerCase();
   if (normalized === "singlechoice") return QuizQuestionTypeEnum.SingleChoice;
   if (normalized === "multiplechoice") return QuizQuestionTypeEnum.MultipleChoice;
@@ -252,6 +246,9 @@ export function QuizDetailPage() {
   const [aiDraftQuestions, setAiDraftQuestions] = useState<QuestionDraft[]>([]);
   const [deletingQuestionId, setDeletingQuestionId] = useState<number | null>(null);
   const [deletingOptionId, setDeletingOptionId] = useState<number | null>(null);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<
+    { type: "question"; id: number } | { type: "option"; id: number } | null
+  >(null);
   const existingQuestions = quizQuestionsQuery.data?.quizQuestionDtos ?? [];
   const lightModeOnlyStyle = useMemo(() => ({ colorScheme: "light" as const }), []);
   const aiQuestions = useMemo(() => extractAiQuizQuestions(aiResponse), [aiResponse]);
@@ -371,8 +368,8 @@ export function QuizDetailPage() {
       const q = questions[i];
       const num = i + 1;
 
-      if (!q.questionKey.trim() || !q.prompt.trim()) {
-        toast.warning(`Question ${num}: fill in Question Key and Prompt`);
+      if (!q.prompt.trim()) {
+        toast.warning(`Question ${num}: fill in Prompt`);
         return;
       }
       if (isShortAnswerType(q.type)) {
@@ -393,14 +390,14 @@ export function QuizDetailPage() {
       }
     }
 
-    const dtos: CreateQuizQuestionWithOptionsDto[] = questions.map((q) => {
+    const dtos: CreateQuizQuestionWithOptionsDto[] = questions.map((q, index) => {
       const normalizedOptions = isShortAnswerType(q.type)
         ? ensureShortAnswerOption(q.options)
         : q.options;
 
       return {
         quizId,
-        questionKey: q.questionKey.trim(),
+        questionKey: q.questionKey.trim() || `q_${index + 1}`,
         prompt: q.prompt.trim(),
         level: q.level || "Beginner",
         type: q.type,
@@ -586,8 +583,8 @@ export function QuizDetailPage() {
       const q = aiDraftQuestions[i];
       const num = i + 1;
 
-      if (!q.questionKey.trim() || !q.prompt.trim()) {
-        toast.warning(`AI Question ${num}: fill in Question Key and Prompt`);
+      if (!q.prompt.trim()) {
+        toast.warning(`AI Question ${num}: fill in Prompt`);
         return;
       }
       if (isShortAnswerType(q.type)) {
@@ -615,7 +612,7 @@ export function QuizDetailPage() {
 
       return {
         quizId,
-        questionKey: q.questionKey.trim(),
+        questionKey: q.questionKey.trim() || `ai_q_${index + 1}`,
         prompt: q.prompt.trim(),
         level: q.level || "Beginner",
         type: q.type,
@@ -698,8 +695,8 @@ export function QuizDetailPage() {
     const isShortAnswer = edit.type === QuizQuestionTypeEnum.ShortAnswer;
     const expectedAnswer = (shortAnswerExpectedEdits[question.id] ?? question.options?.[0]?.displayText ?? "").trim();
 
-    if (!edit.questionKey.trim() || !edit.prompt.trim()) {
-      toast.warning("Question Key and Prompt are required");
+    if (!edit.prompt.trim()) {
+      toast.warning("Prompt is required");
       return;
     }
 
@@ -713,7 +710,7 @@ export function QuizDetailPage() {
         id: question.id,
         quizId,
         updateQuizQuestionDto: {
-          questionKey: edit.questionKey.trim(),
+          questionKey: question.questionKey.trim(),
           prompt: edit.prompt.trim(),
           level: edit.level || "Beginner",
           type: edit.type,
@@ -834,9 +831,6 @@ export function QuizDetailPage() {
   };
 
   const deleteQuestion = async (questionId: number) => {
-    const confirmed = window.confirm("Delete this question?");
-    if (!confirmed) return;
-
     setDeletingQuestionId(questionId);
     try {
       await deleteQuestionMutation.mutateAsync({ id: questionId, quizId });
@@ -850,9 +844,6 @@ export function QuizDetailPage() {
   };
 
   const deleteOption = async (optionId: number) => {
-    const confirmed = window.confirm("Delete this option?");
-    if (!confirmed) return;
-
     setDeletingOptionId(optionId);
     try {
       await deleteOptionMutation.mutateAsync({ id: optionId, quizId });
@@ -863,6 +854,28 @@ export function QuizDetailPage() {
     } finally {
       setDeletingOptionId(null);
     }
+  };
+
+  const requestDeleteQuestion = (questionId: number) => {
+    setDeleteConfirmTarget({ type: "question", id: questionId });
+  };
+
+  const requestDeleteOption = (optionId: number) => {
+    setDeleteConfirmTarget({ type: "option", id: optionId });
+  };
+
+  const confirmDeleteTarget = async () => {
+    if (!deleteConfirmTarget) return;
+
+    const target = deleteConfirmTarget;
+    setDeleteConfirmTarget(null);
+
+    if (target.type === "question") {
+      await deleteQuestion(target.id);
+      return;
+    }
+
+    await deleteOption(target.id);
   };
 
   // ─── Invalid quiz id ────────────────────────────────────────────────────────
@@ -1003,7 +1016,7 @@ export function QuizDetailPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => deleteQuestion(question.id)}
+                        onClick={() => requestDeleteQuestion(question.id)}
                         disabled={deletingQuestionId === question.id || deleteQuestionMutation.isPending}
                         className="text-xs rounded border border-red-300 bg-red-50 px-2 py-1 text-red-700 transition-colors hover:bg-red-100 disabled:opacity-60"
                       >
@@ -1041,13 +1054,6 @@ export function QuizDetailPage() {
 
                   {editingQuestionId === question.id ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                      <input
-                        type="text"
-                        value={(questionEdits[question.id] ?? toQuestionDraft(question)).questionKey}
-                        onChange={(e) => handleEditQuestionChange(question.id, "questionKey", e.target.value)}
-                        className="rounded border border-neutral-300 px-2 py-1.5"
-                        placeholder="Question key"
-                      />
                       <select
                         value={(questionEdits[question.id] ?? toQuestionDraft(question)).level}
                         onChange={(e) => handleEditQuestionChange(question.id, "level", e.target.value)}
@@ -1127,7 +1133,7 @@ export function QuizDetailPage() {
                     </div>
                   ) : (
                     <div className="text-xs text-neutral-600">
-                      Key: <span className="font-medium">{question.questionKey}</span> · Level: {question.level ?? "Beginner"} · Order: {question.orderNo}
+                      Level: {question.level ?? "Beginner"} · Order: {question.orderNo}
                     </div>
                   )}
 
@@ -1255,7 +1261,7 @@ export function QuizDetailPage() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => deleteOption(option.id)}
+                                    onClick={() => requestDeleteOption(option.id)}
                                     disabled={deletingOptionId === option.id || deleteOptionMutation.isPending}
                                     className="rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] text-red-700 transition-colors hover:bg-red-100 disabled:opacity-60"
                                   >
@@ -1304,15 +1310,11 @@ export function QuizDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                    Question Key <span className="text-red-500">*</span>
+                    Question Code
                   </label>
-                  <input
-                    type="text"
-                    value={q.questionKey}
-                    onChange={(e) => updateQuestion(q._qid, { questionKey: e.target.value })}
-                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-                    placeholder="ex: q_angular_1"
-                  />
+                  <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-500">
+                    Will be generated automatically
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 mb-1.5">Level</label>
@@ -1596,20 +1598,7 @@ export function QuizDetailPage() {
             </div>
 
             <div className="space-y-5 overflow-y-auto px-6 py-5">
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px_220px]">
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <span>
-                      Quiz ID: <strong>{quizId}</strong>
-                    </span>
-                    <span>
-                      Roadmap ID: <strong>{roadmapId ?? "N/A"}</strong>
-                    </span>
-                    <span>
-                      Roadmap Node ID: <strong>{roadmapNodeId ?? "N/A"}</strong>
-                    </span>
-                  </div>
-                </div>
+              <div className="grid gap-4 md:grid-cols-[200px_220px] md:justify-end">
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-neutral-700">
@@ -1688,13 +1677,6 @@ export function QuizDetailPage() {
                           </div>
 
                           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                            <input
-                              type="text"
-                              value={question.questionKey}
-                              onChange={(e) => updateAiQuestion(question._qid, { questionKey: e.target.value })}
-                              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-neutral-900 placeholder:text-neutral-400"
-                              placeholder="Question key"
-                            />
                             <select
                               value={question.level}
                               onChange={(e) => updateAiQuestion(question._qid, { level: e.target.value })}
@@ -1927,6 +1909,23 @@ export function QuizDetailPage() {
         </div>,
         document.body
       )}
+
+      <ConfirmationModal
+        isOpen={deleteConfirmTarget != null}
+        onClose={() => setDeleteConfirmTarget(null)}
+        onConfirm={() => {
+          void confirmDeleteTarget();
+        }}
+        title={deleteConfirmTarget?.type === "question" ? "Delete Question" : "Delete Option"}
+        description={
+          deleteConfirmTarget?.type === "question"
+            ? "Are you sure you want to delete this question? This action cannot be undone."
+            : "Are you sure you want to delete this option? This action cannot be undone."
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

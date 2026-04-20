@@ -179,6 +179,14 @@ export const endpoints = {
       overview: '/admin/analytics/overview',
     },
   },
+
+  // Reviews
+  reviews: {
+    create: '/reviews',
+    update: (id: number) => `/reviews/${id}`,
+    delete: (id: number) => `/reviews/${id}`,
+    byRoadmap: (roadmapId: number | string) => `/reviews/roadmap/${roadmapId}`,
+  },
 } as const;
 
 // Type helper for endpoint functions
