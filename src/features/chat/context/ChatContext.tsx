@@ -46,6 +46,14 @@ const initialState: ChatState = {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const generateId = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function getTypingChunkSize(textLength: number): number {
+    if (textLength > 800) return 14;
+    if (textLength > 500) return 10;
+    if (textLength > 250) return 6;
+    return 3;
+}
 
 function areModulesEqual(prev: AvailableModule[], next: AvailableModule[]): boolean {
     if (prev === next) return true;
@@ -396,11 +404,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     taskIds,
                 });
 
+                const fullAiResponse = response.aiResponse ?? '';
+
                 const aiMessage: ChatMessage = {
                     id: response.messageId,
                     conversationId: response.conversationId,
                     role: 'assistant',
-                    content: response.aiResponse,
+                    content: '',
                     createdAt: response.timestamp,
                     context: null,
                 };
@@ -411,6 +421,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     messages: [...prev.messages, aiMessage],
                     isLoading: false,
                 }));
+
+                if (fullAiResponse.length > 0) {
+                    const chunkSize = getTypingChunkSize(fullAiResponse.length);
+
+                    for (let index = chunkSize; index < fullAiResponse.length; index += chunkSize) {
+                        const partialContent = fullAiResponse.slice(0, index);
+
+                        setState((prev) => ({
+                            ...prev,
+                            messages: prev.messages.map((message) =>
+                                message.id === response.messageId
+                                    ? { ...message, content: partialContent }
+                                    : message
+                            ),
+                        }));
+
+                        await sleep(16);
+                    }
+
+                    setState((prev) => ({
+                        ...prev,
+                        messages: prev.messages.map((message) =>
+                            message.id === response.messageId
+                                ? { ...message, content: fullAiResponse }
+                                : message
+                        ),
+                    }));
+                }
 
                 await Promise.all([
                     queryClient.invalidateQueries({ queryKey: queryKeys.chat.all }),

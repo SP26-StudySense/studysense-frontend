@@ -13,6 +13,8 @@ interface SessionSummaryModalProps {
     className?: string;
 }
 
+const AUTO_CONTINUE_SECONDS = 30;
+
 function formatDuration(totalSeconds: number): string {
     const safeSeconds = Math.max(0, Math.floor(totalSeconds));
     const mins = Math.floor(safeSeconds / 60);
@@ -29,13 +31,15 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
     const completeSession = useSessionStore((state) => state.completeSession);
     const [hoveredStar, setHoveredStar] = useState(0);
-    const [autoContinueSeconds, setAutoContinueSeconds] = useState(10);
+    const [autoContinueSeconds, setAutoContinueSeconds] = useState(AUTO_CONTINUE_SECONDS);
     const hasAutoSubmittedRef = useRef(false);
+    const hasSubmittedRef = useRef(false);
     const submitSessionRef = useRef<() => void>(() => {
         // no-op until initialized in render
     });
 
     const endMutation = useEndSession();
+    const isSubmitting = endMutation.isPending;
     const canRender = isOpen && !!summaryData;
 
     const handleStarClick = (rating: number) => {
@@ -46,7 +50,14 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     submitSessionRef.current = () => {
         if (!summaryData) return;
         if (!sessionId) return;
-        if (endMutation.isPending) return;
+        if (hasSubmittedRef.current) return;
+        if (isSubmitting) return;
+        if (!summaryData.rating || summaryData.rating < 1) {
+            toast.warning('Please rate your session before continuing.');
+            return;
+        }
+
+        hasSubmittedRef.current = true;
 
         const tasksPayload = selectedTasks
             .map((task) => {
@@ -86,6 +97,7 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                     completeSession(data);
                 },
                 onError: (error) => {
+                    hasSubmittedRef.current = false;
                     toast.apiError(error, 'Failed to end session');
                 },
             }
@@ -99,11 +111,13 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     useEffect(() => {
         if (!canRender) {
             hasAutoSubmittedRef.current = false;
+            hasSubmittedRef.current = false;
             return;
         }
 
-        setAutoContinueSeconds(10);
+        setAutoContinueSeconds(AUTO_CONTINUE_SECONDS);
         hasAutoSubmittedRef.current = false;
+        hasSubmittedRef.current = false;
 
         const intervalId = window.setInterval(() => {
             setAutoContinueSeconds((prev) => {
@@ -135,8 +149,16 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
             {/* Modal */}
             <div className={cn(
                 "relative w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto overflow-x-hidden bg-gradient-to-b from-emerald-50/95 to-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-900/20",
+                isSubmitting && 'pointer-events-none',
                 className
             )}>
+                {isSubmitting && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-white/70 backdrop-blur-[2px]">
+                        <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-neutral-700 shadow-md">
+                            Saving session...
+                        </div>
+                    </div>
+                )}
                 {/* Header */}
                 <div className="flex flex-col items-center pt-10 pb-6 px-8">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-xl shadow-emerald-500/40 mb-4">
@@ -190,9 +212,11 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                         {[1, 2, 3, 4, 5].map((star) => (
                             <button
                                 key={star}
+                                type="button"
                                 onClick={() => handleStarClick(star)}
                                 onMouseEnter={() => setHoveredStar(star)}
                                 onMouseLeave={() => setHoveredStar(0)}
+                                disabled={isSubmitting}
                                 className="p-1 transition-transform hover:scale-110"
                             >
                                 <Star
@@ -219,11 +243,12 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
                         Auto continue in {autoContinueSeconds}s
                     </p>
                     <button
+                        type="button"
                         onClick={handleSaveAndContinue}
-                        disabled={endMutation.isPending}
+                        disabled={isSubmitting}
                         className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {endMutation.isPending ? 'Saving...' : 'Save & Continue'}
+                        {isSubmitting ? 'Saving...' : 'Save & Continue'}
                     </button>
                 </div>
             </div>
