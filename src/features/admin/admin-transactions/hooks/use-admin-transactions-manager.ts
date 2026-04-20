@@ -17,7 +17,7 @@ export function useAdminTransactionsManager(
 
   const [pageIndex, setPageIndex] = useState(initialPageIndex);
 
-  const { data, isLoading, error } = useAdminTransactionsQuery({
+  const { data, isLoading, isFetching, error } = useAdminTransactionsQuery({
     pageIndex,
     pageSize,
   });
@@ -43,6 +43,7 @@ export function useAdminTransactionsManager(
       hasNextPage: data?.hasNextPage ?? false,
     },
     isLoading,
+    isFetching,
     error,
     errorMessage,
     goToPreviousPage,
