@@ -387,16 +387,28 @@ export function RoadmapCard({ roadmap, variant, existingRoadmapIds, roadmapToStu
                             </div>
                         </div>
 
-                        {/* Stats Row */}
-                        <div className="flex items-center gap-4 text-xs text-neutral-500">
-                            <div className="flex items-center gap-1.5">
-                                <LucideIcons.CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                                <span>{roadmap.completedNodes}/{roadmap.totalNodes}</span>
+                        {/* Stats Row & Preview */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-xs text-neutral-500">
+                                <div className="flex items-center gap-1.5">
+                                    <LucideIcons.CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                                    <span>{roadmap.completedNodes}/{roadmap.totalNodes}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <LucideIcons.Clock className="h-3.5 w-3.5" />
+                                    <span>{formatTimeSpent(roadmap.timeSpent)}</span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <LucideIcons.Clock className="h-3.5 w-3.5" />
-                                <span>{formatTimeSpent(roadmap.timeSpent)}</span>
-                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/roadmaps/preview/${roadmap.id}`);
+                                }}
+                                className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-100 hover:bg-[#00bae2]/10 hover:text-[#00bae2] text-neutral-600 transition-all duration-200 hover:scale-110"
+                                title="Preview roadmap"
+                            >
+                                <LucideIcons.Eye className="h-4 w-4" />
+                            </button>
                         </div>
 
                         {/* Joined date */}

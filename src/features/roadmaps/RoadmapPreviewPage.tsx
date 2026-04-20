@@ -21,6 +21,9 @@ import { useSessionStore } from '@/store/session.store';
 import { get as apiGet } from '@/shared/api/client';
 import { STUDY_PLAN } from '@/shared/lib/constants';
 import { useUserMembership } from '@/features/membership/api/queries';
+import { ReviewSection } from '@/features/reviews/components/ReviewSection';
+import { ReviewModal } from '@/features/reviews/components/ReviewModal';
+import { useRoadmapReviewTrigger } from '@/features/reviews/hooks/useRoadmapReviewTrigger';
 
 interface RoadmapPreviewPageProps {
     roadmapId: string;
@@ -67,6 +70,16 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
     const [isMounted, setIsMounted] = useState(false);
     const retakeModalResolverRef = useRef<((value: boolean) => void) | null>(null);
     const { startLearning, isLoading } = useStartLearning();
+
+    // Review modal state
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [reviewTriggerRoadmapId, setReviewTriggerRoadmapId] = useState<number | null>(null);
+
+    // Listen for roadmap-completion SignalR event → auto-open review popup
+    useRoadmapReviewTrigger(({ roadmapId: triggeredId }) => {
+        setReviewTriggerRoadmapId(triggeredId);
+        setIsReviewModalOpen(true);
+    });
     const isFreeUser = isFreePlan(membership?.subscriptionType ?? user?.subscriptionType);
     const existingStudyPlanId = roadmap
         ? studyPlans.find((plan) => plan.roadmapId === Number(roadmap.id))?.id
@@ -499,6 +512,13 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                                 )}
                             </div>
                         )}
+
+                        {/* Reviews Section – always visible in Overview tab */}
+                        <ReviewSection
+                            roadmapId={Number(roadmap.id)}
+                            roadmapTitle={roadmap.title}
+                            hasJoined={!!existingStudyPlanId}
+                        />
                         </div>
                     ) : (
                         <div className="overflow-hidden border-y border-neutral-200">
@@ -590,6 +610,16 @@ export function RoadmapPreviewPage({ roadmapId }: RoadmapPreviewPageProps) {
                 </div>
             </div>,
             document.body
+        )}
+
+        {/* Auto-triggered review modal from SignalR notification */}
+        {isMounted && roadmap && (
+            <ReviewModal
+                open={isReviewModalOpen && (reviewTriggerRoadmapId === Number(roadmap.id) || reviewTriggerRoadmapId === null)}
+                roadmapId={Number(roadmap.id)}
+                roadmapTitle={roadmap.title}
+                onClose={() => setIsReviewModalOpen(false)}
+            />
         )}
         </>
     );
