@@ -494,7 +494,7 @@ function NodeDetailSection({
                 placeholder="Describe what learners will achieve"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div>
               <div>
                 <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                   Difficulty
@@ -515,24 +515,6 @@ function NodeDetailSection({
                     </option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                  Estimated Hours
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={basicInfoForm.estimatedHours}
-                  onChange={(e) =>
-                    setBasicInfoForm({
-                      ...basicInfoForm,
-                      estimatedHours: Number(e.target.value),
-                    })
-                  }
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all"
-                />
               </div>
             </div>
             <div className="flex gap-2 pt-1">
@@ -570,10 +552,6 @@ function NodeDetailSection({
                   >
                     {node.difficulty}
                   </span>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-neutral-500 mb-0.5">Hours</p>
-                  <p className="text-sm text-neutral-900">{node.estimatedHours}h</p>
                 </div>
               </div>
             </div>
@@ -1678,7 +1656,11 @@ export function RoadmapDetailPage() {
 
   // ── UI state ──
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
-  const [metadataForm, setMetadataForm] = useState({ title: "", description: "" });
+  const [metadataForm, setMetadataForm] = useState({
+    title: "",
+    description: "",
+    version: 1,
+  });
   const [selectedNodeId, setSelectedNodeId] = useState<number | string | null>(null);
   const [reformatSignal, setReformatSignal] = useState<number | null>(null);
 
@@ -1711,6 +1693,10 @@ export function RoadmapDetailPage() {
       setMetadataForm({
         title: editedData.roadmap.title,
         description: (editedData.roadmap as RoadmapMetadata).description ?? "",
+        version:
+          typeof editedData.roadmap.version === "number" && editedData.roadmap.version > 0
+            ? editedData.roadmap.version
+            : 1,
       });
     }
   }, [isEditingMetadata, editedData]);
@@ -1862,9 +1848,19 @@ export function RoadmapDetailPage() {
   // ── Metadata save/cancel ──
   const handleSaveMetadata = () => {
     if (!editedData) return;
+    const normalizedVersion =
+      Number.isFinite(metadataForm.version) && metadataForm.version > 0
+        ? Math.trunc(metadataForm.version)
+        : 1;
+
     setEditedData({
       ...editedData,
-      roadmap: { ...editedData.roadmap, ...metadataForm },
+      roadmap: {
+        ...editedData.roadmap,
+        title: metadataForm.title,
+        description: metadataForm.description,
+        version: normalizedVersion,
+      },
     });
     setHasUnsavedChanges(true);
     setIsEditingMetadata(false);
@@ -1923,6 +1919,10 @@ export function RoadmapDetailPage() {
         roadmap: {
           title: editedData.roadmap.title,
           description: (editedData.roadmap as RoadmapMetadata).description,
+          version:
+            typeof editedData.roadmap.version === "number" && editedData.roadmap.version > 0
+              ? Math.trunc(editedData.roadmap.version)
+              : undefined,
         },
         nodes: nodesWithoutContents,
         edges: editedData.edges,
@@ -2149,6 +2149,25 @@ export function RoadmapDetailPage() {
                   }
                   className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all min-h-[90px]"
                   placeholder="Describe this learning roadmap"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Version
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={metadataForm.version}
+                  onChange={(e) =>
+                    setMetadataForm({
+                      ...metadataForm,
+                      version: Number(e.target.value),
+                    })
+                  }
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 transition-all"
+                  placeholder="Roadmap version"
                 />
               </div>
               <div className="flex gap-2">

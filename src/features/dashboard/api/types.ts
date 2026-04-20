@@ -27,3 +27,9 @@ export interface OverviewStudyPlanDto {
   upcomingTasks: OverviewTaskDto[];
   recentSessions: RecentSessionDto[];
 }
+
+export interface LearningTargetDto {
+  targetRole: string;
+  currentLevel: string;
+  targetDeadlineMonths: number;
+}
