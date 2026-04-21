@@ -87,14 +87,14 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
             },
             {
                 onSuccess: async (data) => {
-                    // Refresh task/session data immediately across pages (schedule/history)
-                    await Promise.all([
+                    completeSession(data);
+
+                    // Don't block UX transition on cache work; refresh in background.
+                    void Promise.allSettled([
                         queryClient.invalidateQueries({ queryKey: ['tasks'] }),
                         queryClient.invalidateQueries({ queryKey: ['studyPlans'] }),
                         queryClient.invalidateQueries({ queryKey: queryKeys.studySessions.all }),
                     ]);
-
-                    completeSession(data);
                 },
                 onError: (error) => {
                     hasSubmittedRef.current = false;
