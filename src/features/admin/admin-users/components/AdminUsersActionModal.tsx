@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { ConfirmationModal } from "@/shared/ui";
+import { ConfirmationModal, Skeleton } from "@/shared/ui";
 
 import type { User } from "../api";
 
@@ -92,7 +92,14 @@ export function AdminUsersActionModal({
             </label>
             <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-neutral-200 p-2">
               {isSubjectOptionsLoading ? (
-                <p className="text-sm text-neutral-500">Loading subjects...</p>
+                <div className="space-y-2 p-1">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <Skeleton
+                      key={`subject-loading-${index}`}
+                      className="h-8 w-full"
+                    />
+                  ))}
+                </div>
               ) : availableSubjects.length === 0 ? (
                 <p className="text-sm text-neutral-500">All active subjects are already assigned.</p>
               ) : (

@@ -8,6 +8,7 @@ import {
   FileText,
   Link2,
 } from "lucide-react";
+import { Skeleton } from "@/shared/ui";
 import { useAnalystDashboardQuery } from "../hooks";
 
 function formatShortDate(isoDate: string): string {
@@ -48,14 +49,43 @@ export function AnalystDashboardPage() {
           {Array.from({ length: 4 }).map((_, idx) => (
             <div
               key={`analyst-dashboard-skeleton-${idx}`}
-              className="h-28 animate-pulse rounded-2xl border border-neutral-200/60 bg-white/80"
-            />
+              className="rounded-2xl border border-neutral-200/60 bg-white/80 p-5"
+            >
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-3 h-8 w-24" />
+              <Skeleton className="mt-3 h-3 w-32" />
+            </div>
           ))}
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
-          <div className="h-80 animate-pulse rounded-2xl border border-neutral-200/60 bg-white/80 xl:col-span-3" />
-          <div className="h-80 animate-pulse rounded-2xl border border-neutral-200/60 bg-white/80 xl:col-span-2" />
+          <div className="rounded-2xl border border-neutral-200/60 bg-white/80 p-6 xl:col-span-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-2 h-3 w-56" />
+            <div className="mt-5 space-y-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`trigger-row-${index}`}>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-32" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
+                  <Skeleton className="mt-2 h-2 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-neutral-200/60 bg-white/80 p-6 xl:col-span-2">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="mt-2 h-3 w-52" />
+            <div className="mt-5 space-y-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`mapping-row-${index}`} className="space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

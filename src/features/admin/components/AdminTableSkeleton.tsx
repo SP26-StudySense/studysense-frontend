@@ -1,5 +1,7 @@
 "use client";
 
+import { Skeleton } from "@/shared/ui";
+
 interface AdminTableSkeletonProps {
   columns: number;
   rows?: number;
@@ -20,7 +22,7 @@ export function AdminTableSkeleton({
                   key={`header-${index}`}
                   className="px-6 py-4"
                 >
-                  <div className="h-3 w-20 animate-pulse rounded bg-neutral-200" />
+                  <Skeleton className="h-3 w-20" />
                 </th>
               ))}
             </tr>
@@ -33,7 +35,7 @@ export function AdminTableSkeleton({
                     key={`cell-${rowIndex}-${colIndex}`}
                     className="px-6 py-4"
                   >
-                    <div className="h-3 w-full max-w-[140px] animate-pulse rounded bg-neutral-200" />
+                    <Skeleton className="h-3 w-full max-w-[140px]" />
                   </td>
                 ))}
               </tr>
