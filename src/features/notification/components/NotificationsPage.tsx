@@ -7,10 +7,10 @@ import {
   CheckCheck,
   ChevronLeft,
   ChevronRight,
-  Loader2,
   RefreshCw,
 } from 'lucide-react';
 
+import { Skeleton } from '@/shared/ui';
 import { useNotifications } from '../hooks/use-notifications';
 import { formatNotificationDistance } from '../api/date-utils';
 
@@ -105,8 +105,17 @@ export function NotificationsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={`notification-skeleton-${index}`}
+              className="rounded-lg border border-neutral-200/80 bg-white/90 px-2.5 py-2 shadow-sm"
+            >
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="mt-2 h-3 w-full" />
+              <Skeleton className="mt-2 h-3 w-24" />
+            </div>
+          ))}
         </div>
       ) : displayItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-16 text-center">

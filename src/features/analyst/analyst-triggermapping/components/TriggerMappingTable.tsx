@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/shared/ui";
 import type { SurveyTriggerMappingDto, SurveyTriggerTypeDto } from "../api/types";
 import { RowActionButtons } from "./RowActionButtons";
 
@@ -35,9 +36,35 @@ export function TriggerMappingTable({
 }: TriggerMappingTableProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-[#00bae2]" />
-        <span className="ml-2 text-sm text-neutral-500">Loading mappings...</span>
+      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-neutral-100 bg-neutral-50">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <th key={`mapping-header-${index}`} className="px-4 py-3 text-left">
+                  <Skeleton className="h-3 w-20" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100">
+            {Array.from({ length: 6 }).map((_, rowIndex) => (
+              <tr key={`mapping-row-${rowIndex}`}>
+                <td className="px-4 py-3"><Skeleton className="h-4 w-36" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-28 rounded-full" /></td>
+                <td className="px-4 py-3"><Skeleton className="mx-auto h-4 w-10" /></td>
+                <td className="px-4 py-3"><Skeleton className="mx-auto h-4 w-10" /></td>
+                <td className="px-4 py-3"><Skeleton className="mx-auto h-6 w-11 rounded-full" /></td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-center gap-2">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }

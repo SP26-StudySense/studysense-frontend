@@ -2,6 +2,7 @@
 
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
+import { AdminTableSkeleton } from "../../components";
 import { useAdminUsersManager } from "../hooks";
 import { AdminUsersPage } from "./AdminUsersPage";
 
@@ -93,9 +94,7 @@ export function AdminUsersSection() {
           {errorMessage}
         </div>
       ) : isLoading && users.length === 0 ? (
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-          Loading users...
-        </div>
+        <AdminTableSkeleton columns={7} rows={8} />
       ) : (
         <AdminUsersPage
           users={users}

@@ -6,6 +6,7 @@ import { Play, Check, Plus, Pencil, Trash2, MoreVertical, Filter, ChevronDown, S
 import { createPortal } from 'react-dom';
 import { cn } from '@/shared/lib/utils';
 import {
+    formatDateInUserTimeZone,
     formatLocalDate,
     getTodayLocalDateInput,
     isIsoDateBeforeTodayLocal,
@@ -761,7 +762,10 @@ export function ModuleTasksPanel({
     };
 
     const formatTaskDeadline = (value?: string): string => {
-        return formatLocalDate(value);
+        return formatDateInUserTimeZone(value, {
+            locale: 'en-US',
+            fallback: formatLocalDate(value),
+        });
     };
 
     const handleToggleTaskExpand = (taskId: string) => {

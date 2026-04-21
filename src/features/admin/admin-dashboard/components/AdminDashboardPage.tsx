@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import { StatCard } from "../../components";
+import { Skeleton } from "@/shared/ui";
 import { useAdminDashboardQuery } from "../hooks";
 
 const MONTH_LABELS = [
@@ -74,8 +75,12 @@ export function AdminDashboardPage() {
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={`dashboard-skeleton-${index}`}
-              className="h-36 animate-pulse rounded-2xl border border-neutral-200/60 bg-white/80"
-            />
+              className="rounded-2xl border border-neutral-200/60 bg-white/80 p-6"
+            >
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-4 h-8 w-28" />
+              <Skeleton className="mt-5 h-3 w-20" />
+            </div>
           ))}
         </div>
         <div className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white/80 shadow-sm backdrop-blur-xl">
@@ -84,7 +89,11 @@ export function AdminDashboardPage() {
               Operational Insights
             </h2>
           </div>
-          <div className="p-6 text-sm text-neutral-500">Loading dashboard data...</div>
+          <div className="space-y-4 p-6">
+            <Skeleton className="h-72 w-full" />
+            <Skeleton className="h-3 w-56" />
+            <Skeleton className="h-3 w-44" />
+          </div>
         </div>
       </div>
     );
