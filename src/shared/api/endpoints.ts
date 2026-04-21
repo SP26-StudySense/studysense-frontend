@@ -122,6 +122,7 @@ export const endpoints = {
     send: '/ai/chat/send',
     createConversation: '/ai/chat/conversations',
     conversations: '/ai/chat/conversations',
+    deleteConversation: (conversationId: string) => `/ai/chat/conversations/${conversationId}`,
     history: (conversationId: string) => `/ai/chat/${conversationId}/history`,
   },
 
