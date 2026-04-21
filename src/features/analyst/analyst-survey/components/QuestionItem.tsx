@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Edit, Trash2 } from "lucide-react";
+import { Skeleton } from "@/shared/ui";
 import type { SurveyQuestion, SurveyQuestionOption, SurveyFieldSemantic } from "../types";
 import { useQuestionOptions, useFieldSemantics } from "../api/queries";
 
@@ -141,8 +142,17 @@ export function QuestionItem({
       {isExpanded && hasOptions && (
         <div className="border-t border-neutral-200 bg-neutral-50 p-4">
           {optionsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-[#00bae2]" />
+            <div className="space-y-2 py-2">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={`option-loading-${index}`} className="rounded-lg bg-white p-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                  <Skeleton className="mt-2 h-3 w-20" />
+                </div>
+              ))}
             </div>
           ) : options.length === 0 ? (
             <div className="text-center py-8 text-neutral-500">
@@ -208,8 +218,19 @@ export function QuestionItem({
           </div>
 
           {semanticsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-[#00bae2]" />
+            <div className="space-y-3 py-2">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div key={`semantic-loading-${index}`} className="rounded-lg border border-neutral-200 bg-white p-4">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="mt-3 h-3 w-24" />
+                  <Skeleton className="mt-1 h-4 w-full" />
+                  <Skeleton className="mt-3 h-3 w-16" />
+                  <Skeleton className="mt-1 h-4 w-[80%]" />
+                </div>
+              ))}
             </div>
           ) : semantics.length === 0 ? (
             <div className="text-center py-6 text-neutral-500 text-sm">

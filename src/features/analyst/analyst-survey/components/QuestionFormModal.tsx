@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
+import { Skeleton } from "@/shared/ui";
 import { useQuestion } from "../api/queries";
 import type { SurveyQuestion, SurveyQuestionType, QuestionFormData } from "../types";
 
@@ -91,9 +92,27 @@ export function QuestionFormModal({
 
         {/* Loading state when fetching question data */}
         {mode === 'edit' && isLoadingQuestion ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-            <p className="mt-3 text-sm text-neutral-600">Loading question data...</p>
+          <div className="space-y-4 py-3">
+            <div>
+              <Skeleton className="mb-2 h-4 w-28" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="mb-2 h-4 w-32" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="mb-2 h-4 w-28" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="mb-2 h-4 w-24" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Skeleton className="h-10 flex-1 rounded-xl" />
+              <Skeleton className="h-10 flex-1 rounded-xl" />
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

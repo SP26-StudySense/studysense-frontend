@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Plus, Edit, Trash2, X } from "lucide-react";
-import { ConfirmationModal } from "@/shared/ui";
+import { ConfirmationModal, Skeleton } from "@/shared/ui";
 
 interface Subject {
   id: string;
@@ -249,8 +249,28 @@ export function CategoryManagement({
           )}
 
           {isLoading && (
-            <div className="rounded-2xl border border-neutral-200/60 bg-white/80 p-8 text-center text-sm text-neutral-500 shadow-sm backdrop-blur-xl">
-              Loading categories...
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`category-skeleton-${index}`}
+                  className="overflow-hidden rounded-2xl border border-neutral-200/60 bg-white/80 shadow-sm backdrop-blur-xl"
+                >
+                  <div className="flex items-center justify-between border-b border-neutral-200/60 p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-7 w-7 rounded-lg" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-72" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
