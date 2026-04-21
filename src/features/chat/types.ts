@@ -64,6 +64,7 @@ export interface ChatState {
     isConversationLoading: boolean;
     isHistoryLoading: boolean;
     isCreatingConversation: boolean;
+    isDeletingConversation: boolean;
 }
 
 export interface ChatActions {
@@ -78,7 +79,8 @@ export interface ChatActions {
     closeAttachmentPicker: () => void;
     selectConversation: (conversationId: string) => void;
     createConversation: () => Promise<void>;
-    clearHistory: () => void;
+    deleteConversation: (conversationId: string) => Promise<void>;
+    clearHistory: () => Promise<void>;
 }
 
 export interface ChatContextType extends ChatState, ChatActions {}

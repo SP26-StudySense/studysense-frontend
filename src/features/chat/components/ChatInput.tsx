@@ -78,56 +78,62 @@ export function ChatInput({
             )}
 
             {/* Input area */}
-            <div className="p-3 flex items-end gap-2">
-                {/* Attachment button */}
-                <button
-                    onClick={onOpenAttachmentPicker}
-                    disabled={disabled}
+            <div className="p-3">
+                <div
                     className={cn(
-                        "flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-xl transition-all",
-                        "bg-neutral-100 text-neutral-500 hover:bg-violet-100 hover:text-violet-600",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                        "flex min-h-11 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-2",
+                        "transition-colors focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-500/10",
+                        disabled && "opacity-60"
                     )}
-                    aria-label="Attach task or module"
                 >
-                    <Plus className="h-5 w-5" />
-                </button>
-
-                {/* Text input */}
-                <div className="flex-1 relative">
-                    <textarea
-                        ref={textareaRef}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        onInput={handleInput}
-                        placeholder="Type your message..."
+                    {/* Attachment button */}
+                    <button
+                        onClick={onOpenAttachmentPicker}
                         disabled={disabled}
-                        rows={1}
                         className={cn(
-                            "w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-2.5 pr-12",
-                            "text-sm text-neutral-800 placeholder:text-neutral-400",
-                            "focus:border-violet-300 focus:outline-none focus:ring-4 focus:ring-violet-500/10",
-                            "disabled:opacity-50 disabled:cursor-not-allowed",
-                            "max-h-[120px]"
+                            "h-8 w-8 flex-shrink-0 rounded-lg text-neutral-500 transition-all",
+                            "inline-flex items-center justify-center hover:bg-violet-100 hover:text-violet-600",
+                            "disabled:cursor-not-allowed"
                         )}
-                    />
-                </div>
+                        aria-label="Attach task or module"
+                    >
+                        <Plus className="h-5 w-5" />
+                    </button>
 
-                {/* Send button */}
-                <button
-                    onClick={handleSend}
-                    disabled={!message.trim() || disabled}
-                    className={cn(
-                        "flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-xl transition-all",
-                        message.trim() && !disabled
-                            ? "bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50"
-                            : "bg-neutral-100 text-neutral-300 cursor-not-allowed"
-                    )}
-                    aria-label="Send message"
-                >
-                    <Send className="h-5 w-5" />
-                </button>
+                    {/* Text input */}
+                    <div className="flex-1">
+                        <textarea
+                            ref={textareaRef}
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onInput={handleInput}
+                            placeholder="Type your message..."
+                            disabled={disabled}
+                            rows={1}
+                            className={cn(
+                                "w-full h-10 max-h-[120px] box-border resize-none border-0 bg-transparent pb-2 pt-3 text-sm leading-5 text-neutral-800",
+                                "placeholder:leading-5 placeholder:text-neutral-400 focus:outline-none focus:ring-0",
+                                "disabled:cursor-not-allowed"
+                            )}
+                        />
+                    </div>
+
+                    {/* Send button */}
+                    <button
+                        onClick={handleSend}
+                        disabled={!message.trim() || disabled}
+                        className={cn(
+                            "h-8 w-8 flex-shrink-0 rounded-lg transition-all inline-flex items-center justify-center",
+                            message.trim() && !disabled
+                                ? "bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-md shadow-violet-500/30 hover:shadow-violet-500/50"
+                                : "text-neutral-300 cursor-not-allowed"
+                        )}
+                        aria-label="Send message"
+                    >
+                        <Send className="h-5 w-5" />
+                    </button>
+                </div>
             </div>
         </div>
     );
