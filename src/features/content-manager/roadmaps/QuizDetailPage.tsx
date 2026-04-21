@@ -128,6 +128,8 @@ const AI_QUESTION_ARRAY_KEYS = [
   "items",
 ] as const;
 
+const AI_MAX_QUESTION_COUNT = 10;
+
 const AI_NESTED_KEYS = ["result", "payload", "data"] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -468,7 +470,7 @@ export function QuizDetailPage() {
         quizId,
         roadmapId,
         roadmapNodeId,
-        questionCount: Math.min(20, Math.max(1, Math.trunc(aiQuestionCount || 1))),
+        questionCount: Math.min(AI_MAX_QUESTION_COUNT, Math.max(1, Math.trunc(aiQuestionCount || 1))),
         level: aiLevel || "Beginner",
       });
 
@@ -1607,9 +1609,14 @@ export function QuizDetailPage() {
                   <input
                     type="number"
                     min="1"
-                    max="20"
+                    max={AI_MAX_QUESTION_COUNT}
                     value={aiQuestionCount}
-                    onChange={(e) => setAiQuestionCount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const nextValue = Number(e.target.value);
+                      setAiQuestionCount(
+                        Math.min(AI_MAX_QUESTION_COUNT, Math.max(1, Math.trunc(nextValue || 1)))
+                      );
+                    }}
                     className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition-colors focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
                   />
                 </div>
