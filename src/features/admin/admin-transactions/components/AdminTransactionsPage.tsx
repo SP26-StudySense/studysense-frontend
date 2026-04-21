@@ -1,16 +1,18 @@
 "use client";
 
-import { AdminTable, TableColumn } from "../../components";
+import { AdminTable, AdminTableSkeleton, TableColumn } from "../../components";
 import type { Transaction } from "../api";
 
 interface AdminTransactionsPageProps {
   transactions?: Transaction[];
+  isLoading?: boolean;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
 }
 
 export function AdminTransactionsPage({
   transactions = [],
+  isLoading = false,
   onEdit,
   onDelete,
 }: AdminTransactionsPageProps) {
@@ -48,23 +50,24 @@ export function AdminTransactionsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <div>
           <p className="text-sm text-neutral-600">
             View all payment transactions
           </p>
         </div>
-        <button className="rounded-xl bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-4 py-2.5 text-sm font-medium text-neutral-900 shadow-sm transition-all hover:shadow-md">
-          Export
-        </button>
       </div>
 
-      <AdminTable
-        columns={columns}
-        data={transactions}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
+      {isLoading ? (
+        <AdminTableSkeleton columns={columns.length} rows={8} />
+      ) : (
+        <AdminTable
+          columns={columns}
+          data={transactions}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      )}
     </div>
   );
 }

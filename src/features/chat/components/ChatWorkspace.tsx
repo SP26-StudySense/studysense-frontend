@@ -1,14 +1,19 @@
 'use client';
 
-import { MessageSquare, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { MessageSquare, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 import { useChat } from '@/features/chat/context/ChatContext';
+import { ConfirmationModal } from '@/shared/ui';
 import { formatDateTimeInUserTimeZone } from '@/shared/lib/date-time';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { AttachmentPicker } from './AttachmentPicker';
 
 export function ChatWorkspace() {
+  const [menuConversationId, setMenuConversationId] = useState<string | null>(null);
+  const [confirmDeleteConversationId, setConfirmDeleteConversationId] = useState<string | null>(null);
+
   const {
     conversations,
     selectedConversationId,
@@ -27,7 +32,9 @@ export function ChatWorkspace() {
     isConversationLoading,
     isHistoryLoading,
     isCreatingConversation,
+    isDeletingConversation,
     createConversation,
+    deleteConversation,
   } = useChat();
 
   return (
@@ -61,21 +68,58 @@ export function ChatWorkspace() {
 
           {conversations.map((conversation) => {
             const isActive = conversation.id === selectedConversationId;
+            const isMenuOpen = menuConversationId === conversation.id;
+
             return (
-              <button
+              <div
                 key={conversation.id}
-                onClick={() => selectConversation(conversation.id)}
-                className={`w-full rounded-xl border px-3 py-2 text-left transition-colors ${
+                className={`relative w-full rounded-xl border px-3 py-2 text-left transition-colors ${
                   isActive
                     ? 'border-violet-300 bg-violet-50'
                     : 'border-transparent bg-white hover:border-neutral-200 hover:bg-neutral-50'
                 }`}
               >
-                <p className="text-sm font-medium text-neutral-800 truncate">{conversation.title}</p>
-                <p className="text-[11px] text-neutral-500 mt-1">
-                  {formatDateTimeInUserTimeZone(conversation.lastMessageAt)}
-                </p>
-              </button>
+                <div className="flex items-start justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => selectConversation(conversation.id)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <p className="text-sm font-medium text-neutral-800 truncate">{conversation.title}</p>
+                    <p className="text-[11px] text-neutral-500 mt-1">
+                      {formatDateTimeInUserTimeZone(conversation.lastMessageAt)}
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuConversationId((prev) => (prev === conversation.id ? null : conversation.id));
+                    }}
+                    className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
+                    aria-label="Conversation options"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {isMenuOpen && (
+                  <div className="absolute right-2 top-9 z-10 w-44 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmDeleteConversationId(conversation.id);
+                        setMenuConversationId(null);
+                      }}
+                      disabled={isDeletingConversation}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete conversation
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -112,6 +156,23 @@ export function ChatWorkspace() {
         selectedIds={pendingAttachments.map((item) => item.id)}
         modules={availableModules}
         tasks={availableTasks}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmDeleteConversationId !== null}
+        onClose={() => setConfirmDeleteConversationId(null)}
+        onConfirm={() => {
+          if (!confirmDeleteConversationId) {
+            return;
+          }
+
+          void deleteConversation(confirmDeleteConversationId);
+        }}
+        title="Delete conversation?"
+        description="This action will permanently remove the selected conversation and all its messages."
+        confirmText={isDeletingConversation ? 'Deleting...' : 'Delete'}
+        cancelText="Cancel"
+        variant="danger"
       />
     </div>
   );

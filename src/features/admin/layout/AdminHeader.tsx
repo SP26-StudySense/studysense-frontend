@@ -17,7 +17,6 @@ export function AdminHeader({ pageTitle }: AdminHeaderProps) {
 
       <div className="flex items-center gap-3">
         <NotificationBell
-          showTestButton={true}
           buttonClassName="relative rounded-xl p-2 text-neutral-600 transition hover:bg-neutral-100"
           iconClassName="h-5 w-5"
         />

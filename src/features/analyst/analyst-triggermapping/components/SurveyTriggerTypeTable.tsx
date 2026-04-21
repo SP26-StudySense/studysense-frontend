@@ -1,5 +1,6 @@
 "use client";
 
+import { Skeleton } from "@/shared/ui";
 import type { SurveyTriggerTypeDto } from "../api/types";
 import { RowActionButtons } from "./RowActionButtons";
 
@@ -31,11 +32,20 @@ export function SurveyTriggerTypeTable({
           </thead>
           <tbody className="divide-y divide-neutral-100 bg-white">
             {isLoading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-sm text-neutral-500">
-                  Loading SurveyTriggerTypes...
-                </td>
-              </tr>
+              Array.from({ length: 6 }).map((_, rowIndex) => (
+                <tr key={`trigger-type-row-${rowIndex}`}>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-64" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                    </div>
+                  </td>
+                </tr>
+              ))
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-neutral-500">

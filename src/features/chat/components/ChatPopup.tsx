@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Bot, Trash2, MoreVertical, Plus } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { routes } from '@/shared/config/routes';
 import { useChat } from '@/features/chat/context/ChatContext';
+import { ConfirmationModal } from '@/shared/ui';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 import { AttachmentPicker } from './AttachmentPicker';
 
 export function ChatPopup() {
     const router = useRouter();
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const {
         isOpen,
         closeChat,
@@ -32,6 +34,7 @@ export function ChatPopup() {
         availableTasks,
         isConversationLoading,
         isCreatingConversation,
+        isDeletingConversation,
         createConversation,
     } = useChat();
 
@@ -103,11 +106,12 @@ export function ChatPopup() {
                             {/* Dropdown menu */}
                             <div className="absolute right-0 top-full mt-1 py-1 w-40 rounded-xl bg-white shadow-lg border border-neutral-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                                 <button
-                                    onClick={clearHistory}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                    onClick={() => setIsDeleteConfirmOpen(true)}
+                                    disabled={isDeletingConversation || !selectedConversationId}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <Trash2 className="h-4 w-4" />
-                                    Clear conversation
+                                    {isDeletingConversation ? 'Deleting...' : 'Clear conversation'}
                                 </button>
                             </div>
                         </div>
@@ -174,6 +178,19 @@ export function ChatPopup() {
                 selectedIds={pendingAttachments.map(a => a.id)}
                 modules={availableModules}
                 tasks={availableTasks}
+            />
+
+            <ConfirmationModal
+                isOpen={isDeleteConfirmOpen}
+                onClose={() => setIsDeleteConfirmOpen(false)}
+                onConfirm={() => {
+                    void clearHistory();
+                }}
+                title="Delete conversation?"
+                description="This action will permanently remove the selected conversation and all its messages."
+                confirmText={isDeletingConversation ? 'Deleting...' : 'Delete'}
+                cancelText="Cancel"
+                variant="danger"
             />
         </>
     );

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Plus, Edit, Trash2, Eye, Loader2 } from "lucide-react";
-import { ConfirmationModal } from "@/shared/ui";
+import { Search, Plus, Edit, Trash2, Eye } from "lucide-react";
+import { ConfirmationModal, Skeleton } from "@/shared/ui";
 import { SurveyFormModal } from "./components";
 import type { Survey, SurveyFormData } from "./types";
 import { useSurveyManager } from "./hooks/use-survey-manager";
@@ -143,9 +143,40 @@ export function SurveyList() {
       {/* Surveys Table */}
       <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-            <p className="mt-3 text-sm text-neutral-600">Loading surveys...</p>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-neutral-200 bg-neutral-50">
+                <tr>
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <th key={`survey-header-${index}`} className="px-6 py-4 text-left">
+                      <Skeleton className="h-3 w-24" />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200">
+                {Array.from({ length: 6 }).map((_, rowIndex) => (
+                  <tr key={`survey-row-${rowIndex}`}>
+                    <td className="px-6 py-4">
+                      <Skeleton className="h-4 w-44" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <Skeleton className="h-4 w-28" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end gap-2">
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : error ? (
           <div className="py-12 text-center">

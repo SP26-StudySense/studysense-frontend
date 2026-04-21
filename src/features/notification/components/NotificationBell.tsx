@@ -1,34 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Bell } from 'lucide-react';
 
 import { useCurrentUser } from '@/features/auth/api/queries';
-import { toast } from '@/shared/lib';
-import {
-  getPushStatus,
-  requestPushPermissionAndSync,
-  type PushStatus,
-} from '../api/onesignal-client';
 import { useNotifications } from '../hooks/use-notifications';
 import { formatNotificationDistance } from '../api/date-utils';
 
 interface NotificationBellProps {
-  showTestButton?: boolean;
   iconClassName?: string;
   buttonClassName?: string;
 }
 
 export function NotificationBell({
-  showTestButton = false,
   iconClassName = 'h-5 w-5',
   buttonClassName = 'relative text-neutral-500 transition-colors hover:text-neutral-900',
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'unseen'>('all');
   const { data: user } = useCurrentUser();
-  const [pushStatus, setPushStatus] = useState<PushStatus>('unavailable');
   const {
     items,
     unreadItems,
@@ -36,52 +27,7 @@ export function NotificationBell({
     markAsRead,
     markAllAsRead,
     isMarkingAllAsRead,
-    sendTest,
-    isSendingTest,
   } = useNotifications(1, 7);
-
-  const refreshPushStatus = useCallback(async () => {
-    const status = await getPushStatus();
-    setPushStatus(status);
-  }, []);
-
-  useEffect(() => {
-    refreshPushStatus().catch(() => {
-      setPushStatus('unavailable');
-    });
-  }, [refreshPushStatus]);
-
-  const pushStatusLabel: Record<PushStatus, string> = {
-    enabled: 'Push enabled',
-    'not-enabled': 'Push not enabled',
-    blocked: 'Push blocked',
-    unsupported: 'Push unsupported',
-    unavailable: 'Push unavailable',
-  };
-
-  const pushStatusClassName: Record<PushStatus, string> = {
-    enabled: 'bg-emerald-100 text-emerald-700',
-    'not-enabled': 'bg-amber-100 text-amber-700',
-    blocked: 'bg-rose-100 text-rose-700',
-    unsupported: 'bg-neutral-200 text-neutral-700',
-    unavailable: 'bg-neutral-200 text-neutral-700',
-  };
-
-  const handleEnablePush = async () => {
-    const granted = await requestPushPermissionAndSync();
-    await refreshPushStatus().catch(() => {
-      // noop
-    });
-
-    if (granted) {
-      toast.success('Push notifications enabled');
-      return;
-    }
-
-    toast.info('Push notifications not enabled', {
-      description: 'Please allow browser notifications to receive push alerts.',
-    });
-  };
 
   const filteredItems = activeTab === 'unseen' ? unreadItems : items;
   const notificationsHref = (() => {
@@ -115,14 +61,6 @@ export function NotificationBell({
           <div className="border-b border-neutral-200/70 bg-gradient-to-br from-[#ebfaff] via-[#f7fbff] to-[#f2f7ff] p-4">
             <div className="flex items-start justify-between gap-4">
               <p className="text-base font-semibold text-neutral-900">Notification</p>
-
-              <div className="flex flex-col items-end gap-2">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${pushStatusClassName[pushStatus]}`}
-                >
-                  {pushStatusLabel[pushStatus]}
-                </span>
-              </div>
             </div>
 
             <div className="mt-3 flex items-center justify-between gap-3">
@@ -158,25 +96,6 @@ export function NotificationBell({
               </button>
             </div>
 
-            <div className="mt-3 flex items-center justify-end gap-3 pr-1">
-              {pushStatus !== 'enabled' ? (
-                <button
-                  onClick={handleEnablePush}
-                  className="text-xs font-medium text-neutral-600 hover:text-neutral-900"
-                >
-                  Enable Push
-                </button>
-              ) : null}
-              {showTestButton ? (
-                <button
-                  onClick={() => sendTest()}
-                  disabled={isSendingTest}
-                  className="text-xs text-[#00bae2] hover:text-[#0a7f97] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Test
-                </button>
-              ) : null}
-            </div>
           </div>
 
           <div className="max-h-[380px] space-y-2 overflow-y-auto bg-white p-3">

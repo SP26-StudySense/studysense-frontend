@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
-import { ConfirmationModal } from "@/shared/ui";
+import { ArrowLeft, Plus } from "lucide-react";
+import { ConfirmationModal, Skeleton } from "@/shared/ui";
 import { QuestionFormModal, OptionFormModal, FieldSemanticFormModal, QuestionItem } from "./components";
 import type {
   SurveyQuestion,
@@ -231,10 +231,41 @@ export function SurveyDetail({ surveyId }: SurveyDetailProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
-          <p className="text-sm text-neutral-600">Loading survey details...</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-9 rounded-xl" />
+            <div>
+              <Skeleton className="h-8 w-64" />
+              <div className="mt-2 flex items-center gap-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-3 rounded-full" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          </div>
+          <Skeleton className="h-11 w-40 rounded-xl" />
+        </div>
+
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`question-skeleton-${index}`}
+              className="rounded-xl border border-neutral-200 bg-white p-4"
+            >
+              <div className="flex items-start gap-4">
+                <Skeleton className="h-7 w-7 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-5 w-24 rounded-full" />
+                  </div>
+                  <Skeleton className="h-5 w-[65%]" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

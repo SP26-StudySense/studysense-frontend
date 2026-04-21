@@ -238,15 +238,15 @@ export const useSessionStore = create<SessionState>()(
             ? currentSelected
             : tasks
               ? tasks.map((t) => ({
-                  id: String(t.id),
-                  title: t.title,
-                  description: t.description ?? undefined,
-                  estimatedMinutes: t.estimatedMinutes,
-                  isCompleted: t.isCompleted,
-                  isActive: false,
-                  startedAt: null,
-                  completedAt: t.isCompleted ? new Date().toISOString() : null,
-                }))
+                id: String(t.id),
+                title: t.title,
+                description: t.description ?? undefined,
+                estimatedMinutes: t.estimatedMinutes,
+                isCompleted: t.isCompleted,
+                isActive: false,
+                startedAt: null,
+                completedAt: t.isCompleted ? new Date().toISOString() : null,
+              }))
               : [];
 
         const hasActive = selectedTasks.some((task) => task.isActive && !task.isCompleted);
@@ -320,12 +320,12 @@ export const useSessionStore = create<SessionState>()(
           showSuccess: true,
           summaryData: summaryData
             ? {
-                ...summaryData,
-                timeStudiedSeconds: endResponse.totalDurationSeconds,
-                xpEarned: endResponse.xpEarned,
-                tasksCompleted: endResponse.tasksCompleted,
-                totalTasks: endResponse.totalTasks,
-              }
+              ...summaryData,
+              timeStudiedSeconds: endResponse.totalDurationSeconds,
+              xpEarned: endResponse.xpEarned,
+              tasksCompleted: endResponse.tasksCompleted,
+              totalTasks: endResponse.totalTasks,
+            }
             : null,
         });
       },
@@ -383,12 +383,12 @@ export const useSessionStore = create<SessionState>()(
           })),
           selectedNode: data.nodeId
             ? {
-                id: String(data.nodeId),
-                roadmapNodeId: data.nodeId,
-                title: data.nodeTitle || '',
-                planId: data.planId ? String(data.planId) : undefined,
-                planTitle: data.planTitle || undefined,
-              }
+              id: String(data.nodeId),
+              roadmapNodeId: data.nodeId,
+              title: data.nodeTitle || '',
+              planId: data.planId ? String(data.planId) : undefined,
+              planTitle: data.planTitle || undefined,
+            }
             : null,
         });
       },
