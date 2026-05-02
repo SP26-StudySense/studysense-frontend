@@ -1308,16 +1308,8 @@ export function QuizDetailPage() {
                 )}
               </div>
 
-              {/* Key + Level + Type */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
-                    Question Code
-                  </label>
-                  <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-500">
-                    Will be generated automatically
-                  </div>
-                </div>
+              {/* Level + Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 mb-1.5">Level</label>
                   <select

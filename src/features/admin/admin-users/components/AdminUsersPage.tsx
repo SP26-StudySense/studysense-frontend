@@ -189,7 +189,6 @@ export function AdminUsersPage({
         </span>
       ),
     },
-    { key: "joinDate", label: "Join Date" },
   ];
 
   const renderActions = (user: User) => {
