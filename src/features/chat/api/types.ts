@@ -26,6 +26,11 @@ export interface CreateConversationResponse {
   title: string;
 }
 
+export interface DeleteConversationResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface ChatConversationDto {
   id: string;
   userId: string;

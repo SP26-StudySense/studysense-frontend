@@ -1034,13 +1034,13 @@ export function ModuleTasksPanel({
                             {/* Điều kiện: Chỉ hiện khi module đã có task (user đã gen task trước đó) */}
                             {!isModuleCompleted && module.tasks && (
                                 <div className="flex flex-wrap items-center gap-3 ml-auto">
-                                    <button
+                                    {/* <button
                                         onClick={handleAddTask}
                                         className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f0fffe] text-[#00bae2] border border-[#baf0fa] text-sm font-medium hover:bg-[#d8f9ff] transition-colors"
                                     >
                                         <Plus className="h-4 w-4" />
                                         <span>Create task</span>
-                                    </button>
+                                    </button> */}
                                     
                                     {/* Không được uncomment nút này nhé */}
                                     {/* <button
@@ -1154,7 +1154,7 @@ export function ModuleTasksPanel({
                                         </div>
                                     )}
 
-                                    {viewFilter === 'module' && !isLocked && (
+                                    {viewFilter === 'module' && !isLocked && !isModuleCompleted && (
                                         <button
                                             onClick={handleGenerateAiTasks}
                                             disabled={createAiTaskItemsMutation.isPending}

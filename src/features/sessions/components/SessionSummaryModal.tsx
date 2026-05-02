@@ -27,6 +27,7 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
     const summaryData = useSessionStore((state) => state.summaryData);
     const setSummaryData = useSessionStore((state) => state.setSummaryData);
     const sessionId = useSessionStore((state) => state.sessionId);
+    const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
     const selectedTasks = useSessionStore((state) => state.selectedTasks);
     const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
     const completeSession = useSessionStore((state) => state.completeSession);
@@ -87,6 +88,24 @@ export function SessionSummaryModal({ isOpen, className }: SessionSummaryModalPr
             },
             {
                 onSuccess: async (data) => {
+                    const numericPlanId = Number(activeStudyPlanId);
+                    const resolvedPlanId = Number.isFinite(numericPlanId) && numericPlanId > 0
+                        ? numericPlanId
+                        : undefined;
+
+                    // Prevent stale "active session" data from restoring a just-ended session.
+                    await Promise.allSettled([
+                        queryClient.cancelQueries({ queryKey: queryKeys.studySessions.active() }),
+                        resolvedPlanId
+                            ? queryClient.cancelQueries({ queryKey: queryKeys.studySessions.active(resolvedPlanId) })
+                            : Promise.resolve(),
+                    ]);
+
+                    queryClient.setQueriesData(
+                        { queryKey: queryKeys.studySessions.active() },
+                        () => null
+                    );
+
                     completeSession(data);
 
                     // Don't block UX transition on cache work; refresh in background.

@@ -14,6 +14,7 @@ import {
     useChatConversations,
     useChatHistory,
     useCreateChatConversation,
+    useDeleteChatConversation,
     useSendChatMessage,
 } from '../api';
 import { mapConversationDto, mapHistoryMessageDto } from '../utils/mappers';
@@ -41,6 +42,7 @@ const initialState: ChatState = {
     isConversationLoading: false,
     isHistoryLoading: false,
     isCreatingConversation: false,
+    isDeletingConversation: false,
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -234,6 +236,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const historyQuery = useChatHistory(state.selectedConversationId);
     const sendMessageMutation = useSendChatMessage();
     const createConversationMutation = useCreateChatConversation();
+    const deleteConversationMutation = useDeleteChatConversation();
 
     const selectedConversation = useMemo(
         () => state.conversations.find((item) => item.id === state.selectedConversationId) ?? null,
@@ -301,7 +304,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const createConversation = useCallback(async () => {
         const activeRoadmapId = effectiveRoadmapId ?? selectedConversation?.roadmapId ?? null;
         if (!activeRoadmapId) {
-            toast.error('Không xác định được roadmap để tạo conversation.');
+            toast.error('Unable to determine roadmap for creating a conversation.');
             return;
         }
 
@@ -324,7 +327,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 }),
             ]);
         } catch (error) {
-            toast.apiError(error, 'Tạo conversation thất bại');
+            toast.apiError(error, 'Failed to create conversation');
         }
     }, [
         createConversationMutation,
@@ -345,7 +348,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             const activeRoadmapId = effectiveRoadmapId ?? selectedConversation?.roadmapId ?? null;
             if (!activeRoadmapId) {
-                toast.error('Không xác định được roadmap từ URL hiện tại.');
+                toast.error('Unable to determine roadmap from the current route.');
                 return;
             }
 
@@ -362,7 +365,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                         selectedConversationId: createdConversation.conversationId,
                     }));
                 } catch (error) {
-                    toast.apiError(error, 'Không thể tạo conversation mới');
+                    toast.apiError(error, 'Unable to create a new conversation');
                     return;
                 }
             }
@@ -458,7 +461,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 ]);
             } catch (error) {
                 setState((prev) => ({ ...prev, isLoading: false }));
-                toast.apiError(error, 'Gửi tin nhắn thất bại');
+                toast.apiError(error, 'Failed to send message');
             }
         },
         [
@@ -516,18 +519,50 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }));
     }, []);
 
-    const clearHistory = useCallback(() => {
-        if (state.selectedConversationId) {
-            queryClient.invalidateQueries({
-                queryKey: queryKeys.chat.history(state.selectedConversationId),
-            });
+    const deleteConversation = useCallback(async (conversationId: string) => {
+        if (!conversationId) {
+            return;
         }
 
-        setState((prev) => ({
-            ...prev,
-            messages: [],
-        }));
-    }, [queryClient, state.selectedConversationId]);
+        try {
+            await deleteConversationMutation.mutateAsync(conversationId);
+
+            setState((prev) => {
+                const nextConversations = prev.conversations.filter((item) => item.id !== conversationId);
+                const nextSelectedConversationId =
+                    prev.selectedConversationId === conversationId
+                        ? (nextConversations[0]?.id ?? null)
+                        : prev.selectedConversationId;
+
+                return {
+                    ...prev,
+                    conversations: nextConversations,
+                    selectedConversationId: nextSelectedConversationId,
+                    messages: prev.selectedConversationId === conversationId ? [] : prev.messages,
+                };
+            });
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: queryKeys.chat.all }),
+                queryClient.invalidateQueries({
+                    queryKey: queryKeys.chat.history(conversationId),
+                }),
+            ]);
+
+            toast.success('Conversation deleted successfully');
+        } catch (error) {
+            toast.apiError(error, 'Failed to delete conversation');
+        }
+    }, [deleteConversationMutation, queryClient]);
+
+    const clearHistory = useCallback(async () => {
+        const conversationId = state.selectedConversationId;
+        if (!conversationId) {
+            return;
+        }
+
+        await deleteConversation(conversationId);
+    }, [deleteConversation, state.selectedConversationId]);
 
     const contextValue: ChatContextType = {
         ...state,
@@ -537,6 +572,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         isConversationLoading: conversationsQuery.isLoading,
         isHistoryLoading: historyQuery.isLoading,
         isCreatingConversation: createConversationMutation.isPending,
+        isDeletingConversation: deleteConversationMutation.isPending,
         openChat,
         closeChat,
         toggleChat,
@@ -548,6 +584,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         closeAttachmentPicker,
         selectConversation,
         createConversation,
+        deleteConversation,
         clearHistory,
     };
 

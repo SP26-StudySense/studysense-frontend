@@ -94,9 +94,11 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
         resolvedSelectedPlanId !== resolvedActivePlanId;
 
     // Check for active session on mount (restore interrupted sessions)
+    const shouldCheckActiveSession = !showSummary && !showSuccess;
+
     const { data: activeSession, isLoading: isCheckingActive } = useActiveSession(resolvedActivePlanId, {
         // In plan-scoped pages, always re-check with planId to avoid stale cross-roadmap session state.
-        enabled: hasPlanScopedContext || !sessionId,
+        enabled: shouldCheckActiveSession && (hasPlanScopedContext || !sessionId),
     });
 
     const isCrossPlanActiveSession =
@@ -106,6 +108,12 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
         activeSession.planId !== resolvedActivePlanId;
 
     useEffect(() => {
+        // During summary/success transitions, ignore active-session refetch results
+        // to avoid restoring a just-ended session when backend state is eventually consistent.
+        if (showSummary || showSuccess) {
+            return;
+        }
+
         if (isCrossPlanActiveSession) {
             resetSessionFlow();
             return;
@@ -140,6 +148,8 @@ export function SessionsPage({ studyPlanId }: SessionsPageProps = {}) {
         resetSessionFlow,
         sessionId,
         setActiveSessionFromApi,
+        showSuccess,
+        showSummary,
     ]);
 
     // Get display tasks
