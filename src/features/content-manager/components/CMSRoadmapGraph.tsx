@@ -11,6 +11,7 @@ interface CMSRoadmapGraphProps {
   selectedNodeId: number | string | null;
   reformatSignal?: number;
   onNodeSelect: (nodeId: number | string | null) => void;
+  onNodeQuickEdit?: (nodeId: number | string, clientX: number, clientY: number) => void;
   className?: string;
   style?: CSSProperties;
 }
@@ -136,6 +137,7 @@ export function CMSRoadmapGraph({
   selectedNodeId,
   reformatSignal,
   onNodeSelect,
+  onNodeQuickEdit,
   className,
   style,
 }: CMSRoadmapGraphProps) {
@@ -509,6 +511,15 @@ export function CMSRoadmapGraph({
               data-node={key}
               onMouseDown={(e) => handleNodeMouseDown(e, key)}
               onClick={(e) => handleNodeClick(e, node)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                const id = node.id != null ? node.id : node.clientId!;
+                if (typeof window !== "undefined" && (e as any).clientX) {
+                  const ev = e as React.MouseEvent;
+                  // prefer parent handler if provided
+                    onNodeQuickEdit?.(id, ev.clientX, ev.clientY);
+                }
+              }}
               className={cn(
                 "absolute w-[180px] rounded-xl border-2 p-3 shadow-md select-none",
                 config.bg,

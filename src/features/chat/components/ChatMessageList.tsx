@@ -147,12 +147,12 @@ function MessageBubble({
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                            p: ({ children }) => <p className="text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
-                            ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 text-sm">{children}</ul>,
-                            ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 text-sm">{children}</ol>,
-                            li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                            strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                            code: ({ children }) => (
+                                    p: ({ children }: { children?: React.ReactNode }) => <p className="text-sm leading-relaxed mb-2 last:mb-0">{children}</p>,
+                                    ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc pl-5 space-y-1 text-sm">{children}</ul>,
+                                    ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-5 space-y-1 text-sm">{children}</ol>,
+                                    li: ({ children }: { children?: React.ReactNode }) => <li className="leading-relaxed">{children}</li>,
+                                    strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-semibold">{children}</strong>,
+                                    code: ({ children }: { children?: React.ReactNode }) => (
                                 <code className={cn(
                                     "rounded px-1 py-0.5 text-[12px]",
                                     isUser ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-800'
@@ -160,7 +160,7 @@ function MessageBubble({
                                     {children}
                                 </code>
                             ),
-                            a: ({ href, children }) => (
+                                    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
                                 <a
                                     href={href}
                                     target="_blank"
