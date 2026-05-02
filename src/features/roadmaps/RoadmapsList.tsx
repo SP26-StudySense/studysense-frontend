@@ -73,6 +73,8 @@ function useRoadmapNodeCounts(roadmapIds: number[]) {
         })),
     });
 
+    const isLoading = queries.some((query) => query.isLoading || query.isFetching);
+
     const nodeCounts = useMemo(() => {
         const map = new Map<number, number>();
         queries.forEach((q) => {
@@ -83,7 +85,7 @@ function useRoadmapNodeCounts(roadmapIds: number[]) {
         return map;
     }, [queries]);
 
-    return nodeCounts;
+    return { nodeCounts, isLoading };
 }
 
 function useStudyPlanModuleStats(studyPlanIds: number[]) {
@@ -104,7 +106,9 @@ function useStudyPlanModuleStats(studyPlanIds: number[]) {
         })),
     });
 
-    return useMemo(() => {
+    const isLoading = queries.some((query) => query.isLoading || query.isFetching);
+
+    const moduleStats = useMemo(() => {
         const map = new Map<number, { completedModules: number; totalModules: number }>();
         queries.forEach((q) => {
             if (q.data) {
@@ -116,6 +120,8 @@ function useStudyPlanModuleStats(studyPlanIds: number[]) {
         });
         return map;
     }, [queries]);
+
+    return { moduleStats, isLoading };
 }
 
 export function RoadmapsList() {
@@ -135,6 +141,7 @@ export function RoadmapsList() {
     const { 
         data: studyPlans = [], 
         isLoading: isLoadingStudyPlans, 
+        isFetching: isFetchingStudyPlans,
         error: studyPlansError 
     } = useStudyPlans(isAuthenticated);
 
@@ -170,7 +177,7 @@ export function RoadmapsList() {
     );
 
     // Fetch roadmaps from API
-    const { data: roadmapsData, isLoading, error } = useRoadmaps({
+    const { data: roadmapsData, isLoading, isFetching, error } = useRoadmaps({
         pageIndex: 1,
         pageSize: 100,
         q: exploreFilters.search || undefined,
@@ -186,7 +193,7 @@ export function RoadmapsList() {
     }, [roadmapsData]);
 
     // Fetch node counts for all roadmaps
-    const nodeCounts = useRoadmapNodeCounts(roadmapIds);
+    const { nodeCounts, isLoading: isNodeCountsLoading } = useRoadmapNodeCounts(roadmapIds);
 
     // Map API data to template format with node counts
     const apiTemplates = useMemo(() => {
@@ -206,13 +213,17 @@ export function RoadmapsList() {
 
     // Filter templates based on category and subject selection
     const filteredTemplates = useMemo(() => {
+        // Don't apply category filter while loading subjects for a new category
+        // This prevents showing "No Roadmaps Found" during the refetch
+        const shouldApplyCategoryFilter = exploreFilters.categoryId && !isSubjectsLoading;
+        
         return apiTemplates.filter((roadmap) => {
             if (exploreFilters.subjectId && roadmap.subjectId !== exploreFilters.subjectId) {
                 return false;
             }
 
             if (
-                exploreFilters.categoryId &&
+                shouldApplyCategoryFilter &&
                 selectedCategorySubjectIds &&
                 !selectedCategorySubjectIds.has(roadmap.subjectId)
             ) {
@@ -221,10 +232,10 @@ export function RoadmapsList() {
 
             return true;
         });
-    }, [apiTemplates, exploreFilters.categoryId, exploreFilters.subjectId, selectedCategorySubjectIds]);
+    }, [apiTemplates, exploreFilters.categoryId, exploreFilters.subjectId, selectedCategorySubjectIds, isSubjectsLoading]);
 
     const studyPlanIds = useMemo(() => studyPlans.map((plan) => plan.id), [studyPlans]);
-    const studyPlanModuleStats = useStudyPlanModuleStats(studyPlanIds);
+    const { moduleStats: studyPlanModuleStats, isLoading: isStudyPlanStatsLoading } = useStudyPlanModuleStats(studyPlanIds);
 
     // Map study plans to learning roadmaps - NO FILTER for My Learning Roadmaps
     const learningRoadmaps = useMemo(
@@ -265,6 +276,11 @@ export function RoadmapsList() {
     const activeFilters = activeTab === 'explore' ? exploreFilters : myRoadmapFilters;
     const setActiveFilters = activeTab === 'explore' ? setExploreFilters : setMyRoadmapFilters;
     const hasActiveFilters = Boolean(activeFilters.search || activeFilters.categoryId || activeFilters.subjectId);
+    
+    // Show loading for Explore tab whenever subjects are loading (for any reason)
+    // This ensures no "No Roadmaps Found" flash when changing category/subject filters
+    const isExploreCardsLoading = isLoading || isFetching || isNodeCountsLoading || isSubjectsLoading;
+    const isMyRoadmapCardsLoading = isLoadingStudyPlans || isFetchingStudyPlans || isStudyPlanStatsLoading;
 
     return (
         <div className="space-y-8">
@@ -301,7 +317,7 @@ export function RoadmapsList() {
                     >
                         <span>Explore Roadmaps</span>
                         <span className="inline-flex min-w-6 justify-center rounded-full bg-white/80 px-1.5 py-0.5 text-xs text-neutral-700">
-                            {isLoading ? '...' : filteredTemplates.length}
+                            {isExploreCardsLoading ? '...' : filteredTemplates.length}
                         </span>
                     </button>
 
@@ -316,7 +332,7 @@ export function RoadmapsList() {
                         >
                             <span>My Roadmaps</span>
                             <span className="inline-flex min-w-6 justify-center rounded-full bg-white/80 px-1.5 py-0.5 text-xs text-neutral-700">
-                                {isLoadingStudyPlans ? '...' : filteredLearningRoadmaps.length}
+                                {isMyRoadmapCardsLoading ? '...' : filteredLearningRoadmaps.length}
                             </span>
                         </button>
                     )}
@@ -326,7 +342,7 @@ export function RoadmapsList() {
             {/* Tab Content */}
             {activeTab === 'my-roadmap' ? (
                 <section className="space-y-4">
-                    {isLoadingStudyPlans ? (
+                    {isMyRoadmapCardsLoading ? (
                         <div className="flex items-center justify-center py-12">
                             <LoadingSpinner size="md" />
                         </div>
@@ -350,7 +366,7 @@ export function RoadmapsList() {
                 </section>
             ) : (
                 <section className="space-y-4">
-                    {isLoading ? (
+                    {isExploreCardsLoading ? (
                         <div className="flex items-center justify-center py-16">
                             <LoadingSpinner size="md" />
                         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Plus, Minus, RotateCcw, Loader2, X, Circle, Clock, FileText, BookOpen, Video, Play, Dumbbell } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { useRoadmapGraph, useNodeContents, NodeDifficulty, RoadmapNodeDTO, RoadmapEdgeDTO, NodeContentItemDTO } from '../api';
@@ -146,6 +146,10 @@ export function RoadmapPreviewGraph({ roadmapId, className, disableContentLinks 
     );
     const visibleNodeContents = useMemo(() => nodeContents ?? [], [nodeContents]);
 
+    useEffect(() => {
+        setSelectedNode(null);
+    }, [roadmapId]);
+
     const NODE_WIDTH = 180;
     const NODE_HEIGHT = 70;
 
@@ -195,7 +199,7 @@ export function RoadmapPreviewGraph({ roadmapId, className, disableContentLinks 
         setSelectedNode(node);
     };
 
-    if (isLoading) {
+    if (isLoading || !graph) {
         return (
             <div className={cn("flex items-center justify-center h-full bg-neutral-50", className)}>
                 <Loader2 className="h-8 w-8 animate-spin text-[#00bae2]" />
@@ -203,7 +207,7 @@ export function RoadmapPreviewGraph({ roadmapId, className, disableContentLinks 
         );
     }
 
-    if (error || !graph) {
+    if (error) {
         return (
             <div className={cn("flex items-center justify-center h-full bg-neutral-50", className)}>
                 <p className="text-neutral-500">Failed to load roadmap graph</p>

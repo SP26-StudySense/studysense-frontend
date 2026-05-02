@@ -18,9 +18,10 @@ import {
 } from "lucide-react";
 import { CMSRoadmapGraph } from "../components/CMSRoadmapGraph";
 import { ContentManagerLoading } from "../components";
+import { QuickEditPopover } from "../components/QuickEditPopover";
+import { toast } from "@/shared/lib";
 import { useRoadmapDetail, useNodeContents, useQuizzesByNode } from "../api/queries";
 import { useCreateQuiz, useDeleteQuiz, useSyncRoadmapGraph, useUpdateQuiz } from "../api/mutations";
-import { toast } from "@/shared/lib";
 import type {
   RoadmapDetail,
   RoadmapNode,
@@ -637,7 +638,7 @@ function NodeDetailSection({
             </div>
             <div>
               <label className="block text-xs font-medium text-neutral-700 mb-1">
-                URL <span className="text-red-500">*</span>
+                URL
               </label>
               <input
                 type="url"
@@ -702,7 +703,7 @@ function NodeDetailSection({
               </button>
               <button
                 onClick={handleAddContent}
-                disabled={!contentForm.title || !contentForm.url}
+                disabled={!contentForm.title}
                 className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Content
@@ -777,7 +778,7 @@ function NodeDetailSection({
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-neutral-700 mb-1">URL <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">URL</label>
                       <input
                         type="url"
                         value={editContentForm.url ?? ""}
@@ -835,7 +836,7 @@ function NodeDetailSection({
                       </button>
                       <button
                         onClick={handleSaveEditContent}
-                        disabled={!editContentForm.title || !editContentForm.url}
+                        disabled={!editContentForm.title}
                         className="flex-1 rounded-lg bg-gradient-to-r from-[#fec5fb] to-[#00bae2] px-3 py-2 text-xs font-medium text-neutral-900 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Check className="inline h-3.5 w-3.5 mr-1" />
@@ -1663,6 +1664,7 @@ export function RoadmapDetailPage() {
   });
   const [selectedNodeId, setSelectedNodeId] = useState<number | string | null>(null);
   const [reformatSignal, setReformatSignal] = useState<number | null>(null);
+  const [activeEditorTab, setActiveEditorTab] = useState<"details" | "connectors">("details");
 
   // Track which nodes had their contents loaded from the API
   const loadedNodeIdsRef = useRef<Set<number>>(new Set());
@@ -1763,6 +1765,51 @@ export function RoadmapDetailPage() {
     updateNodes(normalizeNodeOrder(newNodes));
     setSelectedNodeId(newNode.clientId!);
   }, [editedData, roadmapId, selectedNodeId, updateNodes]);
+
+  useEffect(() => {
+    if (selectedNodeId != null) {
+      setActiveEditorTab("details");
+    }
+  }, [selectedNodeId]);
+
+  const [quickEdit, setQuickEdit] = useState<{
+    open: boolean;
+    x: number;
+    y: number;
+    node: RoadmapNode | null;
+  }>({ open: false, x: 0, y: 0, node: null });
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (document.activeElement && document.activeElement.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || (document.activeElement as HTMLElement)?.isContentEditable) return;
+
+      const currentSelectedNode = editedData?.nodes.find((n) => getNodeKey(n) === String(selectedNodeId)) ?? null;
+
+      if (e.key === "e" || e.key === "E") {
+        if (!currentSelectedNode) {
+          toast.warning("Select a node first to open the editor");
+          return;
+        }
+        setSelectedNodeId(currentSelectedNode.id ?? currentSelectedNode.clientId!);
+      }
+      if (e.key === "q" || e.key === "Q") {
+        if (!currentSelectedNode) {
+          toast.warning("Select a node first to quick edit");
+          return;
+        }
+        const x = Math.round(window.innerWidth / 2 - 130);
+        const y = Math.round(window.innerHeight / 2 - 40);
+        setQuickEdit({ open: true, x, y, node: currentSelectedNode });
+      }
+      if (e.key === "Escape") {
+        setSelectedNodeId(null);
+        setQuickEdit({ open: false, x: 0, y: 0, node: null });
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [selectedNodeId, editedData]);
 
   const handleReformatGraph = useCallback(() => {
     setReformatSignal((prev) => (prev ?? 0) + 1);
@@ -2250,16 +2297,16 @@ export function RoadmapDetailPage() {
 
       {/* ── Graph Editor ── */}
       <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+        <div className="flex flex-col gap-4 border-b border-neutral-100 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-base font-bold text-neutral-900">
               Graph Editor
             </h2>
             <p className="text-xs text-neutral-500 mt-0.5">
-              Visualize and manage nodes and connections
+              Visualize nodes and switch between node detail or connector editing
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleReformatGraph}
               className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-all hover:bg-neutral-50"
@@ -2277,74 +2324,111 @@ export function RoadmapDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-5 h-[520px]">
+        <div className="grid min-h-[720px] lg:grid-cols-2">
           {/* Left: Graph */}
-          <div ref={graphColRef} className="col-span-3 p-4 border-r border-neutral-100 h-full">
+          <div ref={graphColRef} className="h-full border-b border-neutral-100 lg:border-b-0 lg:border-r border-neutral-100 p-4">
             <CMSRoadmapGraph
               nodes={editedData.nodes}
               edges={editedData.edges}
               selectedNodeId={selectedNodeId}
               reformatSignal={reformatSignal ?? undefined}
               onNodeSelect={setSelectedNodeId}
-              className="h-full"
+              onNodeQuickEdit={(nodeId, clientX, clientY) => {
+                const node = editedData.nodes.find((n) => getNodeKey(n) === String(nodeId));
+                if (!node) return;
+                setQuickEdit({ open: true, x: clientX, y: clientY, node });
+              }}
+              className="h-full min-h-[620px]"
             />
           </div>
 
-          {/* Right: Connectors */}
-          <div className="col-span-2 h-full overflow-hidden">
-            <ConnectorPanel
-              nodes={editedData.nodes}
-              edges={editedData.edges}
-              roadmapId={roadmapId}
-              selectedNodeId={selectedNodeId}
-              onAddEdge={handleAddEdge}
-              onDeleteEdge={handleDeleteEdge}
-            />
+          {/* Right: Detail / Connector switcher */}
+          <div className="h-full overflow-hidden">
+            <div className="flex items-center gap-2 border-b border-neutral-100 p-4">
+              <button
+                onClick={() => setActiveEditorTab("details")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                  activeEditorTab === "details"
+                    ? "bg-[#00bae2]/10 text-[#008cae]"
+                    : "text-neutral-500 hover:bg-neutral-50"
+                }`}
+              >
+                Node Detail
+              </button>
+              <button
+                onClick={() => setActiveEditorTab("connectors")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                  activeEditorTab === "connectors"
+                    ? "bg-[#00bae2]/10 text-[#008cae]"
+                    : "text-neutral-500 hover:bg-neutral-50"
+                }`}
+              >
+                Connector
+              </button>
+            </div>
+
+            <div className="h-[calc(100%-65px)] overflow-y-auto p-4">
+              {activeEditorTab === "details" ? (
+                selectedNode ? (
+                  <NodeDetailSection
+                    key={getNodeKey(selectedNode)}
+                    node={selectedNode}
+                    roadmapId={roadmapId}
+                    deletedContentIds={deletedContentIds}
+                    hasPendingChanges={hasUnsavedChanges}
+                    onUpdate={(updates, options) =>
+                      handleNodeUpdate(
+                        selectedNode.id ?? selectedNode.clientId!,
+                        updates,
+                        options
+                      )
+                    }
+                    onMarkContentDeleted={handleMarkContentDeleted}
+                    onUnmarkContentDeleted={handleUnmarkContentDeleted}
+                    onDeleteNode={() =>
+                      handleDeleteNode(selectedNode.id ?? selectedNode.clientId!)
+                    }
+                    onContentsLoaded={(nodeId) => {
+                      loadedNodeIdsRef.current.add(nodeId);
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full min-h-[620px] items-center justify-center text-center">
+                    <div>
+                      <CircleDot className="mx-auto mb-3 h-10 w-10 text-neutral-300" />
+                      <p className="text-sm font-medium text-neutral-500">
+                        Select a node to view and edit its details
+                      </p>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <ConnectorPanel
+                  nodes={editedData.nodes}
+                  edges={editedData.edges}
+                  roadmapId={roadmapId}
+                  selectedNodeId={selectedNodeId}
+                  onAddEdge={handleAddEdge}
+                  onDeleteEdge={handleDeleteEdge}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Node Detail (below graph, visible when node selected) ── */}
-      {selectedNode && (
-        <div
-          key={getNodeKey(selectedNode)}
-          className="rounded-2xl border border-[#00bae2]/30 bg-white shadow-sm p-6 animate-in fade-in slide-in-from-bottom-2 duration-200"
-        >
-          <NodeDetailSection
-            node={selectedNode}
-            roadmapId={roadmapId}
-            deletedContentIds={deletedContentIds}
-            hasPendingChanges={hasUnsavedChanges}
-            onUpdate={(updates, options) =>
-              handleNodeUpdate(
-                selectedNode.id ?? selectedNode.clientId!,
-                updates,
-                options
-              )
-            }
-            onMarkContentDeleted={handleMarkContentDeleted}
-            onUnmarkContentDeleted={handleUnmarkContentDeleted}
-            onDeleteNode={() =>
-              handleDeleteNode(selectedNode.id ?? selectedNode.clientId!)
-            }
-            onContentsLoaded={(nodeId) => {
-              loadedNodeIdsRef.current.add(nodeId);
-            }}
-          />
-        </div>
-      )}
-
-      {/* ── Empty state hint ── */}
-      {!selectedNode && (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center">
-          <CircleDot className="mx-auto h-10 w-10 text-neutral-300 mb-3" />
-          <p className="text-sm font-medium text-neutral-500">
-            Click on a node in the graph to view and edit its details
-          </p>
-          <p className="text-xs text-neutral-400 mt-1">
-            Node contents, basic information, and more will appear here
-          </p>
-        </div>
+      {/* Quick edit popover */}
+      {quickEdit.open && quickEdit.node && (
+        <QuickEditPopover
+          x={quickEdit.x}
+          y={quickEdit.y}
+          initialTitle={quickEdit.node.title}
+          onClose={() => setQuickEdit({ open: false, x: 0, y: 0, node: null })}
+          onSave={(title) => {
+            const id = quickEdit.node!.id != null ? quickEdit.node!.id : quickEdit.node!.clientId!;
+            handleNodeUpdate(id, { title });
+          }}
+        />
       )}
     </div>
   );
