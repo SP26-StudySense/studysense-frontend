@@ -16,7 +16,6 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 
 export function CalendarView({ selectedDate, onDateSelect, taskDates = [], className }: CalendarViewProps) {
-    const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly');
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate || new Date()));
 
     const getDaysInMonth = (date: Date) => {
@@ -89,34 +88,6 @@ export function CalendarView({ selectedDate, onDateSelect, taskDates = [], class
             "bg-transparent",
             className
         )}>
-            {/* View Toggle */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex gap-1 rounded-xl bg-neutral-100/80 p-1">
-                    <button
-                        onClick={() => setViewMode('monthly')}
-                        className={cn(
-                            "px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300",
-                            viewMode === 'monthly'
-                                ? "bg-white text-neutral-900 shadow-md"
-                                : "text-neutral-500 hover:text-neutral-700"
-                        )}
-                    >
-                        Monthly View
-                    </button>
-                    <button
-                        onClick={() => setViewMode('weekly')}
-                        className={cn(
-                            "px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300",
-                            viewMode === 'weekly'
-                                ? "bg-white text-neutral-900 shadow-md"
-                                : "text-neutral-500 hover:text-neutral-700"
-                        )}
-                    >
-                        Weekly View
-                    </button>
-                </div>
-            </div>
-
             {/* Month Navigation */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
@@ -178,14 +149,11 @@ export function CalendarView({ selectedDate, onDateSelect, taskDates = [], class
                                 )}
                             >
                                 {date.getDate()}
-                                {hasTask(date) && !isSelected(date) && (
-                                    <div className="absolute bottom-1.5 w-1 h-1 rounded-full bg-violet-500" />
-                                )}
-                                {hasTask(date) && isSelected(date) && (
-                                    <div className="absolute bottom-1.5 flex gap-0.5">
-                                        <div className="w-1 h-1 rounded-full bg-white/80" />
-                                        <div className="w-1 h-1 rounded-full bg-white/80" />
-                                    </div>
+                                {hasTask(date) && (
+                                    <div className={cn(
+                                        "absolute bottom-1.5 w-1 h-1 rounded-full",
+                                        isSelected(date) ? "bg-white/80" : "bg-violet-500"
+                                    )} />
                                 )}
                             </button>
                         )}

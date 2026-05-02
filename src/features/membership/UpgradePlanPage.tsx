@@ -52,16 +52,16 @@ type BillingCycle = 'monthly' | 'sixmonths';
 const pricingConfig: Record<BillingCycle, { label: string; price: string; perMonth: string; note: string; savings?: string }> = {
     monthly: {
         label: '1 Month',
-        price: '9.999',
-        perMonth: '9.999 ₫/month',
+        price: '19.999',
+        perMonth: '19.999 ₫/month',
         note: 'Billed monthly. Cancel anytime.',
     },
     sixmonths: {
         label: '6 Months',
-        price: '49.999',
-        perMonth: '~8.333 ₫/month',
+        price: '99.999',
+        perMonth: '~16.666 ₫/month',
         note: 'Billed once every 6 months.',
-        savings: 'Save 10.000 ₫',
+        savings: 'Save 20.000 ₫',
     },
 };
 
