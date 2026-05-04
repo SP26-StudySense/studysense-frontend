@@ -22,6 +22,7 @@ export const STUDY_PLAN = {
   MAX_DAILY_HOURS: 12,
   MIN_DAILY_HOURS: 0.5,
   DEFAULT_DAILY_HOURS: 2,
+  MAX_JOINED_ROADMAPS: 2,
 } as const;
 
 // API constants

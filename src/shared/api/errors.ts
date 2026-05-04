@@ -146,21 +146,21 @@ export function parseApiError(error: unknown): ApiException {
       errors?: ApiError[];
     };
 
+    // Timeout from Axios can have no response object.
+    if (error.code === 'ECONNABORTED') {
+      return new ApiException(
+        ErrorMessages[ErrorCode.TIMEOUT],
+        0,
+        ErrorCode.TIMEOUT
+      );
+    }
+
     // Network error
     if (!error.response) {
       return new ApiException(
         ErrorMessages[ErrorCode.NETWORK_ERROR],
         0,
         ErrorCode.NETWORK_ERROR
-      );
-    }
-
-    // Timeout
-    if (error.code === 'ECONNABORTED') {
-      return new ApiException(
-        ErrorMessages[ErrorCode.TIMEOUT],
-        0,
-        ErrorCode.TIMEOUT
       );
     }
 

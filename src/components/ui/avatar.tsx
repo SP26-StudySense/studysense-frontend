@@ -27,10 +27,8 @@ const AvatarImage = React.forwardRef<
     <AvatarPrimitive.Image
         ref={ref}
         className={cn("aspect-square h-full w-full object-cover", className)}
-        onLoadingStatusChange={(status) => {
-            console.log('[AvatarImage] Loading status:', status, 'src:', props.src);
-            onLoadingStatusChange?.(status);
-        }}
+        referrerPolicy="no-referrer"
+        onLoadingStatusChange={onLoadingStatusChange}
         {...props}
     />
 ))

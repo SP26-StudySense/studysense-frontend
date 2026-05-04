@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
-
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { forgotPasswordSchema, type ForgotPasswordInput } from '../schema/auth.schema';
 import { useForgotPassword } from '../api/mutations';
 
@@ -100,12 +100,14 @@ export const ForgotPasswordForm = () => {
 
                 <Button
                     type="submit"
-                    className="w-full rounded-lg bg-neutral-900 py-6 text-sm font-semibold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 hover:-translate-y-0.5 transition-all"
+                    variant="brand"
+                    size="xl"
+                    className="w-full"
                     disabled={isSubmitting || forgotPasswordMutation.isPending}
                 >
                     {isSubmitting || forgotPasswordMutation.isPending ? (
                         <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <LoadingSpinner size="sm" />
                             Sending...
                         </>
                     ) : (

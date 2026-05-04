@@ -1,2 +1,10 @@
-// Re-export the landing page as the root page
-export { default } from './(public)/page';
+import { LandingPage } from '@/features/landing/LandingPage';
+import { PublicLayout } from '@/components/layout/PublicLayout';
+
+export default function Page() {
+    return (
+        <PublicLayout>
+            <LandingPage />
+        </PublicLayout>
+    );
+}

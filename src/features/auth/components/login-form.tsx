@@ -4,14 +4,17 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import Link from 'next/link';
-import { Chrome, Loader2, AlertCircle } from 'lucide-react';
+import { Chrome, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 import { loginSchema, type LoginInput } from '../schema/auth.schema';
 import { useLogin, useGoogleLogin } from '../api/mutations';
+import { useTransitionRouter } from '@/shared/context/TransitionContext';
 
 export const LoginForm = () => {
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -27,6 +30,7 @@ export const LoginForm = () => {
 
   const loginMutation = useLogin();
   const { loginWithGoogle } = useGoogleLogin();
+  const { navigateWithTransition } = useTransitionRouter();
 
   const onSubmit = async (data: LoginInput) => {
     setApiError(null);
@@ -46,7 +50,7 @@ export const LoginForm = () => {
   };
 
   return (
-    <div className="glass-panel w-full rounded-2xl border border-neutral-200 bg-white/50 p-8 shadow-sm backdrop-blur-xl">
+    <div className="glass-panel w-full rounded-3xl border border-white/40 bg-white/60 p-8 shadow-xl backdrop-blur-xl">
       {apiError && (
         <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
           <AlertCircle className="h-4 w-4" />
@@ -61,7 +65,7 @@ export const LoginForm = () => {
             {...register('emailOrUserName')}
             type="text"
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10"
           />
           {errors.emailOrUserName && (
             <p className="text-xs text-red-500">{errors.emailOrUserName.message}</p>
@@ -78,12 +82,21 @@ export const LoginForm = () => {
               Forgot password?
             </Link>
           </div>
-          <input
-            {...register('password')}
-            type="password"
-            placeholder="••••••••"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-          />
+          <div className="relative">
+            <input
+              {...register('password')}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="w-full rounded-xl border border-neutral-200 bg-white/50 px-4 py-3 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 focus:border-[#00bae2] focus:ring-4 focus:ring-[#00bae2]/10 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && (
             <p className="text-xs text-red-500">{errors.password.message}</p>
           )}
@@ -91,12 +104,14 @@ export const LoginForm = () => {
 
         <Button
           type="submit"
-          className="w-full rounded-lg bg-neutral-900 py-6 text-sm font-semibold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 hover:-translate-y-0.5 transition-all"
+          variant="brand"
+          size="xl"
+          className="w-full"
           disabled={isSubmitting || loginMutation.isPending}
         >
           {isSubmitting || loginMutation.isPending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoadingSpinner size="sm" />
               Signing in...
             </>
           ) : (
@@ -117,7 +132,7 @@ export const LoginForm = () => {
       <Button
         type="button"
         variant="outline"
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white py-5 text-neutral-800 hover:bg-neutral-50 hover:text-neutral-900"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/50 py-4 text-neutral-800 hover:bg-white hover:text-neutral-900 hover:shadow-md transition-all duration-300"
         onClick={handleGoogleLogin}
       >
         <Chrome className="h-4 w-4 text-neutral-700" />
@@ -126,9 +141,13 @@ export const LoginForm = () => {
 
       <p className="mt-8 text-center text-sm text-neutral-500">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-semibold text-neutral-900 hover:underline">
+        <button
+          type="button"
+          onClick={() => navigateWithTransition('/register')}
+          className="font-semibold text-neutral-900 hover:underline"
+        >
           Sign up
-        </Link>
+        </button>
       </p>
     </div>
   );

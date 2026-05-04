@@ -27,23 +27,24 @@ function ConfirmEmailContent() {
         }
 
         // Call confirm email API
-        confirmEmailMutation.mutate(
-            { userId, token, returnUrl },
-            {
-                onSuccess: (data) => {
-                    setStatus('success');
-                    setMessage(data.message || 'Your email has been confirmed successfully!');
-                    // Redirect after 3 seconds
-                    setTimeout(() => {
-                        router.push(`/login?confirmed=true`);
-                    }, 3000);
-                },
-                onError: (error) => {
-                    setStatus('error');
-                    setMessage(error instanceof Error ? error.message : 'Failed to confirm email. The link may have expired.');
-                },
-            }
-        );
+       confirmEmailMutation.mutate(
+  { userId, token }, // không gửi returnUrl lên BE
+  {
+    onSuccess: (data) => {
+      setStatus('success');
+      setMessage(data?.message || 'Your email has been confirmed successfully!');
+      setTimeout(() => router.push(returnUrl), 3000);
+    },
+    onError: (error) => {
+      setStatus('error');
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to confirm email. The link may have expired.'
+      );
+    },
+  }
+);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userId, token]);
 

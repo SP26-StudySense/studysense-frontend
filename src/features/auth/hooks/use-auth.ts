@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { routes } from '@/shared/config/routes';
 import { queryKeys } from '@/shared/api/query-keys';
 import { isAuthenticated } from '@/shared/api/client';
+import { clearAllSurveyDrafts } from '@/features/survey/hooks/useSurveyAutoSave';
 import { useCurrentUser } from '../api/queries';
 import { useLogin, useLogout, useRegister, useGoogleLogin } from '../api/mutations';
 import type { LoginRequest, RegisterRequest, User } from '../types';
@@ -16,6 +17,7 @@ interface UseAuthReturn {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isLoggingOut: boolean;
 
     // Actions
     login: (data: LoginRequest) => Promise<void>;
@@ -28,8 +30,6 @@ interface UseAuthReturn {
 }
 
 export function useAuth(): UseAuthReturn {
-    const router = useRouter();
-    const queryClient = useQueryClient();
 
     const { data: user, isLoading } = useCurrentUser();
     const loginMutation = useLogin();
@@ -52,6 +52,7 @@ export function useAuth(): UseAuthReturn {
     );
 
     const logout = useCallback(async () => {
+        clearAllSurveyDrafts();
         await logoutMutation.mutateAsync();
     }, [logoutMutation]);
 
@@ -70,6 +71,7 @@ export function useAuth(): UseAuthReturn {
         user: user ?? null,
         isAuthenticated: !!user,
         isLoading,
+        isLoggingOut: logoutMutation.isPending,
         login,
         register,
         logout,

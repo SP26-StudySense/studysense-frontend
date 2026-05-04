@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const nextConfig = {
   // React 19 features enabled by default in Next.js 16
   reactStrictMode: true,
@@ -19,6 +23,19 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '*.studysense.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+        port: '7243',
       },
     ],
   },
@@ -57,6 +74,16 @@ const nextConfig = {
         source: '/home',
         destination: '/',
         permanent: true,
+      },
+    ];
+  },
+
+  // Rewrites
+  async rewrites() {
+    return [
+      {
+        source: '/auth/reset-password',
+        destination: '/reset-password',
       },
     ];
   },

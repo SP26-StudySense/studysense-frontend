@@ -16,18 +16,18 @@ import Cookies from 'js-cookie';
 
 import { env } from '@/shared/config';
 import type { ApiResponse } from '@/shared/types';
-import { ApiException, parseApiError } from './errors';
+import { parseApiError } from './errors';
 
 // Token storage keys (still needed for client-side token management)
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
 const REFRESH_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_REFRESH_KEY;
+const USER_STORAGE_KEY = 'sss_user';
 
 // Create axios instance - now pointing to proxy endpoint
 const apiClient: AxiosInstance = axios.create({
   baseURL: '/api/proxy', // Proxy will forward to backend
   timeout: env.NEXT_PUBLIC_API_TIMEOUT,
   headers: {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
   },
   withCredentials: true, // Send cookies with requests
@@ -51,11 +51,22 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
-    // Handle 401 - Proxy couldn't refresh token, redirect to login
-    if (error.response?.status === 401) {
-      // Clear tokens and redirect to login
-      clearTokens();
-      
+    const requestUrl = String(error.config?.url || '');
+    const isAuthEndpoint =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/logout') ||
+      requestUrl.includes('/auth/refresh') ||
+      requestUrl.includes('/auth/forgot-password') ||
+      requestUrl.includes('/auth/reset-password') ||
+      requestUrl.includes('/auth/confirm-email');
+
+    // Proxy already handles refresh and one retry on 401.
+    // If we still get 401 here, treat session as expired.
+    // Skip redirect for auth form endpoints so invalid credentials do not reload the page.
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      // Do not clear tokens here: a single API 401 can be endpoint-specific
+      // and clearing cookies globally causes access token to disappear unexpectedly.
       if (typeof window !== 'undefined') {
         window.location.href = '/login?expired=true';
       }
@@ -85,6 +96,11 @@ export function setTokens(accessToken: string, refreshToken: string): void {
 export function clearTokens(): void {
   Cookies.remove(ACCESS_TOKEN_KEY);
   Cookies.remove(REFRESH_TOKEN_KEY);
+  Cookies.remove('refreshToken');
+
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }
 }
 
 export function getAccessToken(): string | undefined {

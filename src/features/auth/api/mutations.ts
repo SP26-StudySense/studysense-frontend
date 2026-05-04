@@ -2,17 +2,20 @@
  * Auth API mutations using React Query
  * Updated to match AUTH_API_README.md specifications
  */
+'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
 import Cookies from 'js-cookie';
 
-import { post, get } from '@/shared/api/client';
+import { post } from '@/shared/api/client';
 import { endpoints } from '@/shared/api/endpoints';
 import { queryKeys } from '@/shared/api/query-keys';
 import { routes } from '@/shared/config/routes';
 import { env } from '@/shared/config';
+import { toast } from '@/shared/lib';
+import { UserRole } from '@/shared/types';
 import type {
   LoginRequest,
   LoginResponse,
@@ -28,21 +31,62 @@ import type {
   GoogleLoginCallbackData,
   User,
 } from '../types';
+import { fetchPendingTriggerSurvey } from '@/features/survey/api/api';
+import { SurveyTriggerType } from '@/features/survey/api/types';
+import { SurveyTriggerReason } from '@/features/survey/types';
+import {
+  deactivateStoredPushToken,
+  syncOneSignalSubscriptionToBackend,
+} from '@/features/notification';
+import { recordDailyLoginIfNeeded } from '@/features/gamification/record-daily-login';
 
 // Token storage key from env
 const ACCESS_TOKEN_KEY = env.NEXT_PUBLIC_AUTH_TOKEN_KEY;
 const USER_STORAGE_KEY = 'sss_user';
 
+function hasNormalizedRole(roles: string[] | undefined, targetRole: string): boolean {
+  const normalizedTargetRole = targetRole.replace(/\s+/g, '').toLowerCase();
+  return !!roles?.some((role) => role.replace(/\s+/g, '').toLowerCase() === normalizedTargetRole);
+}
+
+function getTokenExpiryDate(accessToken: string): Date | undefined {
+  try {
+    const payload = accessToken.split('.')[1];
+    if (!payload) return undefined;
+
+    const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    const exp = Number(decodedPayload?.exp);
+    if (!Number.isFinite(exp)) return undefined;
+
+    return new Date(exp * 1000);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Set access token in cookie
  */
 function setAccessToken(accessToken: string, expiresUtc?: string): void {
-  const expiresDate = expiresUtc ? new Date(expiresUtc) : undefined;
-  Cookies.set(ACCESS_TOKEN_KEY, accessToken, {
-    expires: expiresDate || 1, // 1 day default
+  const expiresFromBackend = expiresUtc ? new Date(expiresUtc) : undefined;
+  const isBackendExpiryValid = !!expiresFromBackend && !Number.isNaN(expiresFromBackend.getTime());
+  const expiresDate = isBackendExpiryValid ? expiresFromBackend : getTokenExpiryDate(accessToken);
+
+  const baseCookieOptions = {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-  });
+    sameSite: 'lax' as const,
+  };
+
+  Cookies.set(
+    ACCESS_TOKEN_KEY,
+    accessToken,
+    expiresDate
+      ? {
+          ...baseCookieOptions,
+          expires: expiresDate,
+        }
+      : baseCookieOptions
+  );
 }
 
 /**
@@ -55,7 +99,7 @@ function clearAccessToken(): void {
 /**
  * Save user data to localStorage for persistence across page reloads
  */
-function saveUserToStorage(user: User): void {
+export function saveUserToStorage(user: User): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }
@@ -84,6 +128,26 @@ function clearUserFromStorage(): void {
 }
 
 /**
+ * Check ON_REGISTER trigger mapping and return the survey redirect URL if pending.
+ * Returns null if no pending survey or if the check fails (fail-safe).
+ */
+async function getOnRegisterSurveyUrl(): Promise<string | null> {
+  try {
+    const result = await fetchPendingTriggerSurvey(SurveyTriggerType.ON_REGISTER);
+    if (result.hasPendingSurvey && result.surveyCode) {
+      const params = new URLSearchParams({
+        returnTo: routes.public.home,
+        triggerReason: SurveyTriggerReason.INITIAL,
+      });
+      return `/surveys/${result.surveyCode}?${params.toString()}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Login mutation
  * Response includes accessToken directly (not nested in tokens)
  * Refresh token is automatically set via HttpOnly cookie by backend
@@ -95,7 +159,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginRequest) =>
       post<LoginResponse>(endpoints.auth.login, data),
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       // Store access token in cookie
       setAccessToken(response.accessToken, response.accessTokenExpiresUtc);
 
@@ -105,12 +169,60 @@ export function useLogin() {
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
 
-      // Redirect to returnUrl or dashboard
-      router.push(response.returnUrl || routes.dashboard.home);
+      // Trigger streak check-in immediately after login.
+      void recordDailyLoginIfNeeded(response.user.id);
+
+      // Show success toast
+      toast.success('Login successful!', {
+        description: `Welcome ${response.user.firstName || response.user.email}`,
+      });
+
+      await syncOneSignalSubscriptionToBackend().catch(() => {
+        // OneSignal may not be initialized or push permission not granted.
+      });
+
+      // Redirect Content Manager users directly to content dashboard
+      const isContentManager = hasNormalizedRole(response.user.roles, 'ContentManager');
+      if (isContentManager) {
+        router.push(routes.contentManager.dashboard);
+        return;
+      }
+
+      // Redirect Admin users directly to admin dashboard
+      const isAdmin = hasNormalizedRole(response.user.roles, 'Admin');
+      if (isAdmin) {
+        router.push(routes.admin.home);
+        return;
+      }
+
+      // Redirect Analyst users directly to analyst dashboard
+      const isAnalyst = response.user.roles?.includes(UserRole.ANALYST);
+      if (isAnalyst) {
+        router.push(routes.analyst.home);
+        return;
+      }
+
+      // Check ON_REGISTER trigger (only for regular users)
+      const isRegularUser = response.user.roles?.includes(UserRole.USER);
+      if (isRegularUser) {
+        const surveyUrl = await getOnRegisterSurveyUrl();
+        if (surveyUrl) {
+          toast.info('Please complete a quick survey', {
+            description: 'This helps us personalize your learning experience',
+          });
+          router.push(surveyUrl);
+          return;
+        }
+      }
+
+      router.push(routes.public.home);
     },
-    onError: () => {
+    onError: (error) => {
       // Clear any stale auth data
       queryClient.removeQueries({ queryKey: queryKeys.auth.all });
+
+      // Show error toast
+      toast.apiError(error, 'Login failed');
     },
   });
 }
@@ -124,8 +236,14 @@ export function useRegister() {
   return useMutation({
     mutationFn: (data: RegisterRequest) =>
       post<RegisterResponse>(endpoints.auth.register, data),
-    // Success handling should show message about email confirmation
-    // No auto-login - user must confirm email first
+    onSuccess: (response) => {
+      toast.success('Registration successful!', {
+        description: response.message || 'Please check your email to confirm your account.',
+      });
+    },
+    onError: (error) => {
+      toast.apiError(error, 'Registration failed');
+    },
   });
 }
 
@@ -139,8 +257,14 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: () => post<{ message: string }>(endpoints.auth.logout),
+    onSuccess: () => {
+      // No toast on logout as requested
+    },
     onSettled: () => {
       // Always clear tokens and cache, even if logout API fails
+      deactivateStoredPushToken().catch(() => {
+        // Ignore deactivation failures during logout.
+      });
       clearAccessToken();
       clearUserFromStorage();
       queryClient.clear();
@@ -162,6 +286,9 @@ export function useRefreshToken() {
       // Store new access token
       setAccessToken(response.accessToken, response.accessTokenExpiresUtc);
 
+      // Persist latest user payload (including subscription fields)
+      saveUserToStorage(response.user);
+
       // Update user cache
       queryClient.setQueryData(queryKeys.auth.me(), response.user);
     },
@@ -169,6 +296,10 @@ export function useRefreshToken() {
       // Refresh failed - clear tokens
       clearAccessToken();
       queryClient.clear();
+
+      toast.error('Session expired', {
+        description: 'Please log in again.',
+      });
     },
   });
 }
@@ -180,6 +311,14 @@ export function useForgotPassword() {
   return useMutation({
     mutationFn: (data: ForgotPasswordRequest) =>
       post<ForgotPasswordResponse>(endpoints.auth.forgotPassword, data),
+    onSuccess: (response) => {
+      toast.success('Email sent!', {
+        description: response.message || 'Please check your inbox to reset your password.',
+      });
+    },
+    onError: (error) => {
+      toast.apiError(error, 'Failed to send reset email');
+    },
   });
 }
 
@@ -194,30 +333,55 @@ export function useResetPassword() {
     mutationFn: (data: ResetPasswordRequest) =>
       post<ResetPasswordResponse>(endpoints.auth.resetPassword, data),
     onSuccess: () => {
+      toast.success('Password reset successful!', {
+        description: 'You can now login with your new password.',
+      });
+
       // Redirect to login with success message
       router.push(`${routes.auth.login}?reset=success`);
+    },
+    onError: (error) => {
+      toast.apiError(error, 'Failed to reset password');
     },
   });
 }
 
 /**
  * Confirm email mutation (GET request with query params)
+ * Note: Redirect is handled by the page component, not here
+ * Uses direct fetch to backend to avoid middleware URL parsing issues with special characters in token
  */
 export function useConfirmEmail() {
-  const router = useRouter();
-
   return useMutation({
-    mutationFn: (params: ConfirmEmailRequest) => {
-      const queryParams = new URLSearchParams({
-        userId: params.userId,
-        token: params.token,
-        ...(params.returnUrl && { returnUrl: params.returnUrl }),
+    mutationFn: async (params: ConfirmEmailRequest) => {
+      // Encode token properly to handle special characters
+      const encodedToken = encodeURIComponent(params.token);
+      const encodedUserId = encodeURIComponent(params.userId);
+
+      // Use the API proxy to avoid CORS and SSL certificate issues
+      const url = `/api/proxy${endpoints.auth.confirmEmail}?userId=${encodedUserId}&token=${encodedToken}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
       });
-      return get<ConfirmEmailResponse>(`${endpoints.auth.confirmEmail}?${queryParams}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to confirm email');
+      }
+
+      return response.json() as Promise<ConfirmEmailResponse>;
     },
-    onSuccess: (_, variables) => {
-      // Redirect to login or returnUrl
-      router.push(variables.returnUrl || `${routes.auth.login}?confirmed=true`);
+    onSuccess: () => {
+      toast.success('Email verified!', {
+        description: 'Your account has been activated.',
+      });
+    },
+    onError: (error) => {
+      toast.apiError(error, 'Failed to verify email');
     },
   });
 }
@@ -231,15 +395,11 @@ export function useGoogleLogin() {
   const popupRef = useRef<Window | null>(null);
 
   const handleMessage = useCallback(
-    (event: MessageEvent<GoogleLoginCallbackData>) => {
-      console.log('[Google Login] Received message:', event.origin, event.data);
-
+    async (event: MessageEvent<GoogleLoginCallbackData>) => {
       // Validate origin - should match API origin
-      const apiUrl = new URL(env.NEXT_PUBLIC_API_URL);
-      console.log('[Google Login] Expected origin:', apiUrl.origin);
+      const apiUrl = new URL(env.NEXT_PUBLIC_API_URL_HTTP);
 
       if (event.origin !== apiUrl.origin) {
-        console.log('[Google Login] Origin mismatch, ignoring');
         return;
       }
 
@@ -247,13 +407,15 @@ export function useGoogleLogin() {
 
       if (error) {
         console.error('Google login failed:', error.message);
+        toast.error('Google login failed', {
+          description: error.message,
+        });
         return;
       }
 
       if (token && user) {
         // ALWAYS normalize user data - backend may send PascalCase keys
         const anyUser = user as any;
-        console.log('[Google Login] Raw user data:', JSON.stringify(anyUser));
 
         const normalizedUser = {
           id: anyUser.id || anyUser.Id || '',
@@ -270,9 +432,6 @@ export function useGoogleLogin() {
           roles: anyUser.roles || anyUser.Roles || [],
         };
 
-
-        console.log('[Google Login] Normalized user data:', JSON.stringify(normalizedUser));
-
         // Store access token
         setAccessToken(token);
 
@@ -282,8 +441,67 @@ export function useGoogleLogin() {
         // Update user cache with NORMALIZED data
         queryClient.setQueryData(queryKeys.auth.me(), normalizedUser);
 
-        // Redirect
-        router.push(returnUrl || routes.dashboard.home);
+        // Trigger streak check-in immediately after login.
+        void recordDailyLoginIfNeeded(normalizedUser.id);
+
+        // Show success toast
+        toast.success('Login successful!', {
+          description: `Welcome ${normalizedUser.firstName || normalizedUser.email}`,
+        });
+
+        await syncOneSignalSubscriptionToBackend().catch(() => {
+          // OneSignal may not be initialized or push permission not granted.
+        });
+
+        // Redirect Content Manager users directly to content dashboard
+        const isContentManager = hasNormalizedRole(normalizedUser.roles, 'ContentManager');
+        if (isContentManager) {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          router.push(routes.contentManager.dashboard);
+          return;
+        }
+
+        // Redirect Admin users directly to admin dashboard
+        const isAdmin = hasNormalizedRole(normalizedUser.roles, 'Admin');
+        if (isAdmin) {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          router.push(routes.admin.home);
+          return;
+        }
+
+        // Redirect Analyst users directly to analyst dashboard
+        const isAnalyst = normalizedUser.roles?.includes(UserRole.ANALYST);
+        if (isAnalyst) {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          }
+          router.push(routes.analyst.home);
+          return;
+        }
+
+        // Check ON_REGISTER trigger (only for regular users)
+        const isRegularUser = normalizedUser.roles?.includes(UserRole.USER);
+        if (isRegularUser) {
+          const surveyUrl = await getOnRegisterSurveyUrl();
+          if (surveyUrl) {
+            toast.info('Please complete a quick survey', {
+              description: 'This helps us personalize your learning experience',
+            });
+            // Close popup before redirecting
+            if (popupRef.current && !popupRef.current.closed) {
+              popupRef.current.close();
+            }
+            router.push(surveyUrl);
+            return;
+          }
+        }
+
+        // Redirect to landing page
+        router.push(routes.public.home);
       }
 
       // Close popup if still open
@@ -307,7 +525,7 @@ export function useGoogleLogin() {
 
     // Include opener origin so backend knows where to postMessage
     const openerOrigin = window.location.origin;
-    const googleLoginUrl = `${env.NEXT_PUBLIC_API_URL}${endpoints.auth.googleLogin}?returnUrl=${encodeURIComponent(returnUrl)}&opener=${encodeURIComponent(openerOrigin)}`;
+    const googleLoginUrl = `${env.NEXT_PUBLIC_API_URL_HTTP}${endpoints.auth.googleLogin}?returnUrl=${encodeURIComponent(returnUrl)}&opener=${encodeURIComponent(openerOrigin)}`;
 
     popupRef.current = window.open(
       googleLoginUrl,

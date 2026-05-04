@@ -173,4 +173,75 @@
 
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Enhanced hover utilities */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out cursor-pointer;
+  }
+  .hover-lift:hover {
+    @apply -translate-y-1 shadow-xl;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300;
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 20px rgba(193, 255, 114, 0.3);
+  }
+
+  .hover-glow-blue:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Link underline animation */
+  .link-underline {
+    @apply relative cursor-pointer;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-[2px] bg-current transition-all duration-300;
+  }
+  .link-underline:hover::after {
+    @apply w-full;
+  }
+
+  /* Button pulse effect */
+  .btn-pulse {
+    @apply relative overflow-hidden;
+  }
+  .btn-pulse::before {
+    content: '';
+    @apply absolute inset-0 bg-white/20 scale-0 rounded-full transition-transform duration-500;
+  }
+  .btn-pulse:hover::before {
+    @apply scale-150;
+  }
+
+  /* Glow accent */
+  .glow-lime {
+    box-shadow: 0 0 12px rgba(193, 255, 114, 0.5);
+  }
+
+  /* Card border glow on hover */
+  .card-glow {
+    @apply transition-all duration-300;
+  }
+  .card-glow:hover {
+    border-color: rgba(193, 255, 114, 0.5);
+    box-shadow: 0 0 30px rgba(193, 255, 114, 0.15);
+  }
+
+  /* Marquee fade edges */
+  .marquee-fade {
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  }
+
+  /* Social icon hover */
+  .social-icon {
+    @apply transition-all duration-200 cursor-pointer;
+  }
+  .social-icon:hover {
+    @apply scale-110 text-[#c1ff72];
+  }
 }

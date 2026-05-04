@@ -1,0 +1,357 @@
+'use client';
+
+import { useEffect, useCallback, useState } from 'react';
+import { Play, Pause, Square, AlertTriangle } from 'lucide-react';
+import { cn } from '@/shared/lib/utils';
+import { useSessionStore } from '@/store/session.store';
+import { useStartSession, usePauseSession, useResumeSession } from '../api/mutations';
+import { SessionStatus } from '@/shared/types';
+import { toast } from '@/shared/lib';
+import { ApiException } from '@/shared/api/errors';
+import { useAnalytics } from '@/shared/hooks/use-analytics';
+import { LearningEventName } from '../types';
+
+interface TimerCardProps {
+    className?: string;
+}
+
+export function TimerCard({ className }: TimerCardProps) {
+    const timerRunning = useSessionStore((state) => state.timerRunning);
+    const elapsedSeconds = useSessionStore((state) => state.elapsedSeconds);
+    const sessionId = useSessionStore((state) => state.sessionId);
+    const sessionStatus = useSessionStore((state) => state.sessionStatus);
+    const incrementElapsed = useSessionStore((state) => state.incrementElapsed);
+    const incrementPauseSeconds = useSessionStore((state) => state.incrementPauseSeconds);
+    const selectedNode = useSessionStore((state) => state.selectedNode);
+    const activeStudyPlanId = useSessionStore((state) => state.activeStudyPlanId);
+    const selectedTasks = useSessionStore((state) => state.selectedTasks);
+
+    // Store actions
+    const storeStartSession = useSessionStore((state) => state.startSession);
+    const storePauseSession = useSessionStore((state) => state.pauseSession);
+    const storeResumeSession = useSessionStore((state) => state.resumeSession);
+    const storeEndSession = useSessionStore((state) => state.endSession);
+
+    // API mutations
+    const startMutation = useStartSession();
+    const pauseMutation = usePauseSession();
+    const resumeMutation = useResumeSession();
+
+    // Analytics
+    const { trackEvent } = useAnalytics();
+
+    // Error state for start session
+    const [startError, setStartError] = useState<string | null>(null);
+    const hasTasks = selectedTasks.length > 0;
+
+    const formatTime = (totalSeconds: number) => {
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+        if (hrs > 0) {
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const toDurationMinutes = useCallback((seconds: number): number => {
+        return Math.floor(Math.max(0, seconds) / 60);
+    }, []);
+
+    const getPlannedDurationSeconds = useCallback((): number | null => {
+        const total = selectedTasks.reduce((sum, task) => {
+            const taskMinutes = Number.isFinite(task.estimatedMinutes) ? task.estimatedMinutes : 0;
+            return sum + Math.max(0, taskMinutes) * 60;
+        }, 0);
+
+        return total > 0 ? total : null;
+    }, [selectedTasks]);
+
+    const hasStarted = sessionStatus !== SessionStatus.NOT_STARTED;
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout | null = null;
+
+        if (timerRunning) {
+            interval = setInterval(() => {
+                incrementElapsed();
+            }, 1000);
+        } else if (hasStarted) {
+            interval = setInterval(() => {
+                incrementPauseSeconds();
+            }, 1000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [timerRunning, incrementElapsed, incrementPauseSeconds]);
+
+    /** Safely convert an ID-like value to number, returning undefined if invalid */
+    const safeNumberId = useCallback((value: string | number | undefined | null): number | undefined => {
+        if (!value) return undefined;
+        const num = Number(value);
+        return Number.isFinite(num) && num > 0 ? num : undefined;
+    }, []);
+
+    const getSessionEventContext = useCallback(() => {
+        const taskIds = selectedTasks
+            .map((task) => safeNumberId(task.id))
+            .filter((id): id is number => typeof id === 'number');
+
+        const studyPlanId = safeNumberId(activeStudyPlanId) ?? safeNumberId(selectedNode?.planId) ?? null;
+        const nodeId = selectedNode?.roadmapNodeId ?? safeNumberId(selectedNode?.id) ?? null;
+        const moduleId = safeNumberId(selectedNode?.id) ?? null;
+
+        return {
+            studyPlanId,
+            nodeId,
+            moduleId,
+            subject: selectedNode?.planTitle ?? null,
+            topic: selectedNode?.title ?? null,
+            taskId: taskIds[0] ?? null,
+            contentId: moduleId ?? nodeId ?? null,
+            taskIds: taskIds.length > 0 ? taskIds : undefined,
+            taskCount: selectedTasks.length,
+            completedTaskCount: selectedTasks.filter((task) => task.isCompleted).length,
+        };
+    }, [activeStudyPlanId, safeNumberId, selectedNode, selectedTasks]);
+
+    const doStartSession = useCallback(() => {
+        setStartError(null);
+
+        if (!hasTasks) {
+            const message = 'Please select at least one task from Schedule before starting a session.';
+            setStartError(message);
+            toast.error('No tasks selected', { description: message });
+            return;
+        }
+
+        const eventContext = getSessionEventContext();
+        const plannedDurationSeconds = getPlannedDurationSeconds();
+
+        const payload = {
+            studyPlanId: eventContext.studyPlanId ?? undefined,
+            nodeId: eventContext.nodeId ?? undefined,
+            moduleId: eventContext.moduleId ?? undefined,
+            taskIds: eventContext.taskIds,
+            plannedDurationSeconds: plannedDurationSeconds ?? undefined,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        };
+
+        console.log('🚀 [StartSession] Raw values:', {
+            activeStudyPlanId,
+            'selectedNode?.id': selectedNode?.id,
+            'selectedNode?.roadmapNodeId': selectedNode?.roadmapNodeId,
+            selectedNode,
+        });
+        console.log('🚀 [StartSession] Payload:', JSON.stringify(payload, null, 2));
+
+        startMutation.mutate(
+            payload,
+            {
+                onSuccess: (data) => {
+                    storeStartSession(data.sessionId, data.tasks);
+
+                    trackEvent(LearningEventName.SESSION_STARTED, {
+                        sessionId: data.sessionId,
+                        ...eventContext,
+                        plannedDurationSeconds: payload.plannedDurationSeconds,
+                        planned_duration_seconds: payload.plannedDurationSeconds,
+                        durationMinutes: payload.plannedDurationSeconds
+                            ? toDurationMinutes(payload.plannedDurationSeconds)
+                            : null,
+                    });
+                    toast.success('Session started!');
+                },
+                onError: (error) => {
+                    const message = error instanceof ApiException
+                        ? error.message
+                        : error.message || 'Failed to start session';
+
+                    // Check if error is about an existing active session
+                    const isActiveSessionError = message.toLowerCase().includes('active')
+                        || message.toLowerCase().includes('already')
+                        || (error instanceof ApiException && error.status === 409);
+
+                    if (isActiveSessionError) {
+                        setStartError('You already have an active session. Please end it before starting a new one.');
+                    } else {
+                        setStartError(message);
+                    }
+                    toast.apiError(error, 'Failed to start session');
+                },
+            }
+        );
+    }, [
+        activeStudyPlanId,
+        getPlannedDurationSeconds,
+        getSessionEventContext,
+        hasTasks,
+        safeNumberId,
+        selectedNode,
+        selectedTasks,
+        startMutation,
+        storeStartSession,
+        toDurationMinutes,
+        trackEvent,
+    ]);
+
+    const handleStart = useCallback(async () => {
+        setStartError(null);
+        // Start session directly — if backend returns error about active session, we handle it in onError
+        doStartSession();
+    }, [doStartSession]);
+
+    const handlePause = useCallback(() => {
+        if (!sessionId) return;
+        const plannedDurationSeconds = getPlannedDurationSeconds();
+        const eventContext = getSessionEventContext();
+        trackEvent(LearningEventName.SESSION_PAUSED, {
+            sessionId,
+            ...eventContext,
+            elapsedSeconds,
+            timeSpentSeconds: elapsedSeconds,
+            plannedDurationSeconds,
+            planned_duration_seconds: plannedDurationSeconds,
+            durationMinutes: toDurationMinutes(elapsedSeconds),
+        });
+        pauseMutation.mutate(sessionId, {
+            onSuccess: (data) => {
+                storePauseSession();
+                useSessionStore.getState().setPauseData(data.pauseCount, data.pauseSeconds);
+            },
+        });
+    }, [sessionId, getPlannedDurationSeconds, getSessionEventContext, pauseMutation, storePauseSession, toDurationMinutes, trackEvent, elapsedSeconds]);
+
+    const handleResume = useCallback(() => {
+        if (!sessionId) return;
+        const plannedDurationSeconds = getPlannedDurationSeconds();
+        const eventContext = getSessionEventContext();
+        trackEvent(LearningEventName.SESSION_RESUMED, {
+            sessionId,
+            ...eventContext,
+            elapsedSeconds,
+            timeSpentSeconds: elapsedSeconds,
+            plannedDurationSeconds,
+            planned_duration_seconds: plannedDurationSeconds,
+            durationMinutes: toDurationMinutes(elapsedSeconds),
+        });
+        resumeMutation.mutate(sessionId, {
+            onSuccess: () => {
+                storeResumeSession();
+            },
+        });
+    }, [sessionId, getPlannedDurationSeconds, getSessionEventContext, resumeMutation, storeResumeSession, toDurationMinutes, trackEvent, elapsedSeconds]);
+
+    const handleEndSession = useCallback(() => {
+        const plannedDurationSeconds = getPlannedDurationSeconds();
+        const eventContext = getSessionEventContext();
+        trackEvent(LearningEventName.SESSION_ENDED, {
+            sessionId,
+            ...eventContext,
+            totalSeconds: elapsedSeconds,
+            timeSpentSeconds: elapsedSeconds,
+            plannedDurationSeconds,
+            planned_duration_seconds: plannedDurationSeconds,
+            durationMinutes: toDurationMinutes(elapsedSeconds),
+        });
+        storeEndSession();
+    }, [getPlannedDurationSeconds, getSessionEventContext, storeEndSession, toDurationMinutes, trackEvent, sessionId, elapsedSeconds]);
+
+    const isAnyPending = startMutation.isPending || pauseMutation.isPending || resumeMutation.isPending;
+
+    return (
+        <div className={cn(
+
+            "relative overflow-hidden flex flex-col items-center justify-center rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-white/90 via-emerald-50/70 to-cyan-50/70 p-10 shadow-2xl shadow-emerald-900/10 backdrop-blur-xl",
+
+            className
+        )}>
+            {/* Decorative gradient */}
+            <div className="absolute -top-24 -right-20 h-52 w-52 rounded-full bg-gradient-to-br from-emerald-200/60 to-cyan-200/20 blur-3xl" />
+            <div className="absolute -bottom-16 -left-12 h-44 w-44 rounded-full bg-gradient-to-tr from-amber-200/35 to-emerald-200/20 blur-3xl" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.75),transparent_45%)]" />
+
+            {/* Timer Display */}
+
+            <div className="relative mb-1 rounded-2xl border border-white/70 bg-white/60 px-6 py-3 text-7xl font-bold tracking-tighter text-neutral-900 font-mono shadow-lg shadow-emerald-900/10 sm:text-8xl">
+
+                {formatTime(elapsedSeconds)}
+            </div>
+
+            {/* Status */}
+            <p className={cn(
+                "mt-2 text-sm font-semibold",
+                timerRunning ? "text-emerald-600" : hasStarted ? "text-amber-600" : startError ? "text-red-500" : "text-neutral-500"
+            )}>
+                {timerRunning
+                    ? '● Session in progress'
+                    : hasStarted
+                        ? '● Paused'
+                        : hasTasks
+                            ? 'Ready to start'
+                            : 'Select tasks in Schedule to start'}
+            </p>
+
+            {/* Error message */}
+            {startError && !hasStarted && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 max-w-md">
+                    <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                    <p className="text-sm text-red-600">{startError}</p>
+                </div>
+            )}
+
+            {/* Controls */}
+            <div className="relative mt-6 flex items-center gap-3">
+                {!hasStarted ? (
+                    <button
+                        onClick={handleStart}
+                        disabled={isAnyPending || !hasTasks}
+
+                        className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+
+                    >
+                        <Play className="h-4 w-4 transition-transform group-hover:scale-110" fill="currentColor" />
+                        {startMutation.isPending ? 'Starting...' : 'Start Session'}
+                    </button>
+                ) : (
+                    <>
+                        {timerRunning ? (
+                            <button
+                                onClick={handlePause}
+                                disabled={isAnyPending}
+
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-amber-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/40 disabled:opacity-50"
+
+                            >
+                                <Pause className="h-4 w-4" fill="currentColor" />
+                                {pauseMutation.isPending ? 'Pausing...' : 'Pause'}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleResume}
+                                disabled={isAnyPending}
+
+                                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-500 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/40 disabled:opacity-50"
+
+                            >
+                                <Play className="h-4 w-4" fill="currentColor" />
+                                {resumeMutation.isPending ? 'Resuming...' : 'Resume'}
+                            </button>
+                        )}
+                        <button
+                            onClick={handleEndSession}
+
+                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-rose-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-rose-500/40"
+
+                        >
+                            <Square className="h-4 w-4" fill="currentColor" />
+                            End Session
+                        </button>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
