@@ -1008,11 +1008,6 @@ export function QuizDetailPage() {
                       Q{qIndex + 1}. {question.prompt}
                     </p>
                     <div className="flex items-center gap-2">
-                      {question.level && (
-                        <span className="text-[11px] rounded bg-blue-50 px-2 py-1 text-blue-700 border border-blue-200">
-                          {question.level}
-                        </span>
-                      )}
                       <span className="text-[11px] rounded bg-white px-2 py-1 text-neutral-600 border border-neutral-200">
                         {getQuestionTypeLabel(question.type)}
                       </span>
@@ -1055,18 +1050,7 @@ export function QuizDetailPage() {
                   </div>
 
                   {editingQuestionId === question.id ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                      <select
-                        value={(questionEdits[question.id] ?? toQuestionDraft(question)).level}
-                        onChange={(e) => handleEditQuestionChange(question.id, "level", e.target.value)}
-                        className="rounded border border-neutral-300 px-2 py-1.5"
-                      >
-                        {QUESTION_LEVELS.map((level) => (
-                          <option key={level} value={level}>
-                            {level}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="grid grid-cols-1 gap-2 text-xs">
                       <select
                         value={(questionEdits[question.id] ?? toQuestionDraft(question)).type}
                         onChange={(e) =>
@@ -1135,7 +1119,7 @@ export function QuizDetailPage() {
                     </div>
                   ) : (
                     <div className="text-xs text-neutral-600">
-                      Level: {question.level ?? "Beginner"} · Order: {question.orderNo}
+                      Order: {question.orderNo}
                     </div>
                   )}
 
@@ -1308,34 +1292,18 @@ export function QuizDetailPage() {
                 )}
               </div>
 
-              {/* Level + Type */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">Level</label>
-                  <select
-                    value={q.level}
-                    onChange={(e) => updateQuestion(q._qid, { level: e.target.value })}
-                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-                  >
-                    {QUESTION_LEVELS.map((level) => (
-                      <option key={level} value={level}>
-                        {level}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">Type</label>
-                  <select
-                    value={q.type}
-                    onChange={(e) => changeQuestionType(q._qid, Number(e.target.value) as QuizQuestionType)}
-                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-                  >
-                    {QUESTION_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Type */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">Type</label>
+                <select
+                  value={q.type}
+                  onChange={(e) => changeQuestionType(q._qid, Number(e.target.value) as QuizQuestionType)}
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
+                >
+                  {QUESTION_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Prompt */}
@@ -1592,7 +1560,7 @@ export function QuizDetailPage() {
             </div>
 
             <div className="space-y-5 overflow-y-auto px-6 py-5">
-              <div className="grid gap-4 md:grid-cols-[200px_220px] md:justify-end">
+              <div className="grid gap-4 md:grid-cols-[200px] md:justify-end">
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-neutral-700">
@@ -1613,22 +1581,6 @@ export function QuizDetailPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-neutral-700">
-                    Level
-                  </label>
-                  <select
-                    value={aiLevel}
-                    onChange={(e) => setAiLevel(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition-colors focus:border-[#00bae2] focus:ring-2 focus:ring-[#00bae2]/10"
-                  >
-                    {QUESTION_LEVELS.map((level) => (
-                      <option key={level} value={level} className="bg-white text-neutral-900">
-                        {level}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {aiResponse?.message && (
@@ -1676,17 +1628,6 @@ export function QuizDetailPage() {
                           </div>
 
                           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                            <select
-                              value={question.level}
-                              onChange={(e) => updateAiQuestion(question._qid, { level: e.target.value })}
-                              className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-neutral-900"
-                            >
-                              {QUESTION_LEVELS.map((level) => (
-                                <option key={level} value={level} className="bg-white text-neutral-900">
-                                  {level}
-                                </option>
-                              ))}
-                            </select>
                             <select
                               value={question.type}
                               onChange={(e) => changeAiQuestionType(question._qid, Number(e.target.value) as QuizQuestionType)}
