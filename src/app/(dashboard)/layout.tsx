@@ -9,6 +9,7 @@ import { ChatProvider, ChatPopup, ChatToggleButton } from '@/features/chat';
 import { NotificationBell } from '@/features/notification';
 import { SessionTimerBadge } from '@/features/sessions/components/SessionTimerBadge';
 import { StreakBadge } from '@/features/gamification/StreakBadge';
+import { useSessionStore } from '@/store/session.store';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -32,7 +33,13 @@ function getPageTitle(pathname: string): string {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
-  const showChatbot = pathname.startsWith('/sessions') && !pathname.endsWith('/history');
+  const showSummary = useSessionStore((state) => state.showSummary);
+  const showSuccess = useSessionStore((state) => state.showSuccess);
+  const showChatbot =
+    pathname.startsWith('/sessions') &&
+    !pathname.endsWith('/history') &&
+    !showSummary &&
+    !showSuccess;
   const rootOverflowClass = pathname.startsWith('/sessions') ? 'overflow-x-hidden' : 'overflow-hidden';
 
   return (
